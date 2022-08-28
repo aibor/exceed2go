@@ -1,5 +1,6 @@
 CLANG ?= clang
-CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
+#CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
+CFLAGS := -O2 -g -Wall $(CFLAGS)
 
 export BPF_CLANG := $(CLANG)
 export BPF_CFLAGS := $(CFLAGS)
