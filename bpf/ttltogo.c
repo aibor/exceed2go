@@ -172,11 +172,17 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	void *nexthdr	= data;
 	int len			= data_end - data;
 
+	bpf_printk("entry");
+
+	return DEFAULT_ACTION;
+
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
 		return DEFAULT_ACTION;
 
 	struct ethhdr *eth = nexthdr;
 	nexthdr += sizeof(*eth);
+
+	bpf_printk("eth");
 
 	if (eth->h_proto != bpf_htons(ETH_P_IPV6))
 		return DEFAULT_ACTION;
@@ -187,8 +193,12 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	__u32 target_key = 0;
 	struct in6_addr *target = bpf_map_lookup_elem(&ttl_addrs, &target_key);
 
+	bpf_printk("ipv6");
+
 	if (!target)
 		return DEFAULT_ACTION;
+
+	bpf_printk("ipv6 target");
 
 	if (IN6_ARE_ADDR_EQUAL(&ipv6->saddr, target))
 		return DEFAULT_ACTION;
@@ -263,3 +273,5 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 
 	return XDP_TX;
 }
+
+char _license[] SEC("license") = "GPL";
