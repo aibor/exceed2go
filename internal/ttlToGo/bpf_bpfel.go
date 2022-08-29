@@ -63,7 +63,8 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	TtlAddrs *ebpf.MapSpec `ebpf:"ttl_addrs"`
+	TtlAddrs    *ebpf.MapSpec `ebpf:"ttl_addrs"`
+	TtlCounters *ebpf.MapSpec `ebpf:"ttl_counters"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -85,12 +86,14 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	TtlAddrs *ebpf.Map `ebpf:"ttl_addrs"`
+	TtlAddrs    *ebpf.Map `ebpf:"ttl_addrs"`
+	TtlCounters *ebpf.Map `ebpf:"ttl_counters"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.TtlAddrs,
+		m.TtlCounters,
 	)
 }
 

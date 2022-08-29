@@ -43,6 +43,20 @@ struct {
 		__uint(max_entries, 32);
 } ttl_addrs SEC(".maps");
 
+struct {
+        __uint(type, BPF_MAP_TYPE_ARRAY);
+        __type(key, __u32);
+        __type(value, __u32);
+		__uint(max_entries, 8);
+} ttl_counters SEC(".maps");
+
+enum ttl_counter_key {
+	TTL_COUNTER_KEY_ENTRY,
+	TTL_COUNTER_KEY_IPV6,
+	TTL_COUNTER_KEY_TARGET,
+	TTL_COUNTER_KEY_FOUND
+};
+
 //static __always_inline __u16 csum_fold(__u32 csum) {
 //	csum = (csum & 0xffff) + (csum >> 16);
 //	csum = (csum & 0xffff) + (csum >> 16);
@@ -91,16 +105,23 @@ static __always_inline __be32 ipv6_pseudohdr_checksum(struct ipv6hdr *hdr,
 	return sum;
 }
 
-static __always_inline __be32 compute_icmp6_csum(char data[4],
+static __always_inline __be32 compute_icmp6_csum(struct icmp6hdr *icmp6hdr,
 												 __u16 payload_len,
 												 struct ipv6hdr *ipv6hdr) {
 	__be32 sum;
 
 	/* compute checksum with new payload length */
-	sum = csum_diff(NULL, 0, data, payload_len, 0);
+	sum = csum_diff(NULL, 0, icmp6hdr, payload_len, 0);
 	sum = ipv6_pseudohdr_checksum(ipv6hdr, IPPROTO_ICMPV6, payload_len,
 				      sum);
 	return sum;
+}
+
+static __always_inline void counter_increment(__u32 key) {
+	__u32 *value = bpf_map_lookup_elem(&ttl_counters, &key);
+	if (value) {
+		__sync_fetch_and_add(value, 1);
+	}
 }
 
 SEC("xdp")
@@ -108,11 +129,11 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	void *data		= (void *)(unsigned long)ctx->data;
 	void *data_end	= (void *)(unsigned long)ctx->data_end;
 	void *nexthdr	= data;
-	int len			= data_end - data;
+	int len			= ctx->data_end - ctx->data;
 
-	bpf_printk("entry");
+	__bpf_printk("entry");
+	counter_increment(TTL_COUNTER_KEY_ENTRY);
 
-	return DEFAULT_ACTION;
 
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
 		return DEFAULT_ACTION;
@@ -120,10 +141,10 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	struct ethhdr *eth = nexthdr;
 	nexthdr += sizeof(*eth);
 
-	bpf_printk("eth");
-
 	if (eth->h_proto != bpf_htons(ETH_P_IPV6))
 		return DEFAULT_ACTION;
+
+	counter_increment(TTL_COUNTER_KEY_IPV6);
 
 	struct ipv6hdr *ipv6 = nexthdr;
 	nexthdr += sizeof(*ipv6);
@@ -131,21 +152,21 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	__u32 target_key = 0;
 	struct in6_addr *target = bpf_map_lookup_elem(&ttl_addrs, &target_key);
 
-	bpf_printk("ipv6");
-
 	if (!target)
 		return DEFAULT_ACTION;
 
-	bpf_printk("ipv6 target");
-
 	if (IN6_ARE_ADDR_EQUAL(&ipv6->saddr, target))
 		return DEFAULT_ACTION;
+
+	counter_increment(TTL_COUNTER_KEY_TARGET);
 
 	__u32 hop_key = ipv6->hop_limit;
 	struct in6_addr *ttl_addr = bpf_map_lookup_elem(&ttl_addrs, &hop_key);
 
 	if (!ttl_addr)
 		return DEFAULT_ACTION;
+
+	counter_increment(TTL_COUNTER_KEY_FOUND);
 
 	if (bpf_xdp_adjust_head(ctx, 0 - (int)ADD_HDR_LEN) != 0)
 		return XDP_DROP;
@@ -156,36 +177,24 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 
 	data		= (void *)(long)ctx->data;
 	data_end	= (void *)(long)ctx->data_end;
-	nexthdr		= data;
-	len			= data_end - data;
+	__u64 off		= 0;
 
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + (int)ADD_HDR_LEN > data_end)
 		return DEFAULT_ACTION;
 
 	struct ethhdr *eth_n = data;
-	nexthdr += sizeof(*eth_n);
+	off += sizeof(struct ethhdr);
 	struct ethhdr *eth_o = data + (int)ADD_HDR_LEN;
 
-	__u8 h_tmp_src[ETH_ALEN];
-    __u8 h_tmp_dst[ETH_ALEN];
+	bpf_memcpy(eth_n->h_source, eth_o->h_dest, ETH_ALEN);
+	bpf_memcpy(eth_n->h_dest, eth_o->h_source, ETH_ALEN);
+	eth_n->h_proto = eth_o->h_proto;
 
-	bpf_memcpy(h_tmp_src, eth_o->h_source, ETH_ALEN);
-	bpf_memcpy(h_tmp_dst, eth_o->h_dest, ETH_ALEN);
-
-	bpf_memcpy(eth_n->h_source, h_tmp_dst, ETH_ALEN);
-	bpf_memcpy(eth_n->h_dest, h_tmp_src, ETH_ALEN);
-	eth_n->h_proto = bpf_htons(ETH_P_IPV6);
-
-	struct ipv6hdr *ipv6_n = nexthdr;
-	nexthdr += sizeof(*ipv6_n);
+	struct ipv6hdr *ipv6_n = data + off;
+	off += sizeof(struct ipv6hdr);
 	struct ipv6hdr *ipv6_o = data + (int)ADD_HDR_LEN + sizeof(*eth_o);
 
-	__u16 payload_len = len - sizeof(struct ipv6hdr);
-	if (payload_len > IPV6_MTU_MIN - sizeof(struct ipv6hdr))
-		payload_len = IPV6_MTU_MIN - sizeof(struct ipv6hdr);
-
-	if ((void *)(long)ipv6_o + payload_len > data_end)
-		return XDP_DROP;
+	__u16 payload_len = data_end - sizeof(struct ethhdr) - sizeof(struct ipv6hdr) - data;
 
 	bpf_memcpy(ipv6_n->flow_lbl, ipv6_o->flow_lbl, sizeof(ipv6_n->flow_lbl));
 
@@ -197,14 +206,14 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	ipv6_n->saddr		= *ttl_addr;
 	ipv6_n->daddr		= ipv6_o->saddr;
 
-	struct icmp6hdr *icmp6 = nexthdr;
+	struct icmp6hdr *icmp6 = data + off;
 
 	icmp6->icmp6_type					= ICMP6_TIME_EXCEEDED;
 	icmp6->icmp6_code					= 0;
 	icmp6->icmp6_cksum					= 0;
 	icmp6->icmp6_dataun.un_data32[0]	= 0;
 
-	__be32 sum = compute_icmp6_csum((void *)(long)icmp6, payload_len, ipv6_o);
+	__be32 sum = compute_icmp6_csum(icmp6, sizeof(struct icmp6hdr), ipv6_o);
 	icmp6->icmp6_cksum = sum;
 
 	return XDP_TX;
