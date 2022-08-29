@@ -43,16 +43,11 @@ struct {
 		__uint(max_entries, 32);
 } ttl_addrs SEC(".maps");
 
-static __always_inline __u16 csum_fold(__u32 csum) {
-	csum = (csum & 0xffff) + (csum >> 16);
-	csum = (csum & 0xffff) + (csum >> 16);
-	return (__u16)~csum;
-}
-
-static __always_inline __wsum csum_unfold(__sum16 csum)
-{
-	return (__wsum)csum;
-}
+//static __always_inline __u16 csum_fold(__u32 csum) {
+//	csum = (csum & 0xffff) + (csum >> 16);
+//	csum = (csum & 0xffff) + (csum >> 16);
+//	return (__u16)~csum;
+//}
 
 static __always_inline __sum16 csum_add(__wsum csum, __wsum addend)
 {
@@ -60,63 +55,6 @@ static __always_inline __sum16 csum_add(__wsum csum, __wsum addend)
 	return csum + (csum < addend);
 }
 
-static int BPF_FUNC_REMAP(csum_diff_external, const void *from, __u32 size_from,
-			  const void *to, __u32 size_to, __u32 seed) =
-	(void *)BPF_FUNC_csum_diff;
-
-#define CSUM_MANGLED_0		((__sum16)0xffff)
-
-static __always_inline void
-__csum_replace_by_diff(__sum16 *sum, __wsum diff)
-{
-	*sum = csum_fold(csum_add(diff, ~csum_unfold(*sum)));
-}
-
-static __always_inline void
-__csum_replace_by_4(__sum16 *sum, __wsum from, __wsum to)
-{
-	__csum_replace_by_diff(sum, csum_add(~from, to));
-}
-
-static __always_inline int
-l4_csum_replace(const struct xdp_md *ctx, __u64 off, __u32 from, __u32 to,
-		__u32 flags)
-{
-	bool is_mmzero = flags & BPF_F_MARK_MANGLED_0;
-	__u32 size = flags & BPF_F_HDR_FIELD_MASK;
-	__sum16 *sum;
-	int ret;
-
-	if (unlikely(flags & ~(BPF_F_MARK_MANGLED_0 | BPF_F_PSEUDO_HDR |
-			       BPF_F_HDR_FIELD_MASK)))
-		return -1;
-	if (unlikely(size != 0 && size != 2))
-		return -1;
-	/* See xdp_load_bytes(). */
-	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
-		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
-		     "%[off] &= %[offmax]\n\t"
-		     "r1 += %[off]\n\t"
-		     "%[sum] = r1\n\t"
-		     "r1 += 2\n\t"
-		     "if r1 > r2 goto +2\n\t"
-		     "%[ret] = 0\n\t"
-		     "goto +1\n\t"
-		     "%[ret] = %[errno]\n\t"
-		     : [ret]"=r"(ret), [sum]"=r"(sum)
-		     : [ctx]"r"(ctx), [off]"r"(off),
-		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-1)
-		     : "r1", "r2");
-	if (!ret) {
-		if (is_mmzero && !*sum)
-			return 0;
-		from ? __csum_replace_by_4(sum, from, to) :
-		       __csum_replace_by_diff(sum, to);
-		if (is_mmzero && !*sum)
-			*sum = CSUM_MANGLED_0;
-	}
-	return ret;
-}
 
 static __always_inline __wsum csum_diff(const void *from, __u32 size_from,
 										const void *to,   __u32 size_to,
@@ -135,7 +73,7 @@ static __always_inline __wsum csum_diff(const void *from, __u32 size_from,
 						 *(__u32 *)to));
 	}
 
-	return csum_diff_external(from, size_from, to, size_to, seed);
+	return bpf_csum_diff((__u32 *)from, size_from, (__u32 *)to, size_to, seed);
 }
 
 static __always_inline __be32 ipv6_pseudohdr_checksum(struct ipv6hdr *hdr,
@@ -153,7 +91,7 @@ static __always_inline __be32 ipv6_pseudohdr_checksum(struct ipv6hdr *hdr,
 	return sum;
 }
 
-static __always_inline __be32 compute_icmp6_csum(char data[80],
+static __always_inline __be32 compute_icmp6_csum(char data[4],
 												 __u16 payload_len,
 												 struct ipv6hdr *ipv6hdr) {
 	__be32 sum;
@@ -266,10 +204,8 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	icmp6->icmp6_cksum					= 0;
 	icmp6->icmp6_dataun.un_data32[0]	= 0;
 
-	//__be32 sum = compute_icmp6_csum((void *)(long)icmp6, payload_len, ipv6_o);
-	__be32 sum = 0x1234;
-	if (l4_csum_replace(ctx, ICMP6_CSUM_OFFSET, 0, sum, BPF_F_PSEUDO_HDR) < 0)
-		return XDP_DROP;
+	__be32 sum = compute_icmp6_csum((void *)(long)icmp6, payload_len, ipv6_o);
+	icmp6->icmp6_cksum = sum;
 
 	return XDP_TX;
 }

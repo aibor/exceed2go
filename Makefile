@@ -1,6 +1,5 @@
 CLANG ?= clang
-#CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
-CFLAGS := -O2 -g -Wall $(CFLAGS)
+CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
 
 export CGO_ENABLED := 0
 export BPF_CLANG := $(CLANG)
@@ -21,4 +20,6 @@ rootrd.gz: rootrd/init
 
 .PHONY: testbpf
 testbpf: rootrd.gz
-	qemu-system-x86_64 -kernel /boot/vmlinuz-linux -initrd rootrd.gz -serial stdio -display none -append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 -- -test.v'
+	qemu-system-x86_64 -kernel /boot/vmlinuz-linux -initrd rootrd.gz \
+		-serial stdio -display none \
+		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 -- -test.v' < /dev/null
