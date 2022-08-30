@@ -2,15 +2,6 @@
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 
-#define __CTX_OFF_MAX			0xff
-
-#define unlikely(x)     __builtin_expect(!!(x), 0)
-#define BPF_FUNC_REMAP(NAME, ...)					\
-	(* NAME)(__VA_ARGS__)
-
-# define BPF_STUB(NAME, ...)						\
-	(* NAME##__stub)(__VA_ARGS__) = (void *)((__u32)-1)
-
 #define DEFAULT_ACTION		XDP_PASS
 #define ETH_HLEN			14
 #define ETH_ALEN			6
@@ -68,7 +59,6 @@ static __always_inline __sum16 csum_add(__wsum csum, __wsum addend)
 	csum += addend;
 	return csum + (csum < addend);
 }
-
 
 static __always_inline __wsum csum_diff(const void *from, __u32 size_from,
 										const void *to,   __u32 size_to,
@@ -131,9 +121,8 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	void *nexthdr	= data;
 	int len			= ctx->data_end - ctx->data;
 
-	__bpf_printk("entry");
+	bpf_printk("entry");
 	counter_increment(TTL_COUNTER_KEY_ENTRY);
-
 
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
 		return DEFAULT_ACTION;
@@ -159,6 +148,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 		return DEFAULT_ACTION;
 
 	counter_increment(TTL_COUNTER_KEY_TARGET);
+	bpf_printk("target");
 
 	__u32 hop_key = ipv6->hop_limit;
 	struct in6_addr *ttl_addr = bpf_map_lookup_elem(&ttl_addrs, &hop_key);
@@ -172,7 +162,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 		return XDP_DROP;
 
 	int len_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - len;
-	if (len < 0)
+	if (len_adjust < 0)
 		bpf_xdp_adjust_tail(ctx, len_adjust);
 
 	data		= (void *)(long)ctx->data;

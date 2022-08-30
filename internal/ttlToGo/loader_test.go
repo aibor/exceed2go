@@ -1,19 +1,24 @@
 package ttlToGo
 
 import (
+	"bufio"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
+	"time"
 
+	"github.com/cilium/ebpf"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
 func mountfs(m *testing.M, path, fstype string) error {
-	if err := syscall.Mkdir(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		return fmt.Errorf("mkdir %s: %v", path, err)
 	}
 
@@ -34,30 +39,57 @@ func poweroff() {
 
 func run(m *testing.M) int {
 	fmt.Println("Init")
+
+	startprint := make(chan struct{})
+
 	if (os.Getpid() == 1) {
 		defer poweroff()
 
-		if err := mountfs(m, "/sys", "sysfs"); err != nil {
-			fmt.Println(err)
-			return 1
+		mounts := map[string]string{
+			"/sys": "sysfs",
+			"/sys/kernel/debug": "debugfs",
+			"/sys/kernel/debug/tracing": "tracefs",
+			"/proc": "proc",
 		}
 
-		if err := mountfs(m, "/proc", "proc"); err != nil {
-			fmt.Println(err)
-			return 1
+		for mp, t := range mounts {
+			if err := mountfs(m, mp, t); err != nil {
+				fmt.Println(err)
+				return 1
+			}
 		}
 
-		// set printk so we see bpf_printk messages
-		//if err := os.WriteFile("/proc/sys/kernel/printk", []byte("15"), 0755); err != nil {
-		//	fmt.Printf("setting printk: %v\n", err)
-		//	return 1
-		//}
+		time.Sleep(100 * time.Millisecond)
+		go func() {
+			f, err := os.Open("/sys/kernel/debug/tracing/trace_pipe")
+			if err != nil {
+				fmt.Printf("error opening trace pipe: %v\n", err)
+				return
+			}
+			r := bufio.NewReader(f)
+			<-startprint
+			for {
+				l, err := r.ReadString('\n')
+				if err != nil {
+					fmt.Println("err")
+					continue
+				}
+				fmt.Printf(l)
+			}
+		}()
+
+
+		if err := os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755); err != nil {
+			fmt.Printf("setting printk: %v\n", err)
+			return 1
+		}
 	}
 
 	fmt.Println("Run tests")
 	ret := m.Run()
-	// disable any output after tests ran
-	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755)
+	fmt.Println("Print trace")
+	close(startprint)
+	time.Sleep(500 * time.Millisecond)
 	return ret
 }
 
@@ -106,17 +138,30 @@ func load(tb testing.TB) *bpfObjects {
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
 		tb.Errorf("error loading objects: %v", err)
+		var ve *ebpf.VerifierError
+		if errors.As(err, &ve) {
+			tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
+		}
+
+		tb.Fail()
+		return nil
 	}
 	return &objs
 }
 
 func TestLoad(t *testing.T) {
 	objs := load(t)
+	if objs == nil {
+		return
+	}
 	defer objs.Close()
 }
 
 func TestTTL(t *testing.T) {
 	objs := load(t)
+	if objs == nil {
+		return
+	}
 	defer objs.Close()
 
 	if err := objs.TtlAddrs.Put(uint32(0), []byte(net.ParseIP("fd01::ff"))); err != nil {
