@@ -1,7 +1,6 @@
 package ttlToGo
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -127,7 +126,7 @@ func packet(hopLimit int) []byte {
 	return buf.Bytes()
 }
 
-func icmp6Checksum(t *testing.T, src string, length int) uint16 {
+func icmp6Checksum(t *testing.T, src string, length uint16) uint16 {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths: false,
@@ -135,7 +134,6 @@ func icmp6Checksum(t *testing.T, src string, length int) uint16 {
 	}
 
 	ipv6 := layers.IPv6{
-		Version: 6,
 		SrcIP: net.ParseIP(src),
 		DstIP: net.ParseIP("fd03::4"),
 		Length: uint16(length),
@@ -149,8 +147,13 @@ func icmp6Checksum(t *testing.T, src string, length int) uint16 {
 	icmp6.SetNetworkLayerForChecksum(&ipv6)
 	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6)
 	require.NoError(t, err)
-	b := buf.Bytes()
-	return binary.BigEndian.Uint16((b[len(b)-2:]))
+
+	outPkt := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Default)
+	outLayers := outPkt.Layers()
+	icmp6out, ok := outLayers[1].(*layers.ICMPv6)
+	require.True(t, ok, "decode icmp for checksum")
+
+	return icmp6out.Checksum
 }
 
 func load(tb testing.TB) *bpfObjects {
@@ -233,7 +236,6 @@ func TestTTL(t *testing.T) {
 		objs.setAddr(t, ip.hopLimit, ip.addr)
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
 			pkt := packet(ip.hopLimit)
-			//pktPrint(t, pkt)
 			ret, out, err := objs.XdpTtltogo.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
@@ -243,16 +245,19 @@ func TestTTL(t *testing.T) {
 
 			ip6, ok := outLayers[1].(*layers.IPv6)
 			if assert.True(tt, ok, "must be IPv6") {
-				assert.Equal(tt, ip.addr, ip6.SrcIP.String(), "correct sourrce address needed")
+				assert.Equal(tt, ip.addr, ip6.SrcIP.String(), "correct src address needed")
+				assert.Equal(tt, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
+				assert.Equal(tt, 64, int(ip6.Length), "correct length needed")
+				assert.Equal(tt, 6, int(ip6.Version), "correct version needed")
+				assert.Equal(tt, 64, int(ip6.HopLimit), "correct hop limit needed")
+				assert.Equal(tt, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
 			}
 
 			icmp6, ok := outLayers[2].(*layers.ICMPv6)
 			if assert.True(tt, ok, "must be ICMPv6") {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
-				assert.Equal(tt, icmp6Checksum(tt, ip.addr, ip.hopLimit), icmp6.Checksum, icmp6.TypeCode.String())
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, 64), icmp6.Checksum, icmp6.TypeCode.String())
 			}
-			//statsPrint(t, objs)
-			//pktPrint(t, out)
 		})
 	}
 
