@@ -1,6 +1,7 @@
 package ttlToGo
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -14,6 +15,8 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var LoadFailed atomic.Bool
@@ -87,7 +90,7 @@ func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
 
-func packet() []byte {
+func packet(hopLimit int) []byte {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths: true,
@@ -102,10 +105,10 @@ func packet() []byte {
 
 	ipv6 := layers.IPv6{
 		Version: uint8(6),
-		SrcIP: net.ParseIP("fd01::4"),
+		SrcIP: net.ParseIP("fd03::4"),
 		DstIP: net.ParseIP("fd01::ff"),
 		NextHeader: layers.IPProtocolICMPv6,
-		HopLimit: uint8(1),
+		HopLimit: uint8(hopLimit),
 	}
 
 	icmp6 := layers.ICMPv6 {
@@ -122,6 +125,32 @@ func packet() []byte {
 	gopacket.SerializeLayers(buf, opts, &eth, &ipv6, &icmp6, &icmp6echo, &payload)
 
 	return buf.Bytes()
+}
+
+func icmp6Checksum(t *testing.T, src string, length int) uint16 {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths: false,
+		ComputeChecksums: true,
+	}
+
+	ipv6 := layers.IPv6{
+		Version: 6,
+		SrcIP: net.ParseIP(src),
+		DstIP: net.ParseIP("fd03::4"),
+		Length: uint16(length),
+		NextHeader: layers.IPProtocolICMPv6,
+	}
+
+	icmp6 := layers.ICMPv6 {
+		TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0),
+	}
+
+	icmp6.SetNetworkLayerForChecksum(&ipv6)
+	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6)
+	require.NoError(t, err)
+	b := buf.Bytes()
+	return binary.BigEndian.Uint16((b[len(b)-2:]))
 }
 
 func load(tb testing.TB) *bpfObjects {
@@ -189,21 +218,42 @@ func TestTTL(t *testing.T) {
 	objs := load(t)
 	defer objs.Close()
 
-	objs.setAddr(t, 0, "fd01::ff")
-	objs.setAddr(t, 1, "fd01::ee")
-
-	pkt := packet()
-	pktPrint(t, pkt)
-
-	ret, out, err := objs.XdpTtltogo.Test(pkt)
-	if err != nil {
-		t.Fatalf("test error: %v", err)
+	ips := []struct{
+		hopLimit int
+		addr string
+	}{
+		{0, "fd01::ff"},
+		{1, "fd01::ee"},
+		{2, "fd01::dd"},
+		{3, "fd01::cc"},
+		{4, "fd01::bb"},
 	}
 
-	statsPrint(t, objs)
-	pktPrint(t, out)
+	for _, ip := range ips {
+		objs.setAddr(t, ip.hopLimit, ip.addr)
+		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
+			pkt := packet(ip.hopLimit)
+			//pktPrint(t, pkt)
+			ret, out, err := objs.XdpTtltogo.Test(pkt)
+			require.NoError(tt, err, "program must run without error")
+			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
+			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
+			outLayers := outPkt.Layers()
+			assert.Equal(tt, 4, len(outLayers), "number of layers must be correct")
 
-	if ret != 3 {
-		t.Fatalf("wrong return value: %d", ret)
+			ip6, ok := outLayers[1].(*layers.IPv6)
+			if assert.True(tt, ok, "must be IPv6") {
+				assert.Equal(tt, ip.addr, ip6.SrcIP.String(), "correct sourrce address needed")
+			}
+
+			icmp6, ok := outLayers[2].(*layers.ICMPv6)
+			if assert.True(tt, ok, "must be ICMPv6") {
+				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, ip.hopLimit), icmp6.Checksum, icmp6.TypeCode.String())
+			}
+			//statsPrint(t, objs)
+			//pktPrint(t, out)
+		})
 	}
+
 }
