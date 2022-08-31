@@ -1,7 +1,6 @@
 package ttlToGo
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -127,81 +126,84 @@ func packet() []byte {
 
 func load(tb testing.TB) *bpfObjects {
 	if LoadFailed.Load() {
-		tb.Error("Fail due to previous load errors")
-		return nil
+		tb.Fatal("Fail due to previous load errors")
 	}
 
 	objs := bpfObjects{}
-	if err := loadBpfObjects(&objs, nil); err != nil {
-		tb.Errorf("error loading objects: %v", err)
-		var ve *ebpf.VerifierError
-		if errors.As(err, &ve) {
-			tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
-		}
-
-		LoadFailed.Store(true)
-		tb.Fail()
-		return nil
+	err := loadBpfObjects(&objs, nil)
+	if err == nil {
+		return &objs
 	}
 
-	return &objs
+	tb.Errorf("error loading objects: %v", err)
+	var ve *ebpf.VerifierError
+	if errors.As(err, &ve) {
+		tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
+	}
+
+	LoadFailed.Store(true)
+	tb.FailNow()
+
+	return nil
 }
 
-func TestLoad(t *testing.T) {
-	objs := load(t)
-	if objs == nil {
-		return
+func (o *bpfObjects) setAddr(t *testing.T, idx int, addr string) {
+	ip := net.ParseIP(addr)
+	if ip == nil {
+		t.Fatalf("must parse: %s", addr)
 	}
-	defer objs.Close()
+	if err := o.TtlAddrs.Put(uint32(idx), []byte(ip)); err != nil {
+		t.Fatalf("map load error: %v", err)
+	}
 }
 
-func TestTTL(t *testing.T) {
-	objs := load(t)
-	if objs == nil {
-		return
-	}
-	defer objs.Close()
-
-	if err := objs.TtlAddrs.Put(uint32(0), []byte(net.ParseIP("fd01::ff"))); err != nil {
-		t.Errorf("map load error: %v", err)
-		t.Fail()
-		return
-	}
-
-	if err := objs.TtlAddrs.Put(uint32(1), []byte(net.ParseIP("fd01::ee"))); err != nil {
-		t.Errorf("map load error: %v", err)
-		t.Fail()
-		return
-	}
-
-	pkt := packet()
-	t.Logf("in length: %d", len(pkt))
-	t.Log(hex.EncodeToString(pkt))
-	ret, out, err := objs.XdpTtltogo.Test(pkt)
-	if err != nil {
-		t.Errorf("test error: %v", err)
-		t.Fail()
-		return
-	}
-
+func statsPrint(t *testing.T, objs *bpfObjects) {
 	var nextKey uint32
 	var lookupKeys   = make([]uint32, 8)
 	var lookupValues = make([]uint32, 8)
 	objs.TtlCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
-	for idx, key := range lookupKeys {
-		t.Logf("%d: %d", key, lookupValues[idx])
-		if key == nextKey {
-			break
+	t.Logf("  Index: % d", lookupKeys)
+	t.Logf("Counter: % d", lookupValues)
+}
+
+func pktPrint(t *testing.T, pkt []byte) {
+	t.Logf("length: %d", len(pkt))
+	for i := 0; i < len(pkt); i += 16 {
+		var out []byte
+		if e := i + 16; e >= len(pkt) {
+			out = pkt[i:]
+		} else {
+			out = pkt[i:e]
 		}
+		t.Logf("%d: % x\n", i/16, out)
+	}
+}
+
+func TestLoad(t *testing.T) {
+	objs := load(t)
+	objs.Close()
+}
+
+func TestTTL(t *testing.T) {
+	objs := load(t)
+	defer objs.Close()
+
+	objs.setAddr(t, 0, "fd01::ff")
+	objs.setAddr(t, 1, "fd01::ee")
+
+	pkt := packet()
+	pktPrint(t, pkt)
+
+	ret, out, err := objs.XdpTtltogo.Test(pkt)
+	if err != nil {
+		t.Fatalf("test error: %v", err)
 	}
 
-	t.Logf("out length: %d", len(out))
-	t.Log(hex.EncodeToString(out))
+	statsPrint(t, objs)
+	pktPrint(t, out)
 
 	if ret != 3 {
-		t.Errorf("wrong return value: %d", ret)
-		t.Fail()
-		return
+		t.Fatalf("wrong return value: %d", ret)
 	}
 }
