@@ -1,13 +1,13 @@
 package ttlToGo
 
 import (
-	"bufio"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -17,12 +17,18 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+var LoadFailed atomic.Bool
+
 func mountfs(m *testing.M, path, fstype string) error {
+	if (os.Getpid() != 1) {
+		return nil
+	}
+
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return fmt.Errorf("mkdir %s: %v", path, err)
 	}
 
-	if err := syscall.Mount("", path, fstype, uintptr(syscall.MS_NOEXEC), ""); err != nil {
+	if err := syscall.Mount("", path, fstype, 0, ""); err != nil {
 		return fmt.Errorf("mount %s: %v", path, err)
 	}
 
@@ -38,58 +44,43 @@ func poweroff() {
 }
 
 func run(m *testing.M) int {
+	defer poweroff()
 	fmt.Println("Init")
 
-	startprint := make(chan struct{})
+	mounts := map[string]string{
+		"/sys": "sysfs",
+		"/sys/kernel/tracing": "tracefs",
+		"/proc": "proc",
+	}
 
-	if (os.Getpid() == 1) {
-		defer poweroff()
-
-		mounts := map[string]string{
-			"/sys": "sysfs",
-			"/sys/kernel/debug": "debugfs",
-			"/sys/kernel/debug/tracing": "tracefs",
-			"/proc": "proc",
-		}
-
-		for mp, t := range mounts {
-			if err := mountfs(m, mp, t); err != nil {
-				fmt.Println(err)
-				return 1
-			}
-		}
-
-		time.Sleep(100 * time.Millisecond)
-		go func() {
-			f, err := os.Open("/sys/kernel/debug/tracing/trace_pipe")
-			if err != nil {
-				fmt.Printf("error opening trace pipe: %v\n", err)
-				return
-			}
-			r := bufio.NewReader(f)
-			<-startprint
-			for {
-				l, err := r.ReadString('\n')
-				if err != nil {
-					fmt.Println("err")
-					continue
-				}
-				fmt.Printf(l)
-			}
-		}()
-
-
-		if err := os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755); err != nil {
-			fmt.Printf("setting printk: %v\n", err)
+	for mp, t := range mounts {
+		if err := mountfs(m, mp, t); err != nil {
+			fmt.Println(err)
 			return 1
 		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if err := os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755); err != nil {
+		fmt.Printf("setting printk: %v\n", err)
+		return 1
 	}
 
 	fmt.Println("Run tests")
 	ret := m.Run()
 	fmt.Println("Print trace")
-	close(startprint)
-	time.Sleep(500 * time.Millisecond)
+	f, err := os.ReadFile("/sys/kernel/tracing/trace")
+	if err != nil {
+		fmt.Printf("error opening trace pipe: %v\n", err)
+		return ret
+	}
+
+	for _, l := range strings.Split(string(f), "\n") {
+		if !strings.HasPrefix(l, "#") {
+			fmt.Println(l)
+		}
+	}
+
 	return ret
 }
 
@@ -135,6 +126,11 @@ func packet() []byte {
 }
 
 func load(tb testing.TB) *bpfObjects {
+	if LoadFailed.Load() {
+		tb.Error("Fail due to previous load errors")
+		return nil
+	}
+
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
 		tb.Errorf("error loading objects: %v", err)
@@ -143,9 +139,11 @@ func load(tb testing.TB) *bpfObjects {
 			tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
 		}
 
+		LoadFailed.Store(true)
 		tb.Fail()
 		return nil
 	}
+
 	return &objs
 }
 
