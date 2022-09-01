@@ -20,13 +20,8 @@ import (
 
 var LoadFailed atomic.Bool
 
-type mapIP struct {
-	hopLimit int
-	addr string
-}
-
-func mapIPs() []mapIP {
-	return []mapIP{
+func mapIPs() []MapIP {
+	return []MapIP{
 		{0, "fd01::ff"},
 		{1, "fd01::ee"},
 		{2, "fd01::dd"},
@@ -182,11 +177,10 @@ func load(tb testing.TB) *bpfObjects {
 		tb.Fatal("Fail due to previous load errors")
 	}
 
-	objs := bpfObjects{}
-	err := loadBpfObjects(&objs, nil)
+	objs, err := Load()
 	if err == nil {
 		tb.Cleanup(func() { objs.Close() })
-		return &objs
+		return objs
 	}
 
 	tb.Errorf("error loading objects: %v", err)
@@ -202,11 +196,7 @@ func load(tb testing.TB) *bpfObjects {
 }
 
 func (o *bpfObjects) setAddr(t *testing.T, idx int, addr string) {
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		t.Fatalf("must parse: %s", addr)
-	}
-	if err := o.TtlAddrs.Put(uint32(idx), []byte(ip)); err != nil {
+	if err := o.SetAddr(idx, addr); err != nil {
 		t.Fatalf("map load error: %v", err)
 	}
 }
@@ -273,7 +263,7 @@ func TestTTL(t *testing.T) {
 }
 
 func TestNoMatch(t *testing.T) {
-	ips := []mapIP{
+	ips := []MapIP{
 		{42,"fd0f::ff"},
 		{12,"fe80::1"},
 		{1,"1234:dead:beef:c0ff:ee:101::ff"},

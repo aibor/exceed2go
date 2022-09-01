@@ -1,25 +1,46 @@
+SHELL := bash
+.ONESHELL:
+
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
 
 export CGO_ENABLED := 0
-export BPF_CLANG := $(CLANG)
-export BPF_CFLAGS := $(CFLAGS)
+
+BPF_FILE := bpf/ttltogo.c
+BPF2GO_FILE := internal/ttlToGo/bpf_bpfel.go
+BPF_TEST_FILE := internal/ttlToGo/loader_test.go
+INITRD_FILE := rootrd.gz
+TEST_INIT_FILE := rootrd/init
+KERNEL_FILE := /boot/vmlinuz-linux
 
 .PHONY: clean
 clean:
-	rm -rv internal/ttlToGo/bpf_bpfe*o
+	@rm -frv \
+		$(BPF2GO_FILE) \
+		$(patsubst %.go,%.o,$(BPF2GO_FILE)) \
+		$(INITRD_FILE) \
+		$(TEST_INIT_FILE)
 
-internal/ttlToGo/bpf_bpfel.go: bpf/ttltogo.c
-	go generate ./internal/ttlToGo/loader.go
+$(BPF2GO_FILE): $(BPF_FILE) bpf/*.h
+	pushd $(@D)
+	GOPACKAGE=ttlToGo go run github.com/cilium/ebpf/cmd/bpf2go -cc $(CLANG) \
+		-target bpfel \
+		-cflags "$(CFLAGS)" \
+		bpf $$(popd >/dev/null; realpath $(BPF_FILE))
 
-rootrd/init: internal/ttlToGo/loader_test.go internal/ttlToGo/bpf_bpfel.go
-	go test -c -o $@ ./internal/ttlToGo/
+$(TEST_INIT_FILE): $(BPF_TEST_FILE) $(BPF2GO_FILE)
+	go test -c -o $@ ./$(<D)
 
-rootrd.gz: rootrd/init
-	pushd rootrd/ && find . | cpio -o -H newc | gzip -c > ../rootrd.gz && popd
+$(INITRD_FILE): $(TEST_INIT_FILE)
+	pushd $(<D)
+	find . | cpio -o -H newc | gzip -c > ../$@
 
 .PHONY: testbpf
-testbpf: rootrd.gz
-	qemu-system-x86_64 -kernel /boot/vmlinuz-linux -initrd rootrd.gz \
-		-serial stdio -display none \
-		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 -- -test.v' < /dev/null
+testbpf: $(INITRD_FILE)
+	@qemu-system-x86_64 \
+		-kernel $(KERNEL_FILE) \
+		-initrd $< \
+		-serial stdio \
+		-display none \
+		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 -- -test.v' \
+		< /dev/null
