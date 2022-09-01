@@ -142,17 +142,16 @@ func packet(hopLimit int, dstAddr string) []byte {
 	return buf.Bytes()
 }
 
-func icmp6Checksum(t *testing.T, src string, length uint16) uint16 {
+func icmp6Checksum(t *testing.T, src, dst string, length int) uint16 {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
-		FixLengths: false,
+		FixLengths: true,
 		ComputeChecksums: true,
 	}
 
 	ipv6 := layers.IPv6{
 		SrcIP: net.ParseIP(src),
-		DstIP: net.ParseIP("fd03::4"),
-		Length: uint16(length),
+		DstIP: net.ParseIP(dst),
 		NextHeader: layers.IPProtocolICMPv6,
 	}
 
@@ -160,12 +159,22 @@ func icmp6Checksum(t *testing.T, src string, length uint16) uint16 {
 		TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0),
 	}
 
+	p := make([]byte, 0)
+	for i := 4; i < length; i++ {
+		p = append(p, 0xff)
+	}
+
+	payload := gopacket.Payload(p)
+
 	icmp6.SetNetworkLayerForChecksum(&ipv6)
-	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6)
+	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6, &payload)
 	require.NoError(t, err)
 
 	outPkt := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Default)
 	outLayers := outPkt.Layers()
+	ip6out, ok := outLayers[0].(*layers.IPv6)
+	require.True(t, ok, "decode ip for checksum")
+	require.Equal(t, uint16(length), ip6out.Length, "decode ip for checksum")
 	icmp6out, ok := outLayers[1].(*layers.ICMPv6)
 	require.True(t, ok, "decode icmp for checksum")
 
@@ -241,7 +250,7 @@ func TestTTL(t *testing.T) {
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
 			outLayers := outPkt.Layers()
-			assert.Equal(tt, 4, len(outLayers), "number of layers must be correct")
+			require.Equal(tt, 4, len(outLayers), "number of layers must be correct")
 
 			ip6, ok := outLayers[1].(*layers.IPv6)
 			if assert.True(tt, ok, "must be IPv6") {
@@ -256,7 +265,7 @@ func TestTTL(t *testing.T) {
 			icmp6, ok := outLayers[2].(*layers.ICMPv6)
 			if assert.True(tt, ok, "must be ICMPv6") {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
-				assert.Equal(tt, icmp6Checksum(tt, ip.addr, 64), icmp6.Checksum, icmp6.TypeCode.String())
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", 64), icmp6.Checksum, "checksum must match")
 			}
 		})
 	}

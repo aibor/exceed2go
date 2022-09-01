@@ -40,37 +40,22 @@ enum ttl_counter_key {
 	TTL_COUNTER_KEY_FOUND
 };
 
-static __always_inline __u16 csum_fold(__u32 csum) {
-	csum = (csum & 0xffff) + (csum >> 16);
-	csum = (csum & 0xffff) + (csum >> 16);
-	return (__u16)~csum;
-}
-
-static __always_inline __be32 ipv6_pseudohdr_checksum(struct ipv6hdr *hdr,
-												      __u8 next_hdr,
-												      __u16 payload_len,
-													  __be32 sum) {
+static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
+										__u16 payload_len,
+										struct ipv6hdr *ipv6) {
 	__be32 len = bpf_htonl((__u32)payload_len);
-	__be32 nexthdr = bpf_htonl((__u32)next_hdr);
+	__be32 nexthdr = bpf_htonl((__u32)IPPROTO_ICMPV6);
+	__be32 sum;
 
-	sum = bpf_csum_diff(NULL, 0, (__be32 *)&hdr->saddr, sizeof(struct in6_addr), sum);
-	sum = bpf_csum_diff(NULL, 0, (__be32 *)&hdr->daddr, sizeof(struct in6_addr), sum);
+	sum = bpf_csum_diff(NULL, 0, (__be32 *)icmp6, 8, 0);
+	sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, sizeof(struct in6_addr), sum);
+	sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, sizeof(struct in6_addr), sum);
 	sum = bpf_csum_diff(NULL, 0, &len, sizeof(len), sum);
 	sum = bpf_csum_diff(NULL, 0, &nexthdr, sizeof(nexthdr), sum);
 
-	return sum;
-}
-
-static __always_inline __be32 compute_icmp6_csum(struct icmp6hdr *icmp6hdr,
-												 __u16 payload_len,
-												 struct ipv6hdr *ipv6hdr) {
-	__be32 sum;
-
-	/* compute checksum with new payload length */
-	sum = bpf_csum_diff(NULL, 0, (__be32 *)icmp6hdr, payload_len, 0);
-	sum = ipv6_pseudohdr_checksum(ipv6hdr, IPPROTO_ICMPV6, payload_len,
-				      sum);
-	return sum;
+	sum = (sum & 0xffff) + (sum >> 16);
+	sum = (sum & 0xffff) + (sum >> 16);
+	return (__u16)~sum;
 }
 
 static __always_inline void counter_increment(__u32 key) {
@@ -138,7 +123,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 
 	// validate locations after resizing
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + ADD_HDR_LEN > data_end)
-		return DEFAULT_ACTION;
+		return XDP_DROP;
 
 	// reinitialize old headers
 	struct ethhdr *eth_o = data + (int)ADD_HDR_LEN;
@@ -173,9 +158,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	// time exceeed has 4 bytes inused space before payload starts
 	icmp6->icmp6_dataun.un_data32[0]	= 0;
 
-	// time exceeded is 4 byte long
-	__be32 sum = compute_icmp6_csum(icmp6, 4, ipv6_n);
-	icmp6->icmp6_cksum = csum_fold(sum);
+	icmp6->icmp6_cksum = icmp6_csum(icmp6, payload_len, ipv6_n);
 
 	return XDP_TX;
 }
