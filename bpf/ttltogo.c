@@ -110,7 +110,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	if (!target)
 		return DEFAULT_ACTION;
 
-	if (IN6_ARE_ADDR_EQUAL(&ipv6->saddr, target))
+	if (!IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
 		return DEFAULT_ACTION;
 
 	counter_increment(TTL_COUNTER_KEY_TARGET);

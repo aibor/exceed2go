@@ -289,7 +289,6 @@ func TestNoMatch(t *testing.T) {
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
-			objs.statsPrint(tt)
 		})
 	}
 }
