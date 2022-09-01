@@ -20,6 +20,27 @@ import (
 
 var LoadFailed atomic.Bool
 
+type mapIP struct {
+	hopLimit int
+	addr string
+}
+
+func mapIPs() []mapIP {
+	return []mapIP{
+		{0, "fd01::ff"},
+		{1, "fd01::ee"},
+		{2, "fd01::dd"},
+		{3, "fd01::cc"},
+		{4, "fd01::bb"},
+	}
+}
+
+func (o *bpfObjects) setMapIPs(t *testing.T) {
+	for _, ip := range mapIPs() {
+		o.setAddr(t, ip.hopLimit, ip.addr)
+	}
+}
+
 func mountfs(m *testing.M, path, fstype string) error {
 	if (os.Getpid() != 1) {
 		return nil
@@ -89,7 +110,7 @@ func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
 
-func packet(hopLimit int) []byte {
+func packet(hopLimit int, dstAddr string) []byte {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths: true,
@@ -105,7 +126,7 @@ func packet(hopLimit int) []byte {
 	ipv6 := layers.IPv6{
 		Version: uint8(6),
 		SrcIP: net.ParseIP("fd03::4"),
-		DstIP: net.ParseIP("fd01::ff"),
+		DstIP: net.ParseIP(dstAddr),
 		NextHeader: layers.IPProtocolICMPv6,
 		HopLimit: uint8(hopLimit),
 	}
@@ -164,6 +185,7 @@ func load(tb testing.TB) *bpfObjects {
 	objs := bpfObjects{}
 	err := loadBpfObjects(&objs, nil)
 	if err == nil {
+		tb.Cleanup(func() { objs.Close() })
 		return &objs
 	}
 
@@ -189,11 +211,11 @@ func (o *bpfObjects) setAddr(t *testing.T, idx int, addr string) {
 	}
 }
 
-func statsPrint(t *testing.T, objs *bpfObjects) {
+func (o *bpfObjects) statsPrint(t *testing.T) {
 	var nextKey uint32
 	var lookupKeys   = make([]uint32, 8)
 	var lookupValues = make([]uint32, 8)
-	objs.TtlCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	o.TtlCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	t.Logf("  Index: % d", lookupKeys)
 	t.Logf("Counter: % d", lookupValues)
@@ -218,24 +240,12 @@ func TestLoad(t *testing.T) {
 }
 
 func TestTTL(t *testing.T) {
-	objs := load(t)
-	defer objs.Close()
-
-	ips := []struct{
-		hopLimit int
-		addr string
-	}{
-		{0, "fd01::ff"},
-		{1, "fd01::ee"},
-		{2, "fd01::dd"},
-		{3, "fd01::cc"},
-		{4, "fd01::bb"},
-	}
-
-	for _, ip := range ips {
-		objs.setAddr(t, ip.hopLimit, ip.addr)
+	for _, ip := range mapIPs() {
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
-			pkt := packet(ip.hopLimit)
+			objs := load(tt)
+			objs.setMapIPs(tt)
+
+			pkt := packet(ip.hopLimit, mapIPs()[0].addr)
 			ret, out, err := objs.XdpTtltogo.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
@@ -260,5 +270,26 @@ func TestTTL(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestNoMatch(t *testing.T) {
+	ips := []mapIP{
+		{42,"fd0f::ff"},
+		{12,"fe80::1"},
+		{1,"1234:dead:beef:c0ff:ee:101::ff"},
+	}
+
+	for _, ip := range ips {
+		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
+			objs := load(tt)
+			objs.setMapIPs(tt)
+
+			pkt := packet(ip.hopLimit, ip.addr)
+			ret, out, err := objs.XdpTtltogo.Test(pkt)
+			require.NoError(tt, err, "program must run without error")
+			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
+			assert.Equal(tt, pkt, out, "output package must be the same as input")
+			objs.statsPrint(tt)
+		})
+	}
 }
