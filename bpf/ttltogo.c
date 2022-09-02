@@ -65,12 +65,72 @@ static __always_inline void counter_increment(__u32 key) {
 	}
 }
 
+static __always_inline int reply_exceeded(struct xdp_md *ctx, struct in6_addr *src_addr) {
+	void *data		= (void *)(unsigned long)ctx->data;
+	void *data_end	= (void *)(unsigned long)ctx->data_end;
+	int off			= 0;
+	int len_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - (data_end - data);
+
+	if (bpf_xdp_adjust_head(ctx, (0 - (int)ADD_HDR_LEN)) != 0)
+		return XDP_DROP;
+
+	if (len_adjust < 0)
+		bpf_xdp_adjust_tail(ctx, len_adjust);
+
+	// reinitialize after length change
+	data		= (void *)(long)ctx->data;
+	data_end	= (void *)(long)ctx->data_end;
+	off			= 0;
+
+	// validate locations after resizing
+	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + ADD_HDR_LEN > data_end)
+		return XDP_DROP;
+
+	// former header positions
+	struct ethhdr *eth_o = data + (int)ADD_HDR_LEN;
+	struct ipv6hdr *ipv6_o = data + (int)ADD_HDR_LEN + sizeof(*eth_o);
+
+	// new headers
+	struct ethhdr *eth_n = data;
+	off += sizeof(struct ethhdr);
+
+	// relocate data and swap mac addresses
+	bpf_memcpy(eth_n->h_source, eth_o->h_dest, ETH_ALEN);
+	bpf_memcpy(eth_n->h_dest, eth_o->h_source, ETH_ALEN);
+	eth_n->h_proto = eth_o->h_proto;
+
+	struct ipv6hdr *ipv6_n = data + off;
+	off += sizeof(struct ipv6hdr);
+
+	__u16 payload_len = data_end - data - off;
+
+	ipv6_n->version		= 6;
+	ipv6_n->priority	= ipv6_o->priority;
+	ipv6_n->payload_len = bpf_htons(payload_len);
+	ipv6_n->nexthdr		= IPPROTO_ICMPV6;
+	ipv6_n->hop_limit	= 64;
+	ipv6_n->saddr		= *src_addr;
+	ipv6_n->daddr		= ipv6_o->saddr;
+	bpf_memcpy(ipv6_n->flow_lbl, ipv6_o->flow_lbl, sizeof(ipv6_n->flow_lbl));
+
+	struct icmp6hdr *icmp6 = data + off;
+
+	icmp6->icmp6_type					= ICMP6_TIME_EXCEEDED;
+	icmp6->icmp6_code					= 0;
+	icmp6->icmp6_cksum					= 0;
+	// time exceeded has 4 bytes inused space before payload starts
+	icmp6->icmp6_dataun.un_data32[0]	= 0;
+
+	icmp6->icmp6_cksum = icmp6_csum(icmp6, payload_len, ipv6_n);
+
+	return XDP_TX;
+}
+
 SEC("xdp")
 int xdp_ttltogo(struct xdp_md *ctx) {
 	void *data		= (void *)(unsigned long)ctx->data;
 	void *data_end	= (void *)(unsigned long)ctx->data_end;
 	int off			= 0;
-	int inlen		= data_end - data;
 
 	counter_increment(TTL_COUNTER_KEY_ENTRY);
 
@@ -110,57 +170,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 
 	counter_increment(TTL_COUNTER_KEY_FOUND);
 
-	if (bpf_xdp_adjust_head(ctx, (0 - (int)ADD_HDR_LEN)) != 0)
-		return XDP_DROP;
-
-	int len_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - inlen;
-	if (len_adjust < 0)
-		bpf_xdp_adjust_tail(ctx, len_adjust);
-
-	data		= (void *)(long)ctx->data;
-	data_end	= (void *)(long)ctx->data_end;
-	off			= 0;
-
-	// validate locations after resizing
-	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + ADD_HDR_LEN > data_end)
-		return XDP_DROP;
-
-	// reinitialize old headers
-	struct ethhdr *eth_o = data + (int)ADD_HDR_LEN;
-	struct ipv6hdr *ipv6_o = data + (int)ADD_HDR_LEN + sizeof(*eth_o);
-
-	struct ethhdr *eth_n = data;
-	off += sizeof(struct ethhdr);
-
-	bpf_memcpy(eth_n->h_source, eth_o->h_dest, ETH_ALEN);
-	bpf_memcpy(eth_n->h_dest, eth_o->h_source, ETH_ALEN);
-	eth_n->h_proto = eth_o->h_proto;
-
-	struct ipv6hdr *ipv6_n = data + off;
-	off += sizeof(struct ipv6hdr);
-
-	__u16 payload_len = data_end - data - off;
-
-	ipv6_n->version		= 6;
-	ipv6_n->priority	= ipv6_o->priority;
-	ipv6_n->payload_len = bpf_htons(payload_len);
-	ipv6_n->nexthdr		= IPPROTO_ICMPV6;
-	ipv6_n->hop_limit	= 64;
-	ipv6_n->saddr		= *ttl_addr;
-	ipv6_n->daddr		= ipv6_o->saddr;
-	bpf_memcpy(ipv6_n->flow_lbl, ipv6_o->flow_lbl, sizeof(ipv6_n->flow_lbl));
-
-	struct icmp6hdr *icmp6 = data + off;
-
-	icmp6->icmp6_type					= ICMP6_TIME_EXCEEDED;
-	icmp6->icmp6_code					= 0;
-	icmp6->icmp6_cksum					= 0;
-	// time exceeed has 4 bytes inused space before payload starts
-	icmp6->icmp6_dataun.un_data32[0]	= 0;
-
-	icmp6->icmp6_cksum = icmp6_csum(icmp6, payload_len, ipv6_n);
-
-	return XDP_TX;
+	return reply_exceeded(ctx, ttl_addr);
 }
 
 char _license[] SEC("license") = "GPL";
