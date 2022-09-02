@@ -64,14 +64,17 @@ func run(m *testing.M) int {
 	defer poweroff()
 	fmt.Println("Init")
 
-	mounts := map[string]string{
-		"/sys": "sysfs",
-		"/sys/kernel/tracing": "tracefs",
-		"/proc": "proc",
+	mounts := []struct{
+		dest string
+		fstype string
+	}{
+		{"/sys", "sysfs"},
+		{"/sys/kernel/tracing", "tracefs"},
+		{"/proc", "proc"},
 	}
 
-	for mp, t := range mounts {
-		if err := mountfs(m, mp, t); err != nil {
+	for _, mp := range mounts {
+		if err := mountfs(m, mp.dest, mp.fstype); err != nil {
 			fmt.Println(err)
 			return 1
 		}
