@@ -165,7 +165,7 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	__u32 hop_key = ipv6->hop_limit;
 	struct in6_addr *ttl_addr = bpf_map_lookup_elem(&ttl_addrs, &hop_key);
 
-	if (!ttl_addr)
+	if (!ttl_addr || !((const uint32_t *) (ttl_addr))[0])
 		return DEFAULT_ACTION;
 
 	counter_increment(TTL_COUNTER_KEY_FOUND);
