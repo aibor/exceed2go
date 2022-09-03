@@ -297,16 +297,37 @@ func TestChecksum(t *testing.T) {
 		src string
 		dst string
 		chksum int
-		payload []byte
+		payload []string
 	}{
-		//{"2a01:4f8:1c1c:86a3::ff:ee", "2a01:4f8:c010:a6ed::1", 0xecff, []byte{}},
-		{"2a01:4f8:1c1c:86a3::ff:ee", "2a01:4f8:c010:a6ed::1", 0xed2f,
-		[]byte{0x60, 0x06, 0x0b, 0xea, 0x00, 0x10, 0x3a, 0x01, 0x2a, 0x01, 0x04, 0xf8, 0xc0, 0x10, 0xa6, 0xed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2a, 0x01, 0x04, 0xf8, 0x1c, 0x1c, 0x86, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0xff, 0x80, 0x00, 0x09, 0xe7, 0x00, 0x0a, 0x00, 0x05, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
-},
+		{
+			"2a01:4f8:1c1c:86a3::ff:ee",
+			"2a01:4f8:c010:a6ed::1",
+			0xecff,
+			[]string{
+				"\x60\x06\x0b\xea\x00\x40\x3a\x01\x2a\x01\x04\xf8\xc0\x10\xa6\xed",
+				"\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8\x1c\x1c\x86\xa3",
+				"\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\xdb\x22\x00\x09\x00\x0c",
+				"\x2b\x4a\x13\x63\x00\x00\x00\x00\x36\x1e\x07\x00\x00\x00\x00\x00",
+				"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+				"\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f",
+				"\x30\x31\x32\x33\x34\x35\x36\x37",
+			},
+		},
+		{
+			"2a01:4f8:1c1c:86a3::ff:ee",
+			"2a01:4f8:c010:a6ed::1",
+			0xed2f,
+			[]string{
+				"\x60\x06\x0b\xea\x00\x10\x3a\x01\x2a\x01\x04\xf8\xc0\x10\xa6\xed",
+				"\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8\x1c\x1c\x86\xa3",
+				"\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\x09\xe7\x00\x0a\x00\x05",
+				"\x00\x01\x02\x03\x04\x05\x06\x07",
+			},
+		},
 	}
 
 	for idx, c := range chksums {
-		chksum := icmp6Checksum(t, c.src, c.dst, c.payload)
+		chksum := icmp6Checksum(t, c.src, c.dst, []byte(strings.Join(c.payload, "")))
 		assert.Equal(t, uint16(c.chksum), chksum, "must match: %d", idx)
 	}
 }
