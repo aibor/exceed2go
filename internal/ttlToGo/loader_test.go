@@ -265,7 +265,7 @@ func TestTTL(t *testing.T) {
 			icmp6, ok := outLayers[2].(*layers.ICMPv6)
 			if assert.True(tt, ok, "must be ICMPv6") {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
-				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", out[54:]), icmp6.Checksum, "checksum must match")
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", out[62:]), icmp6.Checksum, "checksum must match")
 			}
 		})
 	}

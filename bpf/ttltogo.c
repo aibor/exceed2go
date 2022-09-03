@@ -41,17 +41,37 @@ enum ttl_counter_key {
 };
 
 static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
-										__u16 payload_len,
-										struct ipv6hdr *ipv6) {
-	__be32 len = bpf_htonl((__u32)payload_len);
-	__be32 nexthdr = bpf_htonl((__u32)IPPROTO_ICMPV6);
-	__be32 sum;
+										struct ipv6hdr *ipv6,
+										void *data_end) {
+	__be32 len = ((__u32)ipv6->payload_len) << 16;
+	__be32 nexthdr = ((__u32)ipv6->nexthdr) << 24;
+	__be32 sum = 0;
 
-	sum = bpf_csum_diff(NULL, 0, (__be32 *)icmp6, 8, 0);
 	sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, sizeof(struct in6_addr), sum);
 	sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, sizeof(struct in6_addr), sum);
 	sum = bpf_csum_diff(NULL, 0, &len, sizeof(len), sum);
 	sum = bpf_csum_diff(NULL, 0, &nexthdr, sizeof(nexthdr), sum);
+
+	// sum up payload
+	__be32 *buf = (void *)icmp6;
+	for (int i = 0; i < IPV6_MTU_MIN; i += 4) {
+		if ((void *)(buf + 1) > data_end) {
+			break;
+		}
+		sum = bpf_csum_diff(NULL, 0, buf, sizeof(*buf), sum);
+		buf++;
+	}
+
+	// in case there are some bytes left because the packet length is not a
+	// multiple of 4.
+	if (data_end - (void *)buf > 0) {
+		__u8 r[4];
+		void *buf2 = (void *)buf;
+		for (int i = 0; i < 4; i++) {
+			r[i] = (void *)(buf2 + 1) > data_end ? 0 : *(__u8 *)buf2++;
+		}
+		sum = bpf_csum_diff(NULL, 0, (__be32*)&r, sizeof(__be32), sum);
+	}
 
 	sum = (sum & 0xffff) + (sum >> 16);
 	sum = (sum & 0xffff) + (sum >> 16);
@@ -121,7 +141,7 @@ static __always_inline int reply_exceeded(struct xdp_md *ctx, struct in6_addr *s
 	// time exceeded has 4 bytes inused space before payload starts
 	icmp6->icmp6_dataun.un_data32[0]	= 0;
 
-	icmp6->icmp6_cksum = icmp6_csum(icmp6, payload_len, ipv6_n);
+	icmp6->icmp6_cksum = icmp6_csum(icmp6, ipv6_n, data_end);
 
 	return XDP_TX;
 }

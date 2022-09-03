@@ -40,6 +40,7 @@ testbpf: $(INITRD_FILE)
 	@qemu-system-x86_64 \
 		-kernel $(KERNEL_FILE) \
 		-initrd $< \
+		-m 256 \
 		-serial stdio \
 		-display none \
 		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 -- -test.v' \
