@@ -5,7 +5,8 @@ import (
 	"net"
 
 	_ "github.com/cilium/ebpf"
-	//"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 )
 
 type MapIP struct {
@@ -46,4 +47,18 @@ func (o *bpfObjects) GetStats() []uint32 {
 	o.TtlCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	return lookupValues
+}
+
+func (o *bpfObjects) AttachProg(ifName string) error {
+	link, err := netlink.LinkByName(ifName)
+	if err != nil {
+		return fmt.Errorf("interface not found: %s: %w", ifName, err)
+	}
+
+	flags := nl.XDP_FLAGS_SKB_MODE
+	if err := netlink.LinkSetXdpFdWithFlags(link, o.XdpTtltogo.FD(), flags); err != nil {
+		return fmt.Errorf("failed to load XDP program: %w", err)
+	}
+
+	return nil
 }
