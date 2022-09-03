@@ -81,13 +81,18 @@ func run(m *testing.M) int {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	if err := os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755); err != nil {
-		fmt.Printf("setting printk: %v\n", err)
-		return 1
+	if (os.Getpid() == 1) {
+		if err := os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755); err != nil {
+			fmt.Printf("setting printk: %v\n", err)
+			return 1
+		}
 	}
 
 	fmt.Println("Run tests")
 	ret := m.Run()
+	if (os.Getpid() != 1) {
+		return ret
+	}
 	fmt.Println("Print trace")
 	f, err := os.ReadFile("/sys/kernel/tracing/trace")
 	if err != nil {
@@ -145,7 +150,7 @@ func packet(hopLimit int, dstAddr string) []byte {
 	return buf.Bytes()
 }
 
-func icmp6Checksum(t *testing.T, src, dst string, length int) uint16 {
+func icmp6Checksum(t *testing.T, src, dst string, payload []byte) uint16 {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths: true,
@@ -162,22 +167,14 @@ func icmp6Checksum(t *testing.T, src, dst string, length int) uint16 {
 		TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0),
 	}
 
-	p := make([]byte, 0)
-	for i := 4; i < length; i++ {
-		p = append(p, 0xff)
-	}
-
-	payload := gopacket.Payload(p)
+	pload := gopacket.Payload(append([]byte{0x0, 0x0, 0x0, 0x0}, payload...))
 
 	icmp6.SetNetworkLayerForChecksum(&ipv6)
-	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6, &payload)
+	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6, &pload)
 	require.NoError(t, err)
 
 	outPkt := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Default)
 	outLayers := outPkt.Layers()
-	ip6out, ok := outLayers[0].(*layers.IPv6)
-	require.True(t, ok, "decode ip for checksum")
-	require.Equal(t, uint16(length), ip6out.Length, "decode ip for checksum")
 	icmp6out, ok := outLayers[1].(*layers.ICMPv6)
 	require.True(t, ok, "decode icmp for checksum")
 
@@ -268,7 +265,7 @@ func TestTTL(t *testing.T) {
 			icmp6, ok := outLayers[2].(*layers.ICMPv6)
 			if assert.True(tt, ok, "must be ICMPv6") {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
-				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", 64), icmp6.Checksum, "checksum must match")
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", out[54:]), icmp6.Checksum, "checksum must match")
 			}
 		})
 	}
@@ -292,5 +289,24 @@ func TestNoMatch(t *testing.T) {
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
 		})
+	}
+}
+
+func TestChecksum(t *testing.T) {
+	chksums := []struct{
+		src string
+		dst string
+		chksum int
+		payload []byte
+	}{
+		//{"2a01:4f8:1c1c:86a3::ff:ee", "2a01:4f8:c010:a6ed::1", 0xecff, []byte{}},
+		{"2a01:4f8:1c1c:86a3::ff:ee", "2a01:4f8:c010:a6ed::1", 0xed2f,
+		[]byte{0x60, 0x06, 0x0b, 0xea, 0x00, 0x10, 0x3a, 0x01, 0x2a, 0x01, 0x04, 0xf8, 0xc0, 0x10, 0xa6, 0xed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2a, 0x01, 0x04, 0xf8, 0x1c, 0x1c, 0x86, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0xff, 0x80, 0x00, 0x09, 0xe7, 0x00, 0x0a, 0x00, 0x05, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+},
+	}
+
+	for idx, c := range chksums {
+		chksum := icmp6Checksum(t, c.src, c.dst, c.payload)
+		assert.Equal(t, uint16(c.chksum), chksum, "must match: %d", idx)
 	}
 }
