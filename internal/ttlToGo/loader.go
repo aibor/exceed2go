@@ -9,6 +9,10 @@ import (
 	"github.com/vishvananda/netlink/nl"
 )
 
+const AF_INET6 = 10
+
+type CloseFunc = func() error
+
 type MapIP struct {
 	hopLimit int
 	addr string
@@ -49,16 +53,67 @@ func (o *bpfObjects) GetStats() []uint32 {
 	return lookupValues
 }
 
-func (o *bpfObjects) AttachProg(ifName string) error {
+func (o *bpfObjects) AttachProg(ifName string) (CloseFunc, error) {
+	closeFunc := func() error { return o.Close() }
+
 	link, err := netlink.LinkByName(ifName)
 	if err != nil {
-		return fmt.Errorf("interface not found: %s: %w", ifName, err)
+		return closeFunc, fmt.Errorf("interface not found: %s: %w", ifName, err)
 	}
 
 	flags := nl.XDP_FLAGS_SKB_MODE
 	if err := netlink.LinkSetXdpFdWithFlags(link, o.XdpTtltogo.FD(), flags); err != nil {
-		return fmt.Errorf("failed to load XDP program: %w", err)
+		return closeFunc, fmt.Errorf("failed to load XDP program: %w", err)
 	}
 
-	return nil
+	closeFunc = func() error {
+		if err := netlink.LinkSetXdpFdWithFlags(link, -1, flags); err != nil {
+			return fmt.Errorf("error detaching from link (detach amnually with `ip link`: %w", err)
+		}
+
+		return o.Close()
+	}
+
+	return closeFunc, nil
+}
+
+func LinkUpNameList() []string {
+	linkNameList := make([]string, 0)
+
+	linkList, err := netlink.LinkList()
+	if err != nil {
+		return linkNameList
+	}
+
+	// fetch names for links that are up ant not loopback
+	for _, link := range linkList {
+		if  link.Attrs().Flags & (net.FlagUp | net.FlagLoopback) != net.FlagUp {
+			continue
+		}
+		linkNameList = append(linkNameList, link.Attrs().Name)
+	}
+
+	return linkNameList
+}
+
+func IPv6AddrsList(ifName string) []string {
+	ipv6AddrList := make([]string, 0)
+
+	link, err := netlink.LinkByName(ifName)
+	if err != nil {
+		return ipv6AddrList
+	}
+
+	addrList, err := netlink.AddrList(link, AF_INET6)
+	if err != nil {
+		return ipv6AddrList
+	}
+
+	for _, addr := range addrList {
+		if addr.IP.IsGlobalUnicast() {
+			ipv6AddrList = append(ipv6AddrList, addr.IP.String())
+		}
+	}
+
+	return ipv6AddrList
 }

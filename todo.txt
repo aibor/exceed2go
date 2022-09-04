@@ -1,0 +1,8 @@
+# bpf
+* icmp echo reply for target address
+* icmp echo reply for hop addrs
+* optimize programm
+
+# cli
+* non daemon mode (setup and exit)
+* cleanup subcommand (for use when using in non daemon mode)
