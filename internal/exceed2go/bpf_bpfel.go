@@ -2,7 +2,7 @@
 //go:build 386 || amd64 || amd64p32 || arm || arm64 || mips64le || mips64p32le || mipsle || ppc64le || riscv64
 // +build 386 amd64 amd64p32 arm arm64 mips64le mips64p32le mipsle ppc64le riscv64
 
-package ttlToGo
+package exceed2go
 
 import (
 	"bytes"
@@ -56,15 +56,15 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	XdpTtltogo *ebpf.ProgramSpec `ebpf:"xdp_ttltogo"`
+	Exceed2go *ebpf.ProgramSpec `ebpf:"exceed2go"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	TtlAddrs    *ebpf.MapSpec `ebpf:"ttl_addrs"`
-	TtlCounters *ebpf.MapSpec `ebpf:"ttl_counters"`
+	ExceedAddrs    *ebpf.MapSpec `ebpf:"exceed_addrs"`
+	ExceedCounters *ebpf.MapSpec `ebpf:"exceed_counters"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -86,14 +86,14 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	TtlAddrs    *ebpf.Map `ebpf:"ttl_addrs"`
-	TtlCounters *ebpf.Map `ebpf:"ttl_counters"`
+	ExceedAddrs    *ebpf.Map `ebpf:"exceed_addrs"`
+	ExceedCounters *ebpf.Map `ebpf:"exceed_counters"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
-		m.TtlAddrs,
-		m.TtlCounters,
+		m.ExceedAddrs,
+		m.ExceedCounters,
 	)
 }
 
@@ -101,12 +101,12 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	XdpTtltogo *ebpf.Program `ebpf:"xdp_ttltogo"`
+	Exceed2go *ebpf.Program `ebpf:"exceed2go"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.XdpTtltogo,
+		p.Exceed2go,
 	)
 }
 

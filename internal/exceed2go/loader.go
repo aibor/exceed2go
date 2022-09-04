@@ -1,4 +1,4 @@
-package ttlToGo
+package exceed2go
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ type CloseFunc = func() error
 
 type MapIP struct {
 	hopLimit int
-	addr string
+	addr     string
 }
 
 func Load() (*bpfObjects, error) {
@@ -34,7 +34,7 @@ func (o *bpfObjects) SetAddr(idx int, addr string) error {
 		return fmt.Errorf("Cannot parse IP: %s", addr)
 	}
 
-	if err := o.TtlAddrs.Put(uint32(idx), []byte(ip)); err != nil {
+	if err := o.ExceedAddrs.Put(uint32(idx), []byte(ip)); err != nil {
 		return fmt.Errorf("map load error: %w", err)
 	}
 
@@ -43,12 +43,12 @@ func (o *bpfObjects) SetAddr(idx int, addr string) error {
 
 func (o *bpfObjects) GetStats() []uint32 {
 	var (
-		nextKey uint32
+		nextKey      uint32
 		lookupKeys   = make([]uint32, 8)
 		lookupValues = make([]uint32, 8)
 	)
 
-	o.TtlCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	return lookupValues
 }
@@ -62,7 +62,7 @@ func (o *bpfObjects) AttachProg(ifName string) (CloseFunc, error) {
 	}
 
 	flags := nl.XDP_FLAGS_SKB_MODE
-	if err := netlink.LinkSetXdpFdWithFlags(link, o.XdpTtltogo.FD(), flags); err != nil {
+	if err := netlink.LinkSetXdpFdWithFlags(link, o.Exceed2go.FD(), flags); err != nil {
 		return closeFunc, fmt.Errorf("failed to load XDP program: %w", err)
 	}
 
@@ -87,7 +87,7 @@ func LinkUpNameList() []string {
 
 	// fetch names for links that are up ant not loopback
 	for _, link := range linkList {
-		if  link.Attrs().Flags & (net.FlagUp | net.FlagLoopback) != net.FlagUp {
+		if link.Attrs().Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
 			continue
 		}
 		linkNameList = append(linkNameList, link.Attrs().Name)

@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/spf13/cobra"
-	"github.com/aibor/ttltogo/internal/ttlToGo"
 )
 
 // runCmd represents the run command
@@ -23,7 +23,7 @@ var runCmd = &cobra.Command{
 		ifName := args[0]
 		hopAddrs := args[1:]
 
-		objs, err := ttlToGo.Load()
+		objs, err := exceed2go.Load()
 		if err != nil {
 			return fmt.Errorf("error loading objects: %w", err)
 		}
@@ -64,12 +64,11 @@ var runCmd = &cobra.Command{
 		flags := cobra.ShellCompDirectiveNoFileComp
 
 		if len(args) == 0 {
-			return ttlToGo.LinkUpNameList(), flags
+			return exceed2go.LinkUpNameList(), flags
 		}
 
-		return ttlToGo.IPv6AddrsList(args[0]), flags
+		return exceed2go.IPv6AddrsList(args[0]), flags
 	},
-
 }
 
 func init() {

@@ -1,4 +1,4 @@
-module github.com/aibor/ttltogo
+module github.com/aibor/exceed2go
 
 go 1.19
 

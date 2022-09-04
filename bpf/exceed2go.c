@@ -24,20 +24,20 @@ struct {
         __type(key, __u32);
         __type(value, struct in6_addr);
 		__uint(max_entries, 32);
-} ttl_addrs SEC(".maps");
+} exceed_addrs SEC(".maps");
 
 struct {
         __uint(type, BPF_MAP_TYPE_ARRAY);
         __type(key, __u32);
         __type(value, __u32);
 		__uint(max_entries, 8);
-} ttl_counters SEC(".maps");
+} exceed_counters SEC(".maps");
 
-enum ttl_counter_key {
-	TTL_COUNTER_KEY_ENTRY,
-	TTL_COUNTER_KEY_IPV6,
-	TTL_COUNTER_KEY_TARGET,
-	TTL_COUNTER_KEY_FOUND
+enum exceed_counter_key {
+	COUNTER_KEY_ENTRY,
+	COUNTER_KEY_IPV6,
+	COUNTER_KEY_TARGET,
+	COUNTER_KEY_FOUND
 };
 
 static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
@@ -79,7 +79,7 @@ static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
 }
 
 static __always_inline void counter_increment(__u32 key) {
-	__u32 *value = bpf_map_lookup_elem(&ttl_counters, &key);
+	__u32 *value = bpf_map_lookup_elem(&exceed_counters, &key);
 	if (value) {
 		__sync_fetch_and_add(value, 1);
 	}
@@ -147,12 +147,12 @@ static __always_inline int reply_exceeded(struct xdp_md *ctx, struct in6_addr *s
 }
 
 SEC("xdp")
-int xdp_ttltogo(struct xdp_md *ctx) {
+int exceed2go(struct xdp_md *ctx) {
 	void *data		= (void *)(unsigned long)ctx->data;
 	void *data_end	= (void *)(unsigned long)ctx->data_end;
 	int off			= 0;
 
-	counter_increment(TTL_COUNTER_KEY_ENTRY);
+	counter_increment(COUNTER_KEY_ENTRY);
 
 	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
 		return DEFAULT_ACTION;
@@ -163,14 +163,14 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	if (eth->h_proto != bpf_htons(ETH_P_IPV6))
 		return DEFAULT_ACTION;
 
-	counter_increment(TTL_COUNTER_KEY_IPV6);
+	counter_increment(COUNTER_KEY_IPV6);
 
 	struct ipv6hdr *ipv6 = data + off;
 	off += sizeof(*ipv6);
 
 	// key 0 is special an has the target address we are watching for
 	__u32 target_key = 0;
-	struct in6_addr *target = bpf_map_lookup_elem(&ttl_addrs, &target_key);
+	struct in6_addr *target = bpf_map_lookup_elem(&exceed_addrs, &target_key);
 
 	if (!target)
 		return DEFAULT_ACTION;
@@ -178,19 +178,19 @@ int xdp_ttltogo(struct xdp_md *ctx) {
 	if (!IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
 		return DEFAULT_ACTION;
 
-	counter_increment(TTL_COUNTER_KEY_TARGET);
+	counter_increment(COUNTER_KEY_TARGET);
 
 	// all other entries are the addressess we want to answer with for the
 	// specific hop limit
 	__u32 hop_key = ipv6->hop_limit;
-	struct in6_addr *ttl_addr = bpf_map_lookup_elem(&ttl_addrs, &hop_key);
+	struct in6_addr *exceed_addr = bpf_map_lookup_elem(&exceed_addrs, &hop_key);
 
-	if (!ttl_addr || !((const uint32_t *) (ttl_addr))[0])
+	if (!exceed_addr || !((const uint32_t *) (exceed_addr))[0])
 		return DEFAULT_ACTION;
 
-	counter_increment(TTL_COUNTER_KEY_FOUND);
+	counter_increment(COUNTER_KEY_FOUND);
 
-	return reply_exceeded(ctx, ttl_addr);
+	return reply_exceeded(ctx, exceed_addr);
 }
 
 char _license[] SEC("license") = "GPL";
