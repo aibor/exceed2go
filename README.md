@@ -16,7 +16,7 @@ Then run `exceed2go` for those addresses:
 # exceed2go run eth0 2001:db8::ff 2001:db8::5 2001:db8::aa 2001:db8::dd 2001:db8::ee
 ```
 
-or with some bash expansion:
+or a bit more convenient with the help of bash expansion:
 
 ```
 # exceed2go run eth0 2001:db8::{ff,5,aa,dd,ee}
@@ -37,8 +37,8 @@ So with the above values the traceroute will look like this:
 (... hops before your host)
 11:  start.here (2001:db8::5)
 12:  three.more (2001:db8::aa)
-13:  two.more (2001:db8::ff:dd)
-14:  one.more (2001:db8::ff:ee)
+13:  two.more (2001:db8::dd)
+14:  one.more (2001:db8::ee)
 (...)
 ```
 
