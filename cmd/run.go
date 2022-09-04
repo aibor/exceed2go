@@ -53,6 +53,8 @@ var runCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 
+		fmt.Println("Running. Press CTRL-C to stop.")
+
 		for {
 			select {
 			case <-ctx.Done():
