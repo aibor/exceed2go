@@ -26,10 +26,14 @@ $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 clean:
 	@rm -frv \
 		$(BINARY) \
-		$(BPF2GO_FILE) \
-		$(patsubst %.go,%.o,$(BPF2GO_FILE)) \
 		$(INITRD_FILE) \
 		$(TEST_INIT_FILE)
+
+.PHONY: cleangen
+cleangen:
+	@rm -frv \
+		$(BPF2GO_FILE)
+		$(patsubst %.go,%.o,$(BPF2GO_FILE))
 
 $(BPF2GO_FILE): $(BPF_FILE) bpf/*.h
 	pushd $(@D)
