@@ -7,6 +7,7 @@
 #define ETH_TLEN            2
 #define ETH_P_IPV6          0x86DD
 #define IPV6_MTU_MIN        1280
+#define IPV6_ALEN           16
 #define IPPROTO_ICMPV6      58
 #define ICMP6_TIME_EXCEEDED 3
 #define ADD_HDR_LEN         (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
@@ -34,21 +35,28 @@ struct {
 } exceed_counters SEC(".maps");
 
 enum exceed_counter_key {
-    COUNTER_KEY_ENTRY,
     COUNTER_KEY_IPV6,
     COUNTER_KEY_TARGET,
-    COUNTER_KEY_FOUND
+    COUNTER_KEY_FOUND,
+    COUNTER_KEY_DROP
 };
+
+static __always_inline __u16 csum_fold(__u32 sum) {
+    sum = (sum & 0xffff) + (sum >> 16);
+    sum = (sum & 0xffff) + (sum >> 16);
+    return (__u16)~sum;
+}
 
 static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
                                         struct ipv6hdr *ipv6,
                                         void *data_end) {
+	// value already network byte order
     __be32 len = ((__u32)ipv6->payload_len) << 16;
     __be32 nexthdr = ((__u32)ipv6->nexthdr) << 24;
     __be32 sum = 0;
 
-    sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, sizeof(struct in6_addr), sum);
-    sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, sizeof(struct in6_addr), sum);
+    sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, IPV6_ALEN, sum);
+    sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, IPV6_ALEN, sum);
     sum = bpf_csum_diff(NULL, 0, &len, sizeof(len), sum);
     sum = bpf_csum_diff(NULL, 0, &nexthdr, sizeof(nexthdr), sum);
 
@@ -73,9 +81,7 @@ static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
         sum = bpf_csum_diff(NULL, 0, (__be32*)&r, sizeof(__be32), sum);
     }
 
-    sum = (sum & 0xffff) + (sum >> 16);
-    sum = (sum & 0xffff) + (sum >> 16);
-    return (__u16)~sum;
+	return sum;
 }
 
 static __always_inline void counter_increment(__u32 key) {
@@ -85,98 +91,96 @@ static __always_inline void counter_increment(__u32 key) {
     }
 }
 
-static __always_inline int reply_exceeded(struct xdp_md *ctx, struct in6_addr *src_addr) {
-    void *data      = (void *)(unsigned long)ctx->data;
-    void *data_end  = (void *)(unsigned long)ctx->data_end;
-    int off         = 0;
-    int len_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - (data_end - data);
+static __always_inline int reply_exceeded(struct xdp_md *ctx,
+										  struct in6_addr *src_addr) {
+	volatile void *data, *data_end;
+	struct ethhdr *eth, *orig_eth;
+	struct ipv6hdr *ipv6, *orig_ipv6;
+    struct icmp6hdr *icmp6;
+    int tail_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - (ctx->data_end - ctx->data);
 
     if (bpf_xdp_adjust_head(ctx, (0 - (int)ADD_HDR_LEN)) != 0)
         return XDP_DROP;
 
-    if (len_adjust < 0)
-        bpf_xdp_adjust_tail(ctx, len_adjust);
+    if (tail_adjust < 0)
+        bpf_xdp_adjust_tail(ctx, tail_adjust);
 
     // reinitialize after length change
-    data        = (void *)(long)ctx->data;
-    data_end    = (void *)(long)ctx->data_end;
-    off         = 0;
-
-    // validate locations after resizing
-    if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + ADD_HDR_LEN > data_end)
-        return XDP_DROP;
+    data     = (void *)(unsigned long)ctx->data;
+    data_end = (void *)(unsigned long)ctx->data_end;
 
     // former header positions
-    struct ethhdr *eth_o = data + (int)ADD_HDR_LEN;
-    struct ipv6hdr *ipv6_o = data + (int)ADD_HDR_LEN + sizeof(*eth_o);
+    orig_eth  = (void *)data + (int)ADD_HDR_LEN;
+    orig_ipv6 = (void *)(orig_eth + 1);
 
     // new headers
-    struct ethhdr *eth_n = data;
-    off += sizeof(struct ethhdr);
+    eth  = (void *)data;
+	ipv6 = (void *)(eth + 1);
+	if ((void *)(orig_ipv6 + 1) > data_end)
+        return XDP_DROP;
 
     // relocate data and swap mac addresses
-    bpf_memcpy(eth_n->h_source, eth_o->h_dest, ETH_ALEN);
-    bpf_memcpy(eth_n->h_dest, eth_o->h_source, ETH_ALEN);
-    eth_n->h_proto = eth_o->h_proto;
+    bpf_memcpy(eth->h_source, orig_eth->h_dest, ETH_ALEN);
+    bpf_memcpy(eth->h_dest, orig_eth->h_source, ETH_ALEN);
+    eth->h_proto = orig_eth->h_proto;
 
-    struct ipv6hdr *ipv6_n = data + off;
-    off += sizeof(struct ipv6hdr);
+    icmp6 = (void *)(ipv6 + 1);
 
-    __u16 payload_len = data_end - data - off;
+    __u16 payload_len = data_end - (void *)icmp6;
 
-    ipv6_n->version     = 6;
-    ipv6_n->priority    = ipv6_o->priority;
-    ipv6_n->payload_len = bpf_htons(payload_len);
-    ipv6_n->nexthdr     = IPPROTO_ICMPV6;
-    ipv6_n->hop_limit   = 64;
-    ipv6_n->saddr       = *src_addr;
-    ipv6_n->daddr       = ipv6_o->saddr;
-    bpf_memcpy(ipv6_n->flow_lbl, ipv6_o->flow_lbl, sizeof(ipv6_n->flow_lbl));
-
-    struct icmp6hdr *icmp6 = data + off;
+    ipv6->version     = 6;
+    ipv6->priority    = orig_ipv6->priority;
+    ipv6->payload_len = bpf_htons(payload_len);
+    ipv6->nexthdr     = IPPROTO_ICMPV6;
+    ipv6->hop_limit   = 64;
+    ipv6->saddr       = *src_addr;
+    ipv6->daddr       = orig_ipv6->saddr;
+    bpf_memcpy(ipv6->flow_lbl, orig_ipv6->flow_lbl, sizeof(ipv6->flow_lbl));
 
     icmp6->icmp6_type                = ICMP6_TIME_EXCEEDED;
     icmp6->icmp6_code                = 0;
+	// set checksum to zero for calculation
     icmp6->icmp6_cksum               = 0;
     // time exceeded has 4 bytes inused space before payload starts
     icmp6->icmp6_dataun.un_data32[0] = 0;
 
-    icmp6->icmp6_cksum = icmp6_csum(icmp6, ipv6_n, data_end);
+    icmp6->icmp6_cksum = csum_fold(icmp6_csum(icmp6, ipv6, (void *)data_end));
 
     return XDP_TX;
 }
 
 SEC("xdp")
 int exceed2go(struct xdp_md *ctx) {
-    void *data     = (void *)(unsigned long)ctx->data;
-    void *data_end = (void *)(unsigned long)ctx->data_end;
-    int off        = 0;
+	volatile void *data, *data_end;
+	volatile struct ethhdr *eth;
+	volatile struct ipv6hdr *ipv6;
+	int ret = DEFAULT_ACTION;
 
-    counter_increment(COUNTER_KEY_ENTRY);
+    data     = (void *)(unsigned long)ctx->data;
+    data_end = (void *)(unsigned long)ctx->data_end;
 
-    if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
-        return DEFAULT_ACTION;
-
-    struct ethhdr *eth = data;
-    off += sizeof(*eth);
+	eth = data;
+	if ((void *)(eth + 1) > data_end)
+        return ret;
 
     if (eth->h_proto != bpf_htons(ETH_P_IPV6))
-        return DEFAULT_ACTION;
+        return ret;
 
     counter_increment(COUNTER_KEY_IPV6);
 
-    struct ipv6hdr *ipv6 = data + off;
-    off += sizeof(*ipv6);
+    ipv6 = (void *)(eth + 1);
+	if ((void *)(ipv6 + 1) > data_end)
+        return ret;
 
     // key 0 is special an has the target address we are watching for
     __u32 target_key = 0;
     struct in6_addr *target = bpf_map_lookup_elem(&exceed_addrs, &target_key);
 
     if (!target)
-        return DEFAULT_ACTION;
+        return ret;
 
     if (!IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
-        return DEFAULT_ACTION;
+        return ret;
 
     counter_increment(COUNTER_KEY_TARGET);
 
@@ -185,12 +189,15 @@ int exceed2go(struct xdp_md *ctx) {
     __u32 hop_key = ipv6->hop_limit;
     struct in6_addr *exceed_addr = bpf_map_lookup_elem(&exceed_addrs, &hop_key);
 
-    if (!exceed_addr || !((const uint32_t *) (exceed_addr))[0])
-        return DEFAULT_ACTION;
+    if (exceed_addr && ((const uint32_t *)(exceed_addr))[0]) {
+		counter_increment(COUNTER_KEY_FOUND);
+		ret = reply_exceeded(ctx, exceed_addr);
+	}
 
-    counter_increment(COUNTER_KEY_FOUND);
+	if (ret == XDP_DROP)
+		counter_increment(COUNTER_KEY_DROP);
 
-    return reply_exceeded(ctx, exceed_addr);
+	return ret;
 }
 
 char _license[] SEC("license") = "GPL";
