@@ -1,6 +1,6 @@
-#include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "btf/vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
 
 #define DEFAULT_ACTION		XDP_PASS
 #define ETH_ALEN			6

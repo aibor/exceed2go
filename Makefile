@@ -2,11 +2,6 @@ MAKEFLAGS := --no-builtin-rules
 SHELL := bash
 .ONESHELL:
 
-CLANG ?= clang
-CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
-
-export CGO_ENABLED := 0
-
 BIN_DIR ?= bin
 BINARY ?= $(BIN_DIR)/exceed2go
 BPF_FILE := bpf/exceed2go.c
@@ -15,6 +10,13 @@ BPF_TEST_FILE := internal/exceed2go/loader_test.go
 INITRD_FILE ?= rootrd.gz
 TEST_INIT_FILE ?= rootrd/init
 KERNEL_FILE ?= /boot/vmlinuz-linux
+LIBBPF ?= bpf/libbpf
+BTF_FILE ?= bpf/btf/vmlinux.h
+
+CLANG ?= clang
+CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc
+
+export CGO_ENABLED := 0
 
 .PHONY: build
 build: $(BINARY)
@@ -32,10 +34,10 @@ clean:
 .PHONY: cleangen
 cleangen:
 	@rm -frv \
-		$(BPF2GO_FILE)
+		$(BPF2GO_FILE) \
 		$(patsubst %.go,%.o,$(BPF2GO_FILE))
 
-$(BPF2GO_FILE): $(BPF_FILE) bpf/*.h
+$(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h $(BTF_FILE)
 	pushd $(@D)
 	GOPACKAGE=exceed2go go run github.com/cilium/ebpf/cmd/bpf2go -cc $(CLANG) \
 		-target bpfel \
