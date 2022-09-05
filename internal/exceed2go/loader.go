@@ -5,8 +5,7 @@ import (
 	"net"
 
 	_ "github.com/cilium/ebpf"
-	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netlink/nl"
+	"github.com/cilium/ebpf/link"
 )
 
 const AF_INET6 = 10
@@ -56,18 +55,21 @@ func (o *bpfObjects) GetStats() []uint32 {
 func (o *bpfObjects) AttachProg(ifName string) (CloseFunc, error) {
 	closeFunc := func() error { return o.Close() }
 
-	link, err := netlink.LinkByName(ifName)
+	iface, err := net.InterfaceByName(ifName)
 	if err != nil {
 		return closeFunc, fmt.Errorf("interface not found: %s: %w", ifName, err)
 	}
 
-	flags := nl.XDP_FLAGS_SKB_MODE
-	if err := netlink.LinkSetXdpFdWithFlags(link, o.Exceed2go.FD(), flags); err != nil {
+	link, err := link.AttachXDP(link.XDPOptions{
+		Program: o.Exceed2go,
+		Interface: iface.Index,
+	})
+	if err != nil {
 		return closeFunc, fmt.Errorf("failed to load XDP program: %w", err)
 	}
 
 	closeFunc = func() error {
-		if err := netlink.LinkSetXdpFdWithFlags(link, -1, flags); err != nil {
+		if link.Close(); err != nil {
 			return fmt.Errorf("error detaching from link (detach amnually with `ip link`: %w", err)
 		}
 
@@ -77,41 +79,42 @@ func (o *bpfObjects) AttachProg(ifName string) (CloseFunc, error) {
 	return closeFunc, nil
 }
 
-func LinkUpNameList() []string {
-	linkNameList := make([]string, 0)
+func IfUpNameList() []string {
+	ifNameList := make([]string, 0)
 
-	linkList, err := netlink.LinkList()
+	ifList, err := net.Interfaces()
 	if err != nil {
-		return linkNameList
+		return ifNameList
 	}
 
 	// fetch names for links that are up ant not loopback
-	for _, link := range linkList {
-		if link.Attrs().Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
+	for _, iface := range ifList {
+		if iface.Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
 			continue
 		}
-		linkNameList = append(linkNameList, link.Attrs().Name)
+		ifNameList = append(ifNameList, iface.Name)
 	}
 
-	return linkNameList
+	return ifNameList
 }
 
 func IPv6AddrsList(ifName string) []string {
 	ipv6AddrList := make([]string, 0)
 
-	link, err := netlink.LinkByName(ifName)
+	iface, err := net.InterfaceByName(ifName)
 	if err != nil {
 		return ipv6AddrList
 	}
 
-	addrList, err := netlink.AddrList(link, AF_INET6)
+	addrList, err := iface.Addrs()
 	if err != nil {
 		return ipv6AddrList
 	}
 
 	for _, addr := range addrList {
-		if addr.IP.IsGlobalUnicast() {
-			ipv6AddrList = append(ipv6AddrList, addr.IP.String())
+		ip := net.ParseIP(addr.String())
+		if ip.IsGlobalUnicast() {
+			ipv6AddrList = append(ipv6AddrList, addr.String())
 		}
 	}
 

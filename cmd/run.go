@@ -66,7 +66,7 @@ var runCmd = &cobra.Command{
 		flags := cobra.ShellCompDirectiveNoFileComp
 
 		if len(args) == 0 {
-			return exceed2go.LinkUpNameList(), flags
+			return exceed2go.IfUpNameList(), flags
 		}
 
 		return exceed2go.IPv6AddrsList(args[0]), flags
