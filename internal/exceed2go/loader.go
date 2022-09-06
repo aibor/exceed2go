@@ -56,7 +56,8 @@ func (o *bpfObjects) GetStats() []uint32 {
 		lookupValues = make([]uint32, 8)
 	)
 
-	o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	// TODO: error handling
+	_, _ = o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	return lookupValues
 }

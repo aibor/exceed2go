@@ -30,9 +30,9 @@ func mapIPs() []MapIP {
 	}
 }
 
-func (o *bpfObjects) setMapIPs(t *testing.T) {
+func (o *bpfObjects) setMapIPs(tb testing.TB) {
 	for _, ip := range mapIPs() {
-		o.setAddr(t, ip.hopLimit, ip.addr)
+		o.setAddr(tb, ip.hopLimit, ip.addr)
 	}
 }
 
@@ -57,7 +57,9 @@ func poweroff() {
 		return
 	}
 
-	syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF)
+	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
+		fmt.Printf("error calling power off: %v\n", err)
+	}
 }
 
 func run(m *testing.M) int {
@@ -113,7 +115,9 @@ func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
 
-func packet(hopLimit int, dstAddr string) []byte {
+func packet(tb testing.TB, hopLimit int, dstAddr string) []byte {
+	tb.Helper()
+
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -143,14 +147,16 @@ func packet(hopLimit int, dstAddr string) []byte {
 	}
 
 	payload := gopacket.Payload([]byte{0x0, 0x0, 0x0, 0x0, 1, 2, 3, 4})
-	icmp6.SetNetworkLayerForChecksum(&ipv6)
+	err := icmp6.SetNetworkLayerForChecksum(&ipv6)
+	require.NoError(tb, err, "must set layer for checksum")
 
-	gopacket.SerializeLayers(buf, opts, &eth, &ipv6, &icmp6, &icmp6echo, &payload)
+	err = gopacket.SerializeLayers(buf, opts, &eth, &ipv6, &icmp6, &icmp6echo, &payload)
+	require.NoError(tb, err, "must serialize packet")
 
 	return buf.Bytes()
 }
 
-func icmp6Checksum(t *testing.T, src, dst string, payload []byte) uint16 {
+func icmp6Checksum(tb testing.TB, src, dst string, payload []byte) uint16 {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -169,14 +175,15 @@ func icmp6Checksum(t *testing.T, src, dst string, payload []byte) uint16 {
 
 	pload := gopacket.Payload(append([]byte{0x0, 0x0, 0x0, 0x0}, payload...))
 
-	icmp6.SetNetworkLayerForChecksum(&ipv6)
-	err := gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6, &pload)
-	require.NoError(t, err)
+	err := icmp6.SetNetworkLayerForChecksum(&ipv6)
+	require.NoError(tb, err, "must set layer for checksum")
+	err = gopacket.SerializeLayers(buf, opts, &ipv6, &icmp6, &pload)
+	require.NoError(tb, err, "must serialize packet")
 
 	outPkt := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Default)
 	outLayers := outPkt.Layers()
 	icmp6out, ok := outLayers[1].(*layers.ICMPv6)
-	require.True(t, ok, "decode icmp for checksum")
+	require.True(tb, ok, "decode icmp for checksum")
 
 	return icmp6out.Checksum
 }
@@ -204,34 +211,34 @@ func load(tb testing.TB) *bpfObjects {
 	return nil
 }
 
-func (o *bpfObjects) setAddr(t *testing.T, idx int, addr string) {
+func (o *bpfObjects) setAddr(tb testing.TB, idx int, addr string) {
 	if err := o.SetAddr(idx, addr); err != nil {
-		t.Fatalf("map load error: %v", err)
+		tb.Fatalf("map load error: %v", err)
 	}
 }
 
-func (o *bpfObjects) statsPrint(t *testing.T) {
-	var nextKey uint32
-	var lookupKeys = make([]uint32, 8)
-	var lookupValues = make([]uint32, 8)
-	o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+//func (o *bpfObjects) statsPrint(tb testing.TB) {
+//	var nextKey uint32
+//	var lookupKeys = make([]uint32, 8)
+//	var lookupValues = make([]uint32, 8)
+//	_, _ = o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+//
+//	tb.Logf("  Index: % d", lookupKeys)
+//	tb.Logf("Counter: % d", lookupValues)
+//}
 
-	t.Logf("  Index: % d", lookupKeys)
-	t.Logf("Counter: % d", lookupValues)
-}
-
-func pktPrint(t *testing.T, pkt []byte) {
-	t.Logf("length: %d", len(pkt))
-	for i := 0; i < len(pkt); i += 16 {
-		var out []byte
-		if e := i + 16; e >= len(pkt) {
-			out = pkt[i:]
-		} else {
-			out = pkt[i:e]
-		}
-		t.Logf("%d: % x\n", i/16, out)
-	}
-}
+//func pktPrint(tb testing.TB, pkt []byte) {
+//	tb.Logf("length: %d", len(pkt))
+//	for i := 0; i < len(pkt); i += 16 {
+//		var out []byte
+//		if e := i + 16; e >= len(pkt) {
+//			out = pkt[i:]
+//		} else {
+//			out = pkt[i:e]
+//		}
+//		tb.Logf("%d: % x\n", i/16, out)
+//	}
+//}
 
 func TestLoad(t *testing.T) {
 	objs := load(t)
@@ -244,7 +251,7 @@ func TestTTL(t *testing.T) {
 			objs := load(tt)
 			objs.setMapIPs(tt)
 
-			pkt := packet(ip.hopLimit, mapIPs()[0].addr)
+			pkt := packet(t, ip.hopLimit, mapIPs()[0].addr)
 			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
@@ -283,7 +290,7 @@ func TestNoMatch(t *testing.T) {
 			objs := load(tt)
 			objs.setMapIPs(tt)
 
-			pkt := packet(ip.hopLimit, ip.addr)
+			pkt := packet(t, ip.hopLimit, ip.addr)
 			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
