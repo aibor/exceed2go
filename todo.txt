@@ -2,7 +2,10 @@
 * icmp echo reply for target address
 * icmp echo reply for hop addrs
 * optimize programm
+* use map of maps for supporting multiple target addresses (with deamonless mode)
+* use log ringbuffer
 
 # cli
-* non daemon mode (setup and exit)
-* cleanup subcommand (for use when using in non daemon mode)
+* daemonless mode (setup and exit)
+* cleanup subcommand (for daemonless mode)
+* configure maps (for daemonless mode)
