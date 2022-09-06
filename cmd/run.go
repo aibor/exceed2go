@@ -55,12 +55,9 @@ var runCmd = &cobra.Command{
 
 		fmt.Println("Running. Press CTRL-C to stop.")
 
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			}
-		}
+		<-ctx.Done()
+
+		return nil
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		flags := cobra.ShellCompDirectiveNoFileComp
