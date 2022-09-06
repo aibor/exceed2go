@@ -8,7 +8,7 @@ on:
 
 jobs:
   clangFormat:
-    name: lint
+    name: Clang Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +20,7 @@ jobs:
           extensions: c
           clangFormatVersion: 14
   golangci:
-    name: lint
+    name: GolangCI Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
