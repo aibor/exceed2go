@@ -7,20 +7,27 @@ on:
     branches: [ "main" ]
 
 jobs:
-  lint:
-
+  clangFormat:
+    name: lint
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Run clang-format
-      uses: DoozyX/clang-format-lint-action@v0.14
-      with:
-        source: bpf
-        exclude: libbpf
-        extensions: c
-        clangFormatVersion: 14
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3.2.0
-      with:
-        version: latest
+      - uses: actions/checkout@v3
+      - name: Run clang-format
+        uses: DoozyX/clang-format-lint-action@v0.14
+        with:
+          source: bpf
+          exclude: libbpf
+          extensions: c
+          clangFormatVersion: 14
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - uses: actions/checkout@v3
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3.2.0
+        with:
+          version: latest
