@@ -15,10 +15,10 @@
 #define bpf_memcpy __builtin_memcpy
 
 #define IN6_ARE_ADDR_EQUAL(a, b)                                               \
-  ((((const uint32_t *)(a))[0] == ((const uint32_t *)(b))[0]) &&               \
-   (((const uint32_t *)(a))[1] == ((const uint32_t *)(b))[1]) &&               \
-   (((const uint32_t *)(a))[2] == ((const uint32_t *)(b))[2]) &&               \
-   (((const uint32_t *)(a))[3] == ((const uint32_t *)(b))[3]))
+  ((((const __u32 *)(a))[0] == ((const __u32 *)(b))[0]) &&                     \
+   (((const __u32 *)(a))[1] == ((const __u32 *)(b))[1]) &&                     \
+   (((const __u32 *)(a))[2] == ((const __u32 *)(b))[2]) &&                     \
+   (((const __u32 *)(a))[3] == ((const __u32 *)(b))[3]))
 
 struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
@@ -188,7 +188,7 @@ int exceed2go(struct xdp_md *ctx) {
   __u32 hop_key = ipv6->hop_limit;
   struct in6_addr *exceed_addr = bpf_map_lookup_elem(&exceed_addrs, &hop_key);
 
-  if (exceed_addr && ((const uint32_t *)(exceed_addr))[0]) {
+  if (exceed_addr && ((const __u32 *)(exceed_addr))[0]) {
     counter_increment(COUNTER_KEY_FOUND);
     ret = reply_exceeded(ctx, exceed_addr);
   }
