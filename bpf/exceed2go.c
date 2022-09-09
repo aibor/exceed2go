@@ -128,13 +128,15 @@ static __always_inline int reply_exceeded(struct xdp_md *ctx,
   __u16 payload_len = data_end - (void *)icmp6;
 
   ipv6->version = 6;
-  ipv6->priority = orig_ipv6->priority;
+  ipv6->priority = 0;
+  ipv6->flow_lbl[0] = 0;
+  ipv6->flow_lbl[1] = 1;
+  ipv6->flow_lbl[2] = 2;
   ipv6->payload_len = bpf_htons(payload_len);
   ipv6->nexthdr = IPPROTO_ICMPV6;
   ipv6->hop_limit = 64;
   ipv6->saddr = *src_addr;
   ipv6->daddr = orig_ipv6->saddr;
-  bpf_memcpy(ipv6->flow_lbl, orig_ipv6->flow_lbl, sizeof(ipv6->flow_lbl));
 
   icmp6->icmp6_type = ICMP6_TIME_EXCEEDED;
   icmp6->icmp6_code = 0;
