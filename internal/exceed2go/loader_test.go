@@ -19,6 +19,8 @@ import (
 )
 
 var LoadFailed atomic.Bool
+var timeExceededTC = layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0)
+var echoReplyTC = layers.CreateICMPv6TypeCode(layers.ICMPv6TypeEchoReply, 0)
 
 func mapIPs() []MapIP {
 	return []MapIP{
@@ -156,7 +158,7 @@ func packet(tb testing.TB, hopLimit int, dstAddr string) []byte {
 	return buf.Bytes()
 }
 
-func icmp6Checksum(tb testing.TB, src, dst string, payload []byte) uint16 {
+func icmp6Checksum(tb testing.TB, src, dst string, icmp6TypeCode layers.ICMPv6TypeCode, payload []byte) uint16 {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -170,10 +172,10 @@ func icmp6Checksum(tb testing.TB, src, dst string, payload []byte) uint16 {
 	}
 
 	icmp6 := layers.ICMPv6{
-		TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0),
+		TypeCode: icmp6TypeCode,
 	}
 
-	pload := gopacket.Payload(append([]byte{0x0, 0x0, 0x0, 0x0}, payload...))
+	pload := gopacket.Payload(payload)
 
 	err := icmp6.SetNetworkLayerForChecksum(&ipv6)
 	require.NoError(tb, err, "must set layer for checksum")
@@ -217,15 +219,15 @@ func (o *bpfObjects) setAddr(tb testing.TB, idx int, addr string) {
 	}
 }
 
-//func (o *bpfObjects) statsPrint(tb testing.TB) {
-//	var nextKey uint32
-//	var lookupKeys = make([]uint32, 8)
-//	var lookupValues = make([]uint32, 8)
-//	_, _ = o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
-//
-//	tb.Logf("  Index: % d", lookupKeys)
-//	tb.Logf("Counter: % d", lookupValues)
-//}
+func (o *bpfObjects) statsPrint(tb testing.TB) {
+	var nextKey uint32
+	var lookupKeys = make([]uint32, 8)
+	var lookupValues = make([]uint32, 8)
+	_, _ = o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+
+	tb.Logf("  Index: % d", lookupKeys)
+	tb.Logf("Counter: % d", lookupValues)
+}
 
 //func pktPrint(tb testing.TB, pkt []byte) {
 //	tb.Logf("length: %d", len(pkt))
@@ -246,12 +248,16 @@ func TestLoad(t *testing.T) {
 }
 
 func TestTTL(t *testing.T) {
-	for _, ip := range mapIPs() {
+	for idx, ip := range mapIPs() {
+		if idx == 0 {
+			continue
+		}
+
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
 			objs := load(tt)
 			objs.setMapIPs(tt)
 
-			pkt := packet(t, ip.hopLimit, mapIPs()[0].addr)
+			pkt := packet(tt, ip.hopLimit, mapIPs()[0].addr)
 			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
@@ -272,8 +278,9 @@ func TestTTL(t *testing.T) {
 			icmp6, ok := outLayers[2].(*layers.ICMPv6)
 			if assert.True(tt, ok, "must be ICMPv6") {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
-				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", out[62:]), icmp6.Checksum, "checksum must match")
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", timeExceededTC, out[58:]), icmp6.Checksum, "checksum must match")
 			}
+			objs.statsPrint(t)
 		})
 	}
 }
@@ -290,13 +297,44 @@ func TestNoMatch(t *testing.T) {
 			objs := load(tt)
 			objs.setMapIPs(tt)
 
-			pkt := packet(t, ip.hopLimit, ip.addr)
+			pkt := packet(tt, ip.hopLimit, ip.addr)
 			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
+			objs.statsPrint(t)
 		})
 	}
+}
+
+func TestEchoReply(t *testing.T) {
+	objs := load(t)
+	objs.setMapIPs(t)
+
+	pkt := packet(t, 64, mapIPs()[0].addr)
+	ret, out, err := objs.Exceed2go.Test(pkt)
+	require.NoError(t, err, "program must run without error")
+	assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
+	outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
+	outLayers := outPkt.Layers()
+	require.Equal(t, 4, len(outLayers), "number of layers must be correct")
+
+	ip6, ok := outLayers[1].(*layers.IPv6)
+	if assert.True(t, ok, "must be IPv6") {
+		assert.Equal(t, mapIPs()[0].addr, ip6.SrcIP.String(), "correct src address needed")
+		assert.Equal(t, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
+		assert.Equal(t, 16, int(ip6.Length), "correct length needed")
+		assert.Equal(t, 6, int(ip6.Version), "correct version needed")
+		assert.Equal(t, 64, int(ip6.HopLimit), "correct hop limit needed")
+		assert.Equal(t, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
+	}
+
+	icmp6, ok := outLayers[2].(*layers.ICMPv6)
+	if assert.True(t, ok, "must be ICMPv6") {
+		assert.Equal(t, "EchoReply", icmp6.TypeCode.String())
+		assert.Equal(t, icmp6Checksum(t, mapIPs()[0].addr, "fd03::4", echoReplyTC, out[58:]), icmp6.Checksum, "checksum must match")
+	}
+	objs.statsPrint(t)
 }
 
 func TestChecksum(t *testing.T) {
@@ -311,13 +349,13 @@ func TestChecksum(t *testing.T) {
 			"2a01:4f8:c010:a6ed::1",
 			0xecff,
 			[]string{
-				"\x60\x06\x0b\xea\x00\x40\x3a\x01\x2a\x01\x04\xf8\xc0\x10\xa6\xed",
-				"\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8\x1c\x1c\x86\xa3",
-				"\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\xdb\x22\x00\x09\x00\x0c",
-				"\x2b\x4a\x13\x63\x00\x00\x00\x00\x36\x1e\x07\x00\x00\x00\x00\x00",
-				"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
-				"\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f",
-				"\x30\x31\x32\x33\x34\x35\x36\x37",
+				"\x00\x00\x00\x00\x60\x06\x0b\xea\x00\x40\x3a\x01\x2a\x01\x04\xf8",
+				"\xc0\x10\xa6\xed\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8",
+				"\x1c\x1c\x86\xa3\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\xdb\x22",
+				"\x00\x09\x00\x0c\x2b\x4a\x13\x63\x00\x00\x00\x00\x36\x1e\x07\x00",
+				"\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b",
+				"\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b",
+				"\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35\x36\x37",
 			},
 		},
 		{
@@ -325,16 +363,16 @@ func TestChecksum(t *testing.T) {
 			"2a01:4f8:c010:a6ed::1",
 			0xed2f,
 			[]string{
-				"\x60\x06\x0b\xea\x00\x10\x3a\x01\x2a\x01\x04\xf8\xc0\x10\xa6\xed",
-				"\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8\x1c\x1c\x86\xa3",
-				"\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\x09\xe7\x00\x0a\x00\x05",
-				"\x00\x01\x02\x03\x04\x05\x06\x07",
+				"\x00\x00\x00\x00\x60\x06\x0b\xea\x00\x10\x3a\x01\x2a\x01\x04\xf8",
+				"\xc0\x10\xa6\xed\x00\x00\x00\x00\x00\x00\x00\x01\x2a\x01\x04\xf8",
+				"\x1c\x1c\x86\xa3\x00\x00\x00\x00\x00\xff\x00\xff\x80\x00\x09\xe7",
+				"\x00\x0a\x00\x05\x00\x01\x02\x03\x04\x05\x06\x07",
 			},
 		},
 	}
 
 	for idx, c := range chksums {
-		chksum := icmp6Checksum(t, c.src, c.dst, []byte(strings.Join(c.payload, "")))
+		chksum := icmp6Checksum(t, c.src, c.dst, timeExceededTC, []byte(strings.Join(c.payload, "")))
 		assert.Equal(t, uint16(c.chksum), chksum, "must match: %d", idx)
 	}
 }

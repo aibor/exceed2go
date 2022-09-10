@@ -1,6 +1,5 @@
 # bpf
-* icmp echo reply for target address
-* icmp echo reply for hop addrs
+* icmp echo reply for hop addresses
 * optimize programm
 * use map of maps for supporting multiple target addresses (with deamonless mode)
 * use log ringbuffer
