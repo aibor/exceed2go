@@ -23,6 +23,10 @@
    (((const __u32 *)(a))[2] == ((const __u32 *)(b))[2]) &&                     \
    (((const __u32 *)(a))[3] == ((const __u32 *)(b))[3]))
 
+#define NEXT_HDR(h) ((void *)(h + 1))
+
+#define CHECK_BOUNDARY(h, end) (NEXT_HDR(h) > end)
+
 struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
   __type(key, __u32);
@@ -121,20 +125,20 @@ static __always_inline int reply_exceeded(struct xdp_md   *ctx,
 
   /* Initialize former header positions. */
   orig_eth  = (void *)data + (int)ADD_HDR_LEN;
-  orig_ipv6 = (void *)(orig_eth + 1);
+  orig_ipv6 = NEXT_HDR(orig_eth);
+  if (CHECK_BOUNDARY(orig_ipv6, data_end))
+    return XDP_DROP;
 
   /* Initialize new headers. */
   eth  = (void *)data;
-  ipv6 = (void *)(eth + 1);
-  if ((void *)(orig_ipv6 + 1) > data_end)
-    return XDP_DROP;
+  ipv6 = NEXT_HDR(eth);
 
   /* Relocate data and swap mac addresses. */
   bpf_memcpy(eth->h_source, orig_eth->h_dest, ETH_ALEN);
   bpf_memcpy(eth->h_dest, orig_eth->h_source, ETH_ALEN);
   eth->h_proto = orig_eth->h_proto;
 
-  icmp6 = (void *)(ipv6 + 1);
+  icmp6 = NEXT_HDR(ipv6);
 
   __u16 payload_len = data_end - (void *)icmp6;
 
@@ -196,7 +200,7 @@ int exceed2go(struct xdp_md *ctx) {
   volatile void *data_end = (void *)(unsigned long)ctx->data_end;
 
   volatile struct ethhdr *eth = data;
-  if ((void *)(eth + 1) > data_end)
+  if (CHECK_BOUNDARY(eth, data_end))
     goto end;
 
   if (eth->h_proto != bpf_htons(ETH_P_IPV6))
@@ -204,8 +208,8 @@ int exceed2go(struct xdp_md *ctx) {
 
   counter_increment(COUNTER_KEY_IPV6);
 
-  volatile struct ipv6hdr *ipv6 = (void *)(eth + 1);
-  if ((void *)(ipv6 + 1) > data_end)
+  volatile struct ipv6hdr *ipv6 = NEXT_HDR(eth);
+  if (CHECK_BOUNDARY(ipv6, data_end))
     goto end;
 
   /* Key 0 is special an has the target address we are watching for. */
@@ -237,8 +241,8 @@ int exceed2go(struct xdp_md *ctx) {
 
   counter_increment(COUNTER_KEY_TARGET_ICMP);
 
-  volatile struct icmp6hdr *icmp6 = (void *)(ipv6 + 1);
-  if ((void *)(icmp6 + 1) > data_end)
+  volatile struct icmp6hdr *icmp6 = NEXT_HDR(ipv6);
+  if (CHECK_BOUNDARY(icmp6, data_end))
     goto end;
 
   if (icmp6->icmp6_type != ICMP6_ECHO_REQUEST)
