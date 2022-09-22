@@ -32,9 +32,11 @@ func mapIPs() []MapIP {
 	}
 }
 
-func (o *bpfObjects) setMapIPs(tb testing.TB) {
+func setMapIPs(tb testing.TB) {
+	tb.Helper()
+
 	for _, ip := range mapIPs() {
-		o.setAddr(tb, ip.hopLimit, ip.addr)
+		setAddr(tb, ip.hopLimit, ip.addr)
 	}
 }
 
@@ -74,6 +76,7 @@ func run(m *testing.M) int {
 	}{
 		{"/sys", "sysfs"},
 		{"/sys/kernel/tracing", "tracefs"},
+		{"/sys/fs/bpf", "bpf"},
 		{"/proc", "proc"},
 	}
 
@@ -159,6 +162,8 @@ func packet(tb testing.TB, hopLimit int, dstAddr string) []byte {
 }
 
 func icmp6Checksum(tb testing.TB, src, dst string, icmp6TypeCode layers.ICMPv6TypeCode, payload []byte) uint16 {
+	tb.Helper()
+
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -190,15 +195,17 @@ func icmp6Checksum(tb testing.TB, src, dst string, icmp6TypeCode layers.ICMPv6Ty
 	return icmp6out.Checksum
 }
 
-func load(tb testing.TB) *bpfObjects {
+func load(tb testing.TB) {
+	tb.Helper()
+
 	if LoadFailed.Load() {
 		tb.Fatal("Fail due to previous load errors")
 	}
 
-	objs, err := Load()
+	err := LoadAndPin()
+	tb.Cleanup(func() {Cleanup()})
 	if err == nil {
-		tb.Cleanup(func() { objs.Close() })
-		return objs
+		return
 	}
 
 	tb.Errorf("error loading objects: %v", err)
@@ -209,21 +216,39 @@ func load(tb testing.TB) *bpfObjects {
 
 	LoadFailed.Store(true)
 	tb.FailNow()
-
-	return nil
 }
 
-func (o *bpfObjects) setAddr(tb testing.TB, idx int, addr string) {
-	if err := o.SetAddr(idx, addr); err != nil {
+func getProg(tb testing.TB) *ebpf.Program {
+	tb.Helper()
+
+	progInt, err := getPinnedProgram()
+	require.NoError(tb, err, "must get program")
+
+	prog, ok := progInt.(*ebpf.Program)
+	require.True(tb, ok, "must convert to program")
+
+	return prog
+}
+
+func setAddr(tb testing.TB, idx int, addr string) {
+	tb.Helper()
+
+	if err := SetAddr(idx, addr); err != nil {
 		tb.Fatalf("map load error: %v", err)
 	}
 }
 
-func (o *bpfObjects) statsPrint(tb testing.TB) {
+func statsPrint(tb testing.TB) {
+	tb.Helper()
+
 	var nextKey uint32
 	var lookupKeys = make([]uint32, 8)
 	var lookupValues = make([]uint32, 8)
-	_, _ = o.ExceedCounters.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	statsInt, err := getPinnedStatsMap()
+	require.NoError(tb, err, "stats map must load")
+	stats, ok := statsInt.(*ebpf.Map)
+	require.True(tb, ok, "must get map")
+	_, _ = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	tb.Logf("  Index: % d", lookupKeys)
 	tb.Logf("Counter: % d", lookupValues)
@@ -243,8 +268,7 @@ func (o *bpfObjects) statsPrint(tb testing.TB) {
 //}
 
 func TestLoad(t *testing.T) {
-	objs := load(t)
-	objs.Close()
+	load(t)
 }
 
 func TestTTL(t *testing.T) {
@@ -254,11 +278,12 @@ func TestTTL(t *testing.T) {
 		}
 
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
-			objs := load(tt)
-			objs.setMapIPs(tt)
+			load(tt)
+			setMapIPs(tt)
 
+			prog := getProg(tt)
 			pkt := packet(tt, ip.hopLimit, mapIPs()[0].addr)
-			ret, out, err := objs.Exceed2go.Test(pkt)
+			ret, out, err := prog.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
@@ -280,7 +305,7 @@ func TestTTL(t *testing.T) {
 				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
 				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", timeExceededTC, out[58:]), icmp6.Checksum, "checksum must match")
 			}
-			objs.statsPrint(t)
+			statsPrint(t)
 		})
 	}
 }
@@ -294,25 +319,27 @@ func TestNoMatch(t *testing.T) {
 
 	for _, ip := range ips {
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
-			objs := load(tt)
-			objs.setMapIPs(tt)
+			load(tt)
+			setMapIPs(tt)
 
+			prog := getProg(tt)
 			pkt := packet(tt, ip.hopLimit, ip.addr)
-			ret, out, err := objs.Exceed2go.Test(pkt)
+			ret, out, err := prog.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
-			objs.statsPrint(t)
+			statsPrint(t)
 		})
 	}
 }
 
 func TestEchoReply(t *testing.T) {
-	objs := load(t)
-	objs.setMapIPs(t)
+	load(t)
+	setMapIPs(t)
 
+	prog := getProg(t)
 	pkt := packet(t, 64, mapIPs()[0].addr)
-	ret, out, err := objs.Exceed2go.Test(pkt)
+	ret, out, err := prog.Test(pkt)
 	require.NoError(t, err, "program must run without error")
 	assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
 	outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
@@ -334,7 +361,7 @@ func TestEchoReply(t *testing.T) {
 		assert.Equal(t, "EchoReply", icmp6.TypeCode.String())
 		assert.Equal(t, icmp6Checksum(t, mapIPs()[0].addr, "fd03::4", echoReplyTC, out[58:]), icmp6.Checksum, "checksum must match")
 	}
-	objs.statsPrint(t)
+	statsPrint(t)
 }
 
 func TestChecksum(t *testing.T) {

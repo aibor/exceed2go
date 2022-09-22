@@ -1,10 +1,8 @@
 # bpf
 * icmp echo reply for hop addresses
-* optimize programm
-* use map of maps for supporting multiple target addresses (with deamonless mode)
-* use log ringbuffer
+* optimize program
+* use map of maps for supporting multiple target addresses (with daemon less mode)
+* use log ring buffer
 
 # cli
-* daemonless mode (setup and exit)
-* cleanup subcommand (for daemonless mode)
-* configure maps (for daemonless mode)
+* separately configure maps

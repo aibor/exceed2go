@@ -1,19 +1,16 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os/signal"
-	"syscall"
 
 	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/spf13/cobra"
 )
 
-// runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run INTERFACE TARGET_ADDRESS HOP_ADDRESS ...",
-	Short: "Run the program",
+// loadCmd represents the run command
+var loadCmd = &cobra.Command{
+	Use:   "load INTERFACE TARGET_ADDRESS HOP_ADDRESS ...",
+	Short: "Load and configure the program",
 	Long: `Attach the XDP program to the interface with the given name. The
 	first address is the target address that the packets are matched against.
 	The additional addresses are the hops source addresses the time exceeded
@@ -23,39 +20,22 @@ var runCmd = &cobra.Command{
 		ifName := args[0]
 		hopAddrs := args[1:]
 
-		objs, err := exceed2go.Load()
+		err := exceed2go.LoadAndPin()
 		if err != nil {
 			return fmt.Errorf("error loading objects: %w", err)
 		}
-		defer func() {
-			if err := objs.Close(); err != nil {
-				fmt.Printf("error closing objects: %v", err)
-			}
-		}()
 
 		for idx, addr := range hopAddrs {
-			if err := objs.SetAddr(idx, addr); err != nil {
+			if err := exceed2go.SetAddr(idx, addr); err != nil {
+				exceed2go.Cleanup()
 				return fmt.Errorf("error setting address: %w", err)
 			}
 		}
 
-		closeFunc, err := objs.AttachProg(ifName)
-		if err != nil {
+		if err := exceed2go.AttachProg(ifName); err != nil {
+			exceed2go.Cleanup()
 			return fmt.Errorf("error attaching program: %w", err)
 		}
-
-		defer func() {
-			if err := closeFunc(); err != nil {
-				fmt.Printf("error closing objects: %v", err)
-			}
-		}()
-
-		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-		defer stop()
-
-		fmt.Println("Running. Press CTRL-C to stop.")
-
-		<-ctx.Done()
 
 		return nil
 	},
@@ -71,5 +51,5 @@ var runCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(loadCmd)
 }
