@@ -59,5 +59,5 @@ testbpf: $(INITRD_FILE)
 		-m 256 \
 		-serial stdio \
 		-display none \
-		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 -- -test.v' \
+		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 quiet -- -test.v' \
 		< /dev/null
