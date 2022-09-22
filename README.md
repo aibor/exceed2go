@@ -4,6 +4,9 @@ Exceed2go is an eBPF XDP based ICMPv6 time-exceeded packet generator. It
 attaches a XDP program to a given interface and replies to packets matching the
 configured address with ICMPv6 time-exceeded messages.
 
+It's inspired by this news post about someone distributing their CV by
+traceroute: https://news.ycombinator.com/item?id=32609588
+
 ## Usage:
 
 You need to be able to set DNS PTR (rDNS) records for address in a IPv6 subnet
