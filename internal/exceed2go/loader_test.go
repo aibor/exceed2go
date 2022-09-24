@@ -24,11 +24,11 @@ var echoReplyTC = layers.CreateICMPv6TypeCode(layers.ICMPv6TypeEchoReply, 0)
 
 func mapIPs() []MapIP {
 	return []MapIP{
-		{0, "fd01::ff"},
-		{1, "fd01::ee"},
+		{0, "fd01::bb"},
+		{1, "fd01::cc"},
 		{2, "fd01::dd"},
-		{3, "fd01::cc"},
-		{4, "fd01::bb"},
+		{3, "fd01::ee"},
+		{4, "fd01::ff"},
 	}
 }
 
@@ -195,17 +195,21 @@ func icmp6Checksum(tb testing.TB, src, dst string, icmp6TypeCode layers.ICMPv6Ty
 	return icmp6out.Checksum
 }
 
-func load(tb testing.TB) {
+func load(tb testing.TB) *bpfObjects {
 	tb.Helper()
 
 	if LoadFailed.Load() {
 		tb.Fatal("Fail due to previous load errors")
 	}
 
-	err := LoadAndPin()
-	tb.Cleanup(func() {Cleanup()})
+	objs, err := Load()
+	tb.Cleanup(func() {
+		Cleanup()
+		objs.Close()
+	})
 	if err == nil {
-		return
+		require.NoError(tb,objs.PinObjs(), "must Pin objects")
+		return objs
 	}
 
 	tb.Errorf("error loading objects: %v", err)
@@ -216,18 +220,8 @@ func load(tb testing.TB) {
 
 	LoadFailed.Store(true)
 	tb.FailNow()
-}
 
-func getProg(tb testing.TB) *ebpf.Program {
-	tb.Helper()
-
-	progInt, err := getPinnedProgram()
-	require.NoError(tb, err, "must get program")
-
-	prog, ok := progInt.(*ebpf.Program)
-	require.True(tb, ok, "must convert to program")
-
-	return prog
+	return nil
 }
 
 func setAddr(tb testing.TB, idx int, addr string) {
@@ -244,10 +238,8 @@ func statsPrint(tb testing.TB) {
 	var nextKey uint32
 	var lookupKeys = make([]uint32, 8)
 	var lookupValues = make([]uint32, 8)
-	statsInt, err := getPinnedStatsMap()
+	stats, err := getPinnedStatsMap()
 	require.NoError(tb, err, "stats map must load")
-	stats, ok := statsInt.(*ebpf.Map)
-	require.True(tb, ok, "must get map")
 	_, _ = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 
 	tb.Logf("  Index: % d", lookupKeys)
@@ -273,17 +265,16 @@ func TestLoad(t *testing.T) {
 
 func TestTTL(t *testing.T) {
 	for idx, ip := range mapIPs() {
-		if idx == 0 {
+		if idx == 4 {
 			continue
 		}
 
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
-			load(tt)
+			objs := load(tt)
 			setMapIPs(tt)
 
-			prog := getProg(tt)
-			pkt := packet(tt, ip.hopLimit, mapIPs()[0].addr)
-			ret, out, err := prog.Test(pkt)
+			pkt := packet(tt, ip.hopLimit + 1, mapIPs()[4].addr)
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
@@ -319,12 +310,11 @@ func TestNoMatch(t *testing.T) {
 
 	for _, ip := range ips {
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
-			load(tt)
+			objs := load(tt)
 			setMapIPs(tt)
 
-			prog := getProg(tt)
 			pkt := packet(tt, ip.hopLimit, ip.addr)
-			ret, out, err := prog.Test(pkt)
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
@@ -334,34 +324,37 @@ func TestNoMatch(t *testing.T) {
 }
 
 func TestEchoReply(t *testing.T) {
-	load(t)
-	setMapIPs(t)
+	for _, ip := range mapIPs() {
+		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(tt *testing.T) {
+			objs := load(tt)
+			setMapIPs(tt)
 
-	prog := getProg(t)
-	pkt := packet(t, 64, mapIPs()[0].addr)
-	ret, out, err := prog.Test(pkt)
-	require.NoError(t, err, "program must run without error")
-	assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
-	outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
-	outLayers := outPkt.Layers()
-	require.Equal(t, 4, len(outLayers), "number of layers must be correct")
+			pkt := packet(t, 64, ip.addr)
+			ret, out, err := objs.Exceed2go.Test(pkt)
+			require.NoError(t, err, "program must run without error")
+			assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
+			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
+			outLayers := outPkt.Layers()
+			require.Equal(t, 4, len(outLayers), "number of layers must be correct")
 
-	ip6, ok := outLayers[1].(*layers.IPv6)
-	if assert.True(t, ok, "must be IPv6") {
-		assert.Equal(t, mapIPs()[0].addr, ip6.SrcIP.String(), "correct src address needed")
-		assert.Equal(t, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
-		assert.Equal(t, 16, int(ip6.Length), "correct length needed")
-		assert.Equal(t, 6, int(ip6.Version), "correct version needed")
-		assert.Equal(t, 64, int(ip6.HopLimit), "correct hop limit needed")
-		assert.Equal(t, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
+			ip6, ok := outLayers[1].(*layers.IPv6)
+			if assert.True(t, ok, "must be IPv6") {
+				assert.Equal(t, ip.addr, ip6.SrcIP.String(), "correct src address needed")
+				assert.Equal(t, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
+				assert.Equal(t, 16, int(ip6.Length), "correct length needed")
+				assert.Equal(t, 6, int(ip6.Version), "correct version needed")
+				assert.Equal(t, 64, int(ip6.HopLimit), "correct hop limit needed")
+				assert.Equal(t, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
+			}
+
+			icmp6, ok := outLayers[2].(*layers.ICMPv6)
+			if assert.True(t, ok, "must be ICMPv6") {
+				assert.Equal(t, "EchoReply", icmp6.TypeCode.String())
+				assert.Equal(t, icmp6Checksum(t, ip.addr, "fd03::4", echoReplyTC, out[58:]), icmp6.Checksum, "checksum must match")
+			}
+			statsPrint(t)
+		})
 	}
-
-	icmp6, ok := outLayers[2].(*layers.ICMPv6)
-	if assert.True(t, ok, "must be ICMPv6") {
-		assert.Equal(t, "EchoReply", icmp6.TypeCode.String())
-		assert.Equal(t, icmp6Checksum(t, mapIPs()[0].addr, "fd03::4", echoReplyTC, out[58:]), icmp6.Checksum, "checksum must match")
-	}
-	statsPrint(t)
 }
 
 func TestChecksum(t *testing.T) {

@@ -9,20 +9,25 @@ import (
 
 // loadCmd represents the run command
 var loadCmd = &cobra.Command{
-	Use:   "load INTERFACE TARGET_ADDRESS HOP_ADDRESS ...",
+	Use:   "load INTERFACE HOP_ADDRESS ...",
 	Short: "Load and configure the program",
 	Long: `Attach the XDP program to the interface with the given name. The
-	first address is the target address that the packets are matched against.
-	The additional addresses are the hops source addresses the time exceeded
-	ICMP packets will be sent from in the given order.`,
+	hop addresses are used as hops in the order given. So ping the last address
+	the get a traceroute with all the given addresses in that order.`,
 	Args: cobra.MinimumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ifName := args[0]
 		hopAddrs := args[1:]
 
-		err := exceed2go.LoadAndPin()
+		objs, err := exceed2go.Load()
 		if err != nil {
 			return fmt.Errorf("error loading objects: %w", err)
+		}
+
+		defer objs.Close()
+
+		if err := objs.PinObjs(); err != nil {
+			return fmt.Errorf("failed to pin maps: %w", err)
 		}
 
 		for idx, addr := range hopAddrs {
@@ -32,7 +37,7 @@ var loadCmd = &cobra.Command{
 			}
 		}
 
-		if err := exceed2go.AttachProg(ifName); err != nil {
+		if err := objs.AttachProg(ifName); err != nil {
 			exceed2go.Cleanup()
 			return fmt.Errorf("error attaching program: %w", err)
 		}

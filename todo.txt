@@ -1,6 +1,4 @@
 # bpf
-* icmp echo reply for hop addresses
-* optimize program
 * use map of maps for supporting multiple target addresses (with daemon less mode)
 * use log ring buffer
 

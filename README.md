@@ -16,19 +16,19 @@ reverse DNS entries for addresses.
 Then load `exceed2go` for those addresses:
 
 ```
-# exceed2go load eth0 2001:db8::ff 2001:db8::5 2001:db8::aa 2001:db8::dd 2001:db8::ee
+# exceed2go load eth0 2001:db8::5 2001:db8::aa 2001:db8::dd 2001:db8::ee 2001:db8::ff
 ```
 
 or a bit more convenient with the help of bash expansion:
 
 ```
-# exceed2go load eth0 2001:db8::{ff,5,aa,dd,ee}
+# exceed2go load eth0 2001:db8::{5,aa,dd,ee,ff}
 ```
 
 `eth0` is the name of the interface to attach the XDP program to. So it should
 be the interface the packets reach our server at.
 
-The first address (2001:db8::ff in the example) is the target address to start
+The last address (2001:db8::ff in the example) is the target address to start
 a traceroute to.
 
 All additional addresses are the hops to be replied as in the order they should

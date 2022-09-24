@@ -12,15 +12,8 @@ import (
 
 const pinPath = "/sys/fs/bpf/exceed2go"
 
-type pinObj interface{
-	IsPinned() bool
-	Unpin() error
-	Close() error
-}
-
 // MapIP contains an IPv6 addresses that is supposed to be returned for the
-// given hop limit of incoming packets. HopLimit 0 is special and is the target
-// address that should match the incoming destination address.
+// given hop limit of incoming packets.
 type MapIP struct {
 	hopLimit int
 	addr     string
@@ -28,29 +21,52 @@ type MapIP struct {
 
 // Load the BPF objects and return the object collection for further use, like
 // attaching it to an interface.
-func LoadAndPin() error {
+func Load() (*bpfObjects, error) {
 	if err := os.MkdirAll(pinPath, 0755); err != nil {
-		return fmt.Errorf("failed to create bpf pin dir: %w", err)
+		return nil, fmt.Errorf("failed to create bpf pin dir: %w", err)
 	}
 
 	objs := bpfObjects{}
 	err := loadBpfObjects(&objs, nil)
 	if err != nil {
-		return fmt.Errorf("failed to load objects: %w", err)
+		return nil, fmt.Errorf("failed to load objects: %w", err)
 	}
 
-	defer objs.Close()
+	return &objs, nil
+}
 
-	if err := objs.Exceed2go.Pin(programPinPath()); err != nil {
-		return fmt.Errorf("failed to pin program: %w", err)
-	}
-
-	if err := objs.ExceedCounters.Pin(statsPinPath()); err != nil {
+func (o *bpfObjects) PinObjs() error {
+	if err := o.ExceedCounters.Pin(statsPinPath()); err != nil {
 		return fmt.Errorf("failed to pin stats map: %w", err)
 	}
 
-	if err := objs.ExceedAddrs.Pin(configPinPath()); err != nil {
+	if err := o.ExceedAddrs.Pin(configPinPath()); err != nil {
 		return fmt.Errorf("failed to pin config map: %w", err)
+	}
+
+	return nil
+}
+
+// AttachProg attaches the XDP program to the interface with the given name. It
+// pins the link in the directory for the program.
+func (o *bpfObjects) AttachProg(ifName string) error {
+	iface, err := net.InterfaceByName(ifName)
+	if err != nil {
+		return fmt.Errorf("interface not found: %s: %w", ifName, err)
+	}
+
+	link, err := link.AttachXDP(link.XDPOptions{
+		Program: o.Exceed2go,
+		Interface: iface.Index,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to load XDP program: %w", err)
+	}
+
+	defer link.Close()
+
+	if err := link.Pin(linkPinPath()); err != nil {
+		return fmt.Errorf("failed to pin link: %w", err)
 	}
 
 	return nil
@@ -58,42 +74,10 @@ func LoadAndPin() error {
 
 // Cleanup unpins and closes all objects.
 func Cleanup() {
-	pinnedObjs := []func() (pinObj, error) {
-		getPinnedLink,
-		getPinnedProgram,
-		getPinnedStatsMap,
-		getPinnedConfigMap,
-	}
-
-	for _, objFunc := range pinnedObjs {
-		obj, err := objFunc()
-		if err != nil {
-			continue
-		}
-		switch o := obj.(type) {
-		case *ebpf.Program:
-			if o == nil {
-				continue
-			}
-		case *ebpf.Map:
-			if o == nil {
-				continue
-			}
-		default:
-			continue
-		}
-
-		if obj.IsPinned() {
-			_ = obj.Unpin()
-		}
-		_ = obj.Close()
-	}
-
 	_ = os.RemoveAll(pinPath)
 }
 
-// SetAddr puts the given address for the given hop number. Hop number 0 sets
-// the target address to match.
+// SetAddr puts the given address for the given hop number.
 func SetAddr(hop int, addr string) error {
 	config, err := getPinnedConfigMap()
 	if err != nil {
@@ -105,7 +89,7 @@ func SetAddr(hop int, addr string) error {
 		return fmt.Errorf("Cannot parse IP: %s", addr)
 	}
 
-	if err := config.(*ebpf.Map).Put(uint32(hop), []byte(ip)); err != nil {
+	if err := config.Put(uint32(hop), []byte(ip)); err != nil {
 		return fmt.Errorf("map load error: %w", err)
 	}
 
@@ -125,43 +109,12 @@ func GetStats() ([]uint32, error) {
 		return lookupValues, fmt.Errorf("failed to get stats map: %w", err)
 	}
 
-	_, err = stats.(*ebpf.Map).BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	_, err = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 	if err != nil {
 		return lookupValues, fmt.Errorf("failed to lookup stats: %w", err)
 	}
 
 	return lookupValues, nil
-}
-
-// AttachProg attaches the XDP program to the interface with the given name. It
-// returns a function that detaches and closes the objects and an error in case
-// if failure.
-func AttachProg(ifName string) error {
-	iface, err := net.InterfaceByName(ifName)
-	if err != nil {
-		return fmt.Errorf("interface not found: %s: %w", ifName, err)
-	}
-
-	prog, err := getPinnedProgram()
-	if err != nil {
-		return fmt.Errorf("failed to get pinned program: %w", err)
-	}
-
-	link, err := link.AttachXDP(link.XDPOptions{
-		Program: prog.(*ebpf.Program),
-		Interface: iface.Index,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to load XDP program: %w", err)
-	}
-
-	defer link.Close()
-
-	if err := link.Pin(linkPinPath()); err != nil {
-		return fmt.Errorf("failed to pin link: %w", err)
-	}
-
-	return nil
 }
 
 // IfUpNameList returns a list of names of all interfaces that are up and not a
@@ -211,33 +164,21 @@ func IPv6AddrsList(ifName string) []string {
 }
 
 func linkPinPath() string {
-	return path.Join(pinPath, "link")
-}
-
-func programPinPath() string {
-	return path.Join(pinPath, "prog")
+	return path.Join(pinPath, "xdp_link")
 }
 
 func statsPinPath() string {
-	return path.Join(pinPath, "stats")
+	return path.Join(pinPath, "stats_map")
 }
 
 func configPinPath() string {
-	return path.Join(pinPath, "config")
+	return path.Join(pinPath, "config_map")
 }
 
-func getPinnedLink() (pinObj, error) {
-	return ebpf.LoadPinnedProgram(linkPinPath(), nil)
-}
-
-func getPinnedProgram() (pinObj, error) {
-	return ebpf.LoadPinnedProgram(programPinPath(), nil)
-}
-
-func getPinnedStatsMap() (pinObj, error) {
+func getPinnedStatsMap() (*ebpf.Map, error) {
 	return ebpf.LoadPinnedMap(statsPinPath(), nil)
 }
 
-func getPinnedConfigMap() (pinObj, error) {
+func getPinnedConfigMap() (*ebpf.Map, error) {
 	return ebpf.LoadPinnedMap(configPinPath(), nil)
 }

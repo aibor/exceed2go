@@ -2,7 +2,9 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_helpers.h>
 
-#define DEFAULT_ACTION      XDP_PASS
+#define DEFAULT_ACTION XDP_PASS
+#define MAX_ADDRS      32
+
 #define ETH_ALEN            6
 #define ETH_TLEN            2
 #define ETH_P_IPV6          0x86DD
@@ -31,7 +33,7 @@ struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
   __type(key, __u32);
   __type(value, struct in6_addr);
-  __uint(max_entries, 32);
+  __uint(max_entries, MAX_ADDRS);
 } exceed_addrs SEC(".maps");
 
 struct {
@@ -46,8 +48,8 @@ enum exceed_counter_key {
   COUNTER_KEY_TARGET,
   COUNTER_KEY_FOUND,
   COUNTER_KEY_DROP,
-  COUNTER_KEY_TARGET_ICMP,
-  COUNTER_KEY_TARGET_ICMP_ECHO_REQ,
+  COUNTER_KEY_ICMP,
+  COUNTER_KEY_ICMP_ECHO_REQ,
 };
 
 static __always_inline void counter_increment(__u32 key) {
@@ -201,62 +203,83 @@ int exceed2go(struct xdp_md *ctx) {
 
   volatile struct ethhdr *eth = data;
   if (CHECK_BOUNDARY(eth, data_end))
-    goto end;
+    return ret;
 
   if (eth->h_proto != bpf_htons(ETH_P_IPV6))
-    goto end;
+    return ret;
 
   counter_increment(COUNTER_KEY_IPV6);
 
   volatile struct ipv6hdr *ipv6 = NEXT_HDR(eth);
   if (CHECK_BOUNDARY(ipv6, data_end))
-    goto end;
+    return ret;
 
-  /* Key 0 is special an has the target address we are watching for. */
-  __u32            target_key = 0;
-  struct in6_addr *target     = bpf_map_lookup_elem(&exceed_addrs, &target_key);
+  struct in6_addr *target;
+  __u32            target_key;
+  for (__u32 i = 0; i < MAX_ADDRS; i++) {
+    /* Verifier doesn't like pointer to the loop var. */
+    target_key = i;
+    target     = bpf_map_lookup_elem(&exceed_addrs, &target_key);
+    /* If lookup returns nothing or found address is zero exit as that indicates
+     *we are through the list of configured addresses.
+     */
+    if (!target || !((const __u32 *)(target))[0])
+      return ret;
 
-  if (!target || !IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
-    goto end;
+    if (IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
+      break;
+
+    target = NULL;
+  }
+
+  if (!target)
+    return ret;
 
   counter_increment(COUNTER_KEY_TARGET);
 
-  /* All other entries are the addressess we want to answer with for the
-   * specific hop limit.
+  /* Address map array is 0 indexed, but the lowest hop_limit that will reach us
+   * is 1, so decrement the hop_key by 1.
    */
-  __u32            hop_key     = ipv6->hop_limit;
-  struct in6_addr *exceed_addr = bpf_map_lookup_elem(&exceed_addrs, &hop_key);
+  __u32 hop_key = ipv6->hop_limit > 0 ? ipv6->hop_limit - 1 : 0;
 
-  /* If there is an address found for the hop limit then reply with ICMP time
-   * exceeded message.
+  /* Only reply with time exceeded messages, if the hop_limit is not above the
+   * index of the destination address. All the addresses above should be ignored
+   * as the destination has already been reached so all addrs after are not
+   * relevant.
    */
-  if (exceed_addr && ((const __u32 *)(exceed_addr))[0]) {
-    counter_increment(COUNTER_KEY_FOUND);
-    ret = reply_exceeded(ctx, exceed_addr);
-    goto end;
+  if (target_key > hop_key) {
+    struct in6_addr *exceed_addr = bpf_map_lookup_elem(&exceed_addrs, &hop_key);
+
+    /* If there is an address found for the hop limit then reply with ICMP time
+     * exceeded message.
+     */
+    if (exceed_addr && ((const __u32 *)(exceed_addr))[0]) {
+      counter_increment(COUNTER_KEY_FOUND);
+      ret = reply_exceeded(ctx, exceed_addr);
+      if (ret == XDP_DROP)
+        counter_increment(COUNTER_KEY_DROP);
+      return ret;
+    }
   }
 
+  /* If the packet wasn't answered already with a time exceeded message, it
+   * might be an ICMP echo request that should be answered for all of our addrs.
+   */
   if (ipv6->nexthdr != IPPROTO_ICMPV6)
-    goto end;
+    return ret;
 
-  counter_increment(COUNTER_KEY_TARGET_ICMP);
+  counter_increment(COUNTER_KEY_ICMP);
 
   volatile struct icmp6hdr *icmp6 = NEXT_HDR(ipv6);
   if (CHECK_BOUNDARY(icmp6, data_end))
-    goto end;
+    return ret;
 
   if (icmp6->icmp6_type != ICMP6_ECHO_REQUEST)
-    goto end;
+    return ret;
 
-  counter_increment(COUNTER_KEY_TARGET_ICMP_ECHO_REQ);
+  counter_increment(COUNTER_KEY_ICMP_ECHO_REQ);
 
-  ret = reply_echo(eth, ipv6, icmp6, data_end);
-
-end:
-  if (ret == XDP_DROP)
-    counter_increment(COUNTER_KEY_DROP);
-
-  return ret;
+  return reply_echo(eth, ipv6, icmp6, data_end);
 }
 
 char _license[] SEC("license") = "GPL";
