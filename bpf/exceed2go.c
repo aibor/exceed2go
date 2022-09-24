@@ -18,16 +18,16 @@
 #define ADD_HDR_LEN         (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
 #define bpf_memcpy __builtin_memcpy
-
 #define IN6_ARE_ADDR_EQUAL(a, b)                                               \
   ((((const __u32 *)(a))[0] == ((const __u32 *)(b))[0]) &&                     \
    (((const __u32 *)(a))[1] == ((const __u32 *)(b))[1]) &&                     \
    (((const __u32 *)(a))[2] == ((const __u32 *)(b))[2]) &&                     \
    (((const __u32 *)(a))[3] == ((const __u32 *)(b))[3]))
-
 #define NEXT_HDR(h) ((void *)(h + 1))
-
-#define CHECK_BOUNDARY(h, end) (NEXT_HDR(h) > end)
+#define CHECK_BOUNDARY(h, end, ret)                                            \
+  if (NEXT_HDR(h) > end) {                                                     \
+    return ret;                                                                \
+  }
 
 struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
@@ -65,20 +65,20 @@ static __always_inline __u16 csum_fold(__u32 sum) {
   return (__u16)~sum;
 }
 
-static __always_inline __u32 icmp6_csum(volatile struct icmp6hdr *icmp6,
-                                        volatile struct ipv6hdr  *ipv6,
-                                        volatile void            *data_end) {
+static __always_inline __u32 icmp6_csum(struct icmp6hdr *icmp6,
+                                        struct ipv6hdr *ipv6, void *data_end) {
   /* Value is already in network byte order. */
   __be32 len     = ((__u32)ipv6->payload_len) << 16;
   __be32 nexthdr = ((__u32)ipv6->nexthdr) << 24;
   __be32 sum     = 0;
 
+  /* Sum up IPv6 pseudo header. */
   sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, IPV6_ALEN, sum);
   sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, IPV6_ALEN, sum);
   sum = bpf_csum_diff(NULL, 0, &len, sizeof(len), sum);
   sum = bpf_csum_diff(NULL, 0, &nexthdr, sizeof(nexthdr), sum);
 
-  /* Sum up payload. */
+  /* Sum up ICMP6 header and payload. */
   __be32 *buf = (void *)icmp6;
   for (int i = 0; i < IPV6_MTU_MIN; i += 4) {
     if ((void *)(buf + 1) > data_end) {
@@ -105,11 +105,6 @@ static __always_inline __u32 icmp6_csum(volatile struct icmp6hdr *icmp6,
 
 static __always_inline int reply_exceeded(struct xdp_md   *ctx,
                                           struct in6_addr *src_addr) {
-  volatile void   *data, *data_end;
-  struct ethhdr   *eth, *orig_eth;
-  struct ipv6hdr  *ipv6, *orig_ipv6;
-  struct icmp6hdr *icmp6;
-
   /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU.
    * TODO: add test case
    */
@@ -122,33 +117,33 @@ static __always_inline int reply_exceeded(struct xdp_md   *ctx,
     bpf_xdp_adjust_tail(ctx, tail_adjust);
 
   /* Reinitialize after length change. */
-  data     = (void *)(unsigned long)ctx->data;
-  data_end = (void *)(unsigned long)ctx->data_end;
+  void *data     = (void *)(unsigned long)ctx->data;
+  void *data_end = (void *)(unsigned long)ctx->data_end;
 
   /* Initialize former header positions. */
-  orig_eth  = (void *)data + (int)ADD_HDR_LEN;
-  orig_ipv6 = NEXT_HDR(orig_eth);
-  if (CHECK_BOUNDARY(orig_ipv6, data_end))
-    return XDP_DROP;
+  struct ethhdr  *orig_eth  = (void *)data + (int)ADD_HDR_LEN;
+  struct ipv6hdr *orig_ipv6 = NEXT_HDR(orig_eth);
+  CHECK_BOUNDARY(orig_ipv6, data_end, XDP_DROP);
 
   /* Initialize new headers. */
-  eth  = (void *)data;
-  ipv6 = NEXT_HDR(eth);
+  struct ethhdr  *eth  = (void *)data;
+  struct ipv6hdr *ipv6 = NEXT_HDR(eth);
 
   /* Relocate data and swap mac addresses. */
   bpf_memcpy(eth->h_source, orig_eth->h_dest, ETH_ALEN);
   bpf_memcpy(eth->h_dest, orig_eth->h_source, ETH_ALEN);
   eth->h_proto = orig_eth->h_proto;
 
-  icmp6 = NEXT_HDR(ipv6);
+  /* Create new ICMP6 layer. */
+  struct icmp6hdr *icmp6 = NEXT_HDR(ipv6);
 
   __u16 payload_len = data_end - (void *)icmp6;
 
   ipv6->version     = 6;
   ipv6->priority    = 0;
   ipv6->flow_lbl[0] = 0;
-  ipv6->flow_lbl[1] = 1;
-  ipv6->flow_lbl[2] = 2;
+  ipv6->flow_lbl[1] = 0;
+  ipv6->flow_lbl[2] = 0;
   ipv6->payload_len = bpf_htons(payload_len);
   ipv6->nexthdr     = IPPROTO_ICMPV6;
   ipv6->hop_limit   = IPV6_HOP_LIMIT;
@@ -167,10 +162,8 @@ static __always_inline int reply_exceeded(struct xdp_md   *ctx,
   return XDP_TX;
 }
 
-static __always_inline int reply_echo(volatile struct ethhdr   *eth,
-                                      volatile struct ipv6hdr  *ipv6,
-                                      volatile struct icmp6hdr *icmp6,
-                                      volatile void            *data_end) {
+static __always_inline int reply_echo(struct ethhdr *eth, struct ipv6hdr *ipv6,
+                                      struct icmp6hdr *icmp6, void *data_end) {
 
   /* Swap ethernet addresses. */
   char tmphwaddr[ETH_ALEN];
@@ -196,23 +189,19 @@ static __always_inline int reply_echo(volatile struct ethhdr   *eth,
 
 SEC("xdp")
 int exceed2go(struct xdp_md *ctx) {
-  int ret = DEFAULT_ACTION;
+  void *data     = (void *)(unsigned long)ctx->data;
+  void *data_end = (void *)(unsigned long)ctx->data_end;
 
-  volatile void *data     = (void *)(unsigned long)ctx->data;
-  volatile void *data_end = (void *)(unsigned long)ctx->data_end;
-
-  volatile struct ethhdr *eth = data;
-  if (CHECK_BOUNDARY(eth, data_end))
-    return ret;
+  struct ethhdr *eth = data;
+  CHECK_BOUNDARY(eth, data_end, DEFAULT_ACTION);
 
   if (eth->h_proto != bpf_htons(ETH_P_IPV6))
-    return ret;
+    return DEFAULT_ACTION;
 
   counter_increment(COUNTER_KEY_IPV6);
 
-  volatile struct ipv6hdr *ipv6 = NEXT_HDR(eth);
-  if (CHECK_BOUNDARY(ipv6, data_end))
-    return ret;
+  struct ipv6hdr *ipv6 = NEXT_HDR(eth);
+  CHECK_BOUNDARY(ipv6, data_end, DEFAULT_ACTION);
 
   struct in6_addr *target;
   __u32            target_key;
@@ -220,20 +209,24 @@ int exceed2go(struct xdp_md *ctx) {
     /* Verifier doesn't like pointer to the loop var. */
     target_key = i;
     target     = bpf_map_lookup_elem(&exceed_addrs, &target_key);
+
     /* If lookup returns nothing or found address is zero exit as that indicates
      *we are through the list of configured addresses.
      */
     if (!target || !((const __u32 *)(target))[0])
-      return ret;
+      return DEFAULT_ACTION;
 
     if (IN6_ARE_ADDR_EQUAL(&ipv6->daddr, target))
+      /* Found the destination address in our list. Break the loop and proceed
+       * with the found target address.
+       */
       break;
 
     target = NULL;
   }
 
   if (!target)
-    return ret;
+    return DEFAULT_ACTION;
 
   counter_increment(COUNTER_KEY_TARGET);
 
@@ -255,7 +248,7 @@ int exceed2go(struct xdp_md *ctx) {
      */
     if (exceed_addr && ((const __u32 *)(exceed_addr))[0]) {
       counter_increment(COUNTER_KEY_FOUND);
-      ret = reply_exceeded(ctx, exceed_addr);
+      int ret = reply_exceeded(ctx, exceed_addr);
       if (ret == XDP_DROP)
         counter_increment(COUNTER_KEY_DROP);
       return ret;
@@ -266,16 +259,15 @@ int exceed2go(struct xdp_md *ctx) {
    * might be an ICMP echo request that should be answered for all of our addrs.
    */
   if (ipv6->nexthdr != IPPROTO_ICMPV6)
-    return ret;
+    return DEFAULT_ACTION;
 
   counter_increment(COUNTER_KEY_ICMP);
 
-  volatile struct icmp6hdr *icmp6 = NEXT_HDR(ipv6);
-  if (CHECK_BOUNDARY(icmp6, data_end))
-    return ret;
+  struct icmp6hdr *icmp6 = NEXT_HDR(ipv6);
+  CHECK_BOUNDARY(icmp6, data_end, DEFAULT_ACTION);
 
   if (icmp6->icmp6_type != ICMP6_ECHO_REQUEST)
-    return ret;
+    return DEFAULT_ACTION;
 
   counter_increment(COUNTER_KEY_ICMP_ECHO_REQ);
 
