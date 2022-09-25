@@ -203,7 +203,7 @@ int exceed2go(struct xdp_md *ctx) {
   struct ipv6hdr *ipv6 = NEXT_HDR(eth);
   CHECK_BOUNDARY(ipv6, data_end, DEFAULT_ACTION);
 
-  struct in6_addr *target;
+  struct in6_addr *target = NULL;
   __u32            target_key;
   for (__u32 i = 0; i < MAX_ADDRS; i++) {
     /* Verifier doesn't like pointer to the loop var. */
