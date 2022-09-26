@@ -7,3 +7,6 @@ AlignConsecutiveMacros: AcrossComments
 AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveDeclarations: AcrossComments
+AlignEscapedNewlines: DontAlign
+BinPackParameters: false
+BinPackArguments: false
