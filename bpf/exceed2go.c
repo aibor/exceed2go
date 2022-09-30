@@ -15,23 +15,19 @@
 #define ICMP6_TIME_EXCEEDED 3
 #define ICMP6_ECHO_REQUEST  128
 #define ICMP6_ECHO_REPLY    129
-#define ADD_HDR_LEN         (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
+#define ADJ_LEN             (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
 #define bpf_memcpy __builtin_memcpy
 #define IN6_ARE_ADDR_EQUAL(a, b) \
-  ((((const __u32 *)(a))[0] == ((const __u32 *)(b))[0]) && \
-   (((const __u32 *)(a))[1] == ((const __u32 *)(b))[1]) && \
-   (((const __u32 *)(a))[2] == ((const __u32 *)(b))[2]) && \
-   (((const __u32 *)(a))[3] == ((const __u32 *)(b))[3]))
+  ((((const __u64 *)(a))[0] == ((const __u64 *)(b))[0]) && \
+   (((const __u64 *)(a))[1] == ((const __u64 *)(b))[1]))
 #define next_header(h) ((void *)(h + 1))
 #define assert_boundary(h, end, ret) \
-  if (next_header(h) > end) { \
-    return ret; \
-  }
+  if (next_header(h) > end) \
+  return ret
 #define assert_equal(f, e, ret) \
-  if (f != e) { \
-    return ret; \
-  }
+  if (f != e) \
+  return ret
 
 struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
@@ -56,7 +52,7 @@ enum exceed_counter_key {
   COUNTER_KEY_ICMP_ECHO_REQ,
 };
 
-static __always_inline void counter_increment(__u32 key) {
+static void counter_increment(__u32 key) {
   __u32 *value = bpf_map_lookup_elem(&exceed_counters, &key);
   if (value) {
     __sync_fetch_and_add(value, 1);
@@ -96,7 +92,7 @@ static long target_search_cb(void                        *map,
 /* Fold a 32bit integer checksum down to 16bit value as needed in protocol
  * headers.
  */
-static __always_inline __u16 csum_fold(__u32 sum) {
+static __u16 csum_fold(__u32 sum) {
   sum = (sum & 0xffff) + (sum >> 16);
   sum = (sum & 0xffff) + (sum >> 16);
   return (__u16)~sum;
@@ -152,10 +148,9 @@ static __always_inline int reply_exceeded(struct xdp_md   *ctx,
   /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU.
    * TODO: add test case
    */
-  int tail_adjust = IPV6_MTU_MIN - ADD_HDR_LEN - (ctx->data_end - ctx->data);
+  int tail_adjust = IPV6_MTU_MIN - ADJ_LEN - (ctx->data_end - ctx->data);
 
-  assert_equal(
-      bpf_xdp_adjust_head(ctx, (0 - (int)ADD_HDR_LEN)), 0, XDP_ABORTED);
+  assert_equal(bpf_xdp_adjust_head(ctx, (0 - (int)ADJ_LEN)), 0, XDP_ABORTED);
 
   if (tail_adjust < 0)
     bpf_xdp_adjust_tail(ctx, tail_adjust);
@@ -165,7 +160,7 @@ static __always_inline int reply_exceeded(struct xdp_md   *ctx,
   void *data_end = (void *)(unsigned long)ctx->data_end;
 
   /* Initialize former header positions. */
-  struct ethhdr  *orig_eth  = (void *)data + (int)ADD_HDR_LEN;
+  struct ethhdr  *orig_eth  = (void *)data + (int)ADJ_LEN;
   struct ipv6hdr *orig_ipv6 = next_header(orig_eth);
   assert_boundary(orig_ipv6, data_end, XDP_ABORTED);
 
