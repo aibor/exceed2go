@@ -276,7 +276,7 @@ func TestTTL(t *testing.T) {
 			setMapIPs(tt)
 
 			pkt := packet(tt, ip.hopLimit + 1, mapIPs()[4].addr)
-			ret, out, err := objs.Exceed2go.Test(pkt)
+			ret, out, err := objs.Exceed2goRoot.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
@@ -316,7 +316,7 @@ func TestNoMatch(t *testing.T) {
 			setMapIPs(tt)
 
 			pkt := packet(tt, ip.hopLimit, ip.addr)
-			ret, out, err := objs.Exceed2go.Test(pkt)
+			ret, out, err := objs.Exceed2goRoot.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(tt, pkt, out, "output package must be the same as input")
@@ -332,7 +332,7 @@ func TestEchoReply(t *testing.T) {
 			setMapIPs(tt)
 
 			pkt := packet(tt, 64, ip.addr)
-			ret, out, err := objs.ReplyEcho.Test(pkt)
+			ret, out, err := objs.Exceed2goEcho.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
