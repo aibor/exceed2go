@@ -8,6 +8,7 @@
 #define JMP_IDX_REPLY_EXCEEDED 0
 #define JMP_IDX_REPLY_ECHO     1
 
+#define ETH_HLEN            14
 #define ETH_ALEN            6
 #define ETH_TLEN            2
 #define ETH_P_IPV6          0x86DD
@@ -120,7 +121,7 @@ icmp6_csum(struct icmp6hdr *icmp6, struct ipv6hdr *ipv6, void *data_end) {
 
   /* Sum up ICMP6 header and payload. */
   __be32 *buf = (void *)icmp6;
-  for (int i = 0; i < IPV6_MTU_MIN; i += 4) {
+  for (int i = 0; i < ETH_HLEN + IPV6_MTU_MIN; i += 4) {
     if ((void *)(buf + 1) > data_end) {
       break;
     }
@@ -161,11 +162,9 @@ int exceed2go_exceeded(struct xdp_md *ctx) {
   if (src_addr.in6_u.u6_addr32[0] == 0)
     return DEFAULT_ACTION;
 
-  /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU.
-   * TODO: add test case
-   */
+  /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
   int head_len_adjust = 0 - (int)ADJ_LEN;
-  int tail_len_adjust = IPV6_MTU_MIN - ADJ_LEN - (data_end - data);
+  int tail_len_adjust = ETH_HLEN + IPV6_MTU_MIN - ADJ_LEN - (data_end - data);
 
   /* Remove meta data as it is not needed anymore. */
   assert_equal(bpf_xdp_adjust_meta(ctx, IPV6_ALEN), 0, XDP_ABORTED);

@@ -120,8 +120,12 @@ func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
 
-func packet(tb testing.TB, hopLimit int, dstAddr string) []byte {
+func packet(tb testing.TB, hopLimit int, dstAddr string, payload []byte) []byte {
 	tb.Helper()
+
+	if len(payload) == 0 {
+		payload = []byte{0x0, 0x0, 0x0, 0x0, 1, 2, 3, 4}
+	}
 
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
@@ -151,11 +155,11 @@ func packet(tb testing.TB, hopLimit int, dstAddr string) []byte {
 		SeqNumber:  1,
 	}
 
-	payload := gopacket.Payload([]byte{0x0, 0x0, 0x0, 0x0, 1, 2, 3, 4})
+	pload := gopacket.Payload(payload)
 	err := icmp6.SetNetworkLayerForChecksum(&ipv6)
 	require.NoError(tb, err, "must set layer for checksum")
 
-	err = gopacket.SerializeLayers(buf, opts, &eth, &ipv6, &icmp6, &icmp6echo, &payload)
+	err = gopacket.SerializeLayers(buf, opts, &eth, &ipv6, &icmp6, &icmp6echo, &pload)
 	require.NoError(tb, err, "must serialize packet")
 
 	return buf.Bytes()
@@ -275,7 +279,7 @@ func TestTTL(t *testing.T) {
 			objs := load(tt)
 			setMapIPs(tt)
 
-			pkt := packet(tt, ip.hopLimit + 1, mapIPs()[4].addr)
+			pkt := packet(tt, ip.hopLimit + 1, mapIPs()[4].addr, []byte{})
 			ret, out, err := objs.Exceed2goRoot.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
@@ -303,6 +307,61 @@ func TestTTL(t *testing.T) {
 	}
 }
 
+func TestTTLMaxSize(t *testing.T) {
+	payloads := []struct{
+		truncated bool
+		payload []byte
+	}{
+		{false, []byte{0x0, 0x0, 0x0, 0x0, 1, 2, 3, 4}},
+		{false, make([]byte, 1182)},
+		{false, make([]byte, 1183)},
+		{false, make([]byte, 1184)},
+		{true,  make([]byte, 1185)},
+		{true,  make([]byte, 1186)},
+		{true,  make([]byte, 1187)},
+		{true,  make([]byte, 1400)},
+	}
+
+	for idx, payload := range payloads {
+		t.Run(fmt.Sprintf("hop %d", idx), func(tt *testing.T) {
+			objs := load(tt)
+			setMapIPs(tt)
+
+			ip := mapIPs()[0]
+			pktSize := len(payload.payload) + 110
+			if payload.truncated {
+				pktSize = 1294
+			}
+
+			pkt := packet(tt, 1, mapIPs()[4].addr, payload.payload)
+			ret, out, err := objs.Exceed2goRoot.Test(pkt)
+			require.NoError(tt, err, "program must run without error")
+			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
+			assert.Equal(tt, pktSize, len(out), "out package must have correct length")
+			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
+			outLayers := outPkt.Layers()
+			require.Equal(tt, 4, len(outLayers), "number of layers must be correct")
+
+			ip6, ok := outLayers[1].(*layers.IPv6)
+			if assert.True(tt, ok, "must be IPv6") {
+				assert.Equal(tt, ip.addr, ip6.SrcIP.String(), "correct src address needed")
+				assert.Equal(tt, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
+				assert.Equal(tt, pktSize - 54, int(ip6.Length), "correct length needed")
+				assert.Equal(tt, 6, int(ip6.Version), "correct version needed")
+				assert.Equal(tt, 64, int(ip6.HopLimit), "correct hop limit needed")
+				assert.Equal(tt, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
+			}
+
+			icmp6, ok := outLayers[2].(*layers.ICMPv6)
+			if assert.True(tt, ok, "must be ICMPv6") {
+				assert.Equal(tt, "TimeExceeded(HopLimitExceeded)", icmp6.TypeCode.String())
+				assert.Equal(tt, icmp6Checksum(tt, ip.addr, "fd03::4", timeExceededTC, out[58:]), icmp6.Checksum, "checksum must match")
+			}
+			statsPrint(t)
+		})
+	}
+}
+
 func TestNoMatch(t *testing.T) {
 	ips := []MapIP{
 		{42, "fd0f::ff"},
@@ -315,7 +374,7 @@ func TestNoMatch(t *testing.T) {
 			objs := load(tt)
 			setMapIPs(tt)
 
-			pkt := packet(tt, ip.hopLimit, ip.addr)
+			pkt := packet(tt, ip.hopLimit, ip.addr, []byte{})
 			ret, out, err := objs.Exceed2goRoot.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 2, int(ret), "return code must be XDP_PASS(2)")
@@ -331,7 +390,7 @@ func TestEchoReply(t *testing.T) {
 			objs := load(tt)
 			setMapIPs(tt)
 
-			pkt := packet(tt, 64, ip.addr)
+			pkt := packet(tt, 64, ip.addr, []byte{})
 			ret, out, err := objs.Exceed2goEcho.Test(pkt)
 			require.NoError(tt, err, "program must run without error")
 			assert.Equal(tt, 3, int(ret), "return code must be XDP_TX(3)")
