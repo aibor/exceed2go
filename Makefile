@@ -45,7 +45,7 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h $(BTF_FILE)
 		bpf $$(popd >/dev/null; realpath $(BPF_FILE))
 
 $(TEST_INIT_FILE): $(BPF_TEST_FILE) $(BPF2GO_FILE)
-	go test -c -o $@ ./$(<D)
+	go test -tags pidone -c -o $@ ./$(<D)
 
 $(INITRD_FILE): $(TEST_INIT_FILE)
 	pushd $(<D)
