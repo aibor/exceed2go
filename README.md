@@ -7,6 +7,8 @@ configured address with ICMPv6 time-exceeded messages.
 It's inspired by this news post about someone distributing their CV by
 traceroute: https://news.ycombinator.com/item?id=32609588
 
+See it in action at `exceed2go.aibor.de`.
+
 ## Usage:
 
 You need to be able to set DNS PTR (rDNS) records for address in a IPv6 subnet
