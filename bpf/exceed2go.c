@@ -18,13 +18,15 @@
 #define ICMP6_ECHO_REPLY    129
 #define ADJ_LEN             (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
+#define likely(p)      __builtin_expect(!!(p), 1)
+#define unlikely(p)    __builtin_expect(!!(p), 0)
 #define bpf_memcpy     __builtin_memcpy
 #define next_header(h) ((void *)(h + 1))
 #define assert_boundary(h, end, ret) \
-  if (next_header(h) > end) \
+  if (unlikely(next_header(h) > end)) \
   return ret
 #define assert_equal(f, e, ret) \
-  if (f != e) \
+  if (unlikely(f != e)) \
   return ret
 
 struct {
@@ -48,12 +50,13 @@ enum exceed_counter_key {
   COUNTER_KEY_ABORTED,
   COUNTER_KEY_ICMP,
   COUNTER_KEY_ICMP_ECHO_REQ,
+  COUNTER_KEY_ICMP_WRONG_CSUM,
   COUNTER_KEY_UNREACH,
 };
 
 static __always_inline void counter_increment(__u32 key) {
   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-  if (value) {
+  if (likely(value)) {
     __sync_fetch_and_add(value, 1);
   }
 }
@@ -62,6 +65,25 @@ static __always_inline bool in6_addr_equal(const struct in6_addr *a,
                                            const struct in6_addr *b) {
   return ((a->in6_u.u6_addr64[0] == b->in6_u.u6_addr64[0]) &&
           (a->in6_u.u6_addr64[1] == b->in6_u.u6_addr64[1]));
+}
+
+/* Copy non address fields of the new headers. New headers are defined on stack
+ * and make sure all fields that are not set dynamically later are initialized
+ * with 0.
+ */
+static __always_inline void ipv6_init(struct ipv6hdr *ipv6) {
+  const struct ipv6hdr ipv6_new = {
+      .version     = 6,
+      .priority    = 0,
+      .flow_lbl[0] = 0,
+      .flow_lbl[1] = 0,
+      .flow_lbl[2] = 0,
+      .payload_len = 0,
+      .nexthdr     = IPPROTO_ICMPV6,
+      .hop_limit   = IPV6_HOP_LIMIT,
+  };
+
+  bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
 }
 
 struct target_search_cb_ctx {
@@ -105,7 +127,7 @@ static __always_inline __wsum csum_add(__wsum csum, __be32 addend) {
 static __always_inline __sum16 csum_fold(__wsum sum) {
   sum = (sum & 0xffff) + (sum >> 16);
   sum = (sum & 0xffff) + (sum >> 16);
-  return (__u16)~sum;
+  return (__u16)sum;
 }
 
 /* Calculate ICMPv6 header checksum. This sums up the IPv6 pseudo header of the
@@ -113,7 +135,8 @@ static __always_inline __sum16 csum_fold(__wsum sum) {
  */
 static __always_inline __wsum icmp6_csum(struct icmp6hdr *icmp6,
                                          struct ipv6hdr  *ipv6,
-                                         void            *data_end) {
+                                         void            *data_end,
+                                         const bool       max4) {
   __wsum sum = 0;
 
   /* Sum up IPv6 pseudo header. */
@@ -128,13 +151,31 @@ static __always_inline __wsum icmp6_csum(struct icmp6hdr *icmp6,
    * we need to process.
    */
   void *buf = icmp6;
-  for (__u16 i = 1024; i >= 4; i = (i > 512) ? (i - 512) : i >> 1) {
+  for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
     __u16 j = (i >= 512) ? 512 : i;
-    if (buf + j <= data_end) {
+    if (likely(buf + j <= data_end)) {
       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
       buf += j;
     }
   }
+
+  /* inline optimization. */
+  if (likely(buf + 4 <= data_end)) {
+    sum = csum_add(sum, *(__be32 *)buf++);
+  }
+
+  if (max4) {
+    return sum;
+  }
+
+  __u32 addend = 0;
+  if (likely(buf + 2 <= data_end)) {
+    addend = *(__be16 *)buf++;
+  }
+  if (likely(buf + 1 <= data_end)) {
+    addend += *(__u8 *)buf++;
+  }
+  sum = csum_add(sum, addend);
 
   return sum;
 }
@@ -188,18 +229,11 @@ static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
   bpf_memcpy(&eth->h_dest, &orig_eth->h_source, ETH_ALEN);
   eth->h_proto = orig_eth->h_proto;
 
-  /* Define new headers on stack and make sure all fields that are not set
-   * dynamically later are initialized with 0.
-   */
-  const struct ipv6hdr ipv6_new = {
-      .version     = 6,
-      .priority    = 0,
-      .flow_lbl[0] = 0,
-      .flow_lbl[1] = 0,
-      .flow_lbl[2] = 0,
-      .nexthdr     = IPPROTO_ICMPV6,
-      .hop_limit   = IPV6_HOP_LIMIT,
-  };
+  ipv6_init(ipv6);
+  ipv6->payload_len = bpf_htons(data_end - (void *)icmp6);
+  ipv6->saddr       = *src_addr;
+  ipv6->daddr       = orig_ipv6->saddr;
+
   const struct icmp6hdr icmp6_new = {
       .icmp6_type                = ICMP6_TIME_EXCEEDED,
       .icmp6_code                = 0,
@@ -208,16 +242,9 @@ static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
       .icmp6_dataun.un_data32[0] = 0,
   };
 
-  /* Copy non address fields of the new headers. */
-  bpf_memcpy(ipv6, &ipv6_new, sizeof(struct in6_addr) - 2 * IPV6_ALEN);
   bpf_memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
 
-  /* Set dynamic values. */
-  ipv6->payload_len = bpf_htons(data_end - (void *)icmp6);
-  ipv6->saddr       = *src_addr;
-  ipv6->daddr       = orig_ipv6->saddr;
-
-  icmp6->icmp6_cksum = csum_fold(icmp6_csum(icmp6, ipv6, data_end));
+  icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, ipv6, data_end, true));
 
   return XDP_TX;
 }
@@ -232,7 +259,13 @@ exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
   assert_boundary(icmp6, data_end, DEFAULT_ACTION);
 
   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, DEFAULT_ACTION);
+  assert_equal(icmp6->icmp6_code, 0, DEFAULT_ACTION);
   counter_increment(COUNTER_KEY_ICMP_ECHO_REQ);
+  /* Validate check sum. */
+  assert_equal(csum_fold(icmp6_csum(icmp6, ipv6, data_end, false)),
+               0xffff,
+               DEFAULT_ACTION);
+  counter_increment(COUNTER_KEY_ICMP_WRONG_CSUM);
 
   /* Swap ethernet addresses. */
   __u64 tmphwaddr = 0;
@@ -240,18 +273,24 @@ exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
   bpf_memcpy(&eth->h_source, &eth->h_dest, ETH_ALEN);
   bpf_memcpy(&eth->h_dest, &tmphwaddr, ETH_ALEN);
 
+  /* Reset fields but keep payload_len. Gets optimized by the compiler so the
+   * payload_length field is kept as is.
+   * */
+  __be16 payload_len = ipv6->payload_len;
+  ipv6_init(ipv6);
+  ipv6->payload_len = payload_len;
+
   /* Swap IPv6 addresses. */
   struct in6_addr tmpipv6addr = ipv6->saddr;
   ipv6->saddr                 = ipv6->daddr;
   ipv6->daddr                 = tmpipv6addr;
-  ipv6->hop_limit             = IPV6_HOP_LIMIT;
 
   /* Set echo reply header. */
-  icmp6->icmp6_type  = ICMP6_ECHO_REPLY;
-  icmp6->icmp6_code  = 0;
-  icmp6->icmp6_cksum = 0;
+  icmp6->icmp6_type = ICMP6_ECHO_REPLY;
+  icmp6->icmp6_code = 0;
 
-  icmp6->icmp6_cksum = csum_fold(icmp6_csum(icmp6, ipv6, data_end));
+  /* Only field changed that affects the check sum field is the ICMP type. */
+  icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
 
   return XDP_TX;
 }
