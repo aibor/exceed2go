@@ -192,8 +192,8 @@ func TestTTL(t *testing.T) {
 		}
 
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
-			pkt := packet(t, ip.hopLimit + 1, mapIPs()[4].addr, []byte{})
-			ret, out, err := objs.Exceed2goRoot.Test(pkt)
+			pkt := packet(t, ip.hopLimit+1, mapIPs()[4].addr, []byte{})
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(t, err, "program must run without error")
 			assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)
@@ -224,18 +224,18 @@ func TestTTLMaxSize(t *testing.T) {
 	objs := load(t)
 	setMapIPs(t)
 
-	payloads := []struct{
+	payloads := []struct {
 		truncated bool
-		payload []byte
+		payload   []byte
 	}{
 		{false, []byte{0x0, 0x0, 0x0, 0x0, 1, 2, 3, 4}},
 		{false, make([]byte, 1182)},
 		{false, make([]byte, 1183)},
 		{false, make([]byte, 1184)},
-		{true,  make([]byte, 1185)},
-		{true,  make([]byte, 1186)},
-		{true,  make([]byte, 1187)},
-		{true,  make([]byte, 1400)},
+		{true, make([]byte, 1185)},
+		{true, make([]byte, 1186)},
+		{true, make([]byte, 1187)},
+		{true, make([]byte, 1400)},
 	}
 
 	for _, payload := range payloads {
@@ -247,7 +247,7 @@ func TestTTLMaxSize(t *testing.T) {
 			}
 
 			pkt := packet(t, 1, mapIPs()[4].addr, payload.payload)
-			ret, out, err := objs.Exceed2goRoot.Test(pkt)
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(t, err, "program must run without error")
 			assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
 			assert.Equal(t, pktSize, len(out), "out package must have correct length")
@@ -259,7 +259,7 @@ func TestTTLMaxSize(t *testing.T) {
 			if assert.True(t, ok, "must be IPv6") {
 				assert.Equal(t, ip.addr, ip6.SrcIP.String(), "correct src address needed")
 				assert.Equal(t, "fd03::4", ip6.DstIP.String(), "correct dst address needed")
-				assert.Equal(t, pktSize - 54, int(ip6.Length), "correct length needed")
+				assert.Equal(t, pktSize-54, int(ip6.Length), "correct length needed")
 				assert.Equal(t, 6, int(ip6.Version), "correct version needed")
 				assert.Equal(t, 64, int(ip6.HopLimit), "correct hop limit needed")
 				assert.Equal(t, layers.IPProtocolICMPv6, ip6.NextHeader, "correct next header needed")
@@ -288,7 +288,7 @@ func TestNoMatch(t *testing.T) {
 	for _, ip := range ips {
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
 			pkt := packet(t, ip.hopLimit, ip.addr, []byte{})
-			ret, out, err := objs.Exceed2goRoot.Test(pkt)
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(t, err, "program must run without error")
 			assert.Equal(t, 2, int(ret), "return code must be XDP_PASS(2)")
 			assert.Equal(t, pkt, out, "output package must be the same as input")
@@ -304,7 +304,7 @@ func TestEchoReply(t *testing.T) {
 	for _, ip := range mapIPs() {
 		t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
 			pkt := packet(t, 64, ip.addr, []byte{})
-			ret, out, err := objs.Exceed2goEcho.Test(pkt)
+			ret, out, err := objs.Exceed2go.Test(pkt)
 			require.NoError(t, err, "program must run without error")
 			assert.Equal(t, 3, int(ret), "return code must be XDP_TX(3)")
 			outPkt := gopacket.NewPacket(out, layers.LayerTypeEthernet, gopacket.Default)

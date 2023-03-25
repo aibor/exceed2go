@@ -44,18 +44,6 @@ func (o *bpfObjects) PinObjs() error {
 		return fmt.Errorf("failed to pin config map: %w", err)
 	}
 
-	if err := o.Exceed2goJumps.Pin(jumpPinPath()); err != nil {
-		return fmt.Errorf("failed to pin config map: %w", err)
-	}
-
-	if err := o.Exceed2goExceeded.Pin(exceededPinPath()); err != nil {
-		return fmt.Errorf("failed to pin config map: %w", err)
-	}
-
-	if err := o.Exceed2goEcho.Pin(echoPinPath()); err != nil {
-		return fmt.Errorf("failed to pin config map: %w", err)
-	}
-
 	return nil
 }
 
@@ -68,7 +56,7 @@ func (o *bpfObjects) AttachProg(ifName string) error {
 	}
 
 	link, err := link.AttachXDP(link.XDPOptions{
-		Program: o.Exceed2goRoot,
+		Program:   o.Exceed2go,
 		Interface: iface.Index,
 	})
 	if err != nil {
@@ -185,18 +173,6 @@ func statsPinPath() string {
 
 func configPinPath() string {
 	return path.Join(pinPath, "config_map")
-}
-
-func jumpPinPath() string {
-	return path.Join(pinPath, "jump_map")
-}
-
-func exceededPinPath() string {
-	return path.Join(pinPath, "exceeded_prog")
-}
-
-func echoPinPath() string {
-	return path.Join(pinPath, "echo_prog")
 }
 
 func getPinnedStatsMap() (*ebpf.Map, error) {

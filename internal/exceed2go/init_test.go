@@ -90,4 +90,3 @@ func run(m *testing.M) int {
 func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
-

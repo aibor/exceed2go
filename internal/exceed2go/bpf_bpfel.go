@@ -56,9 +56,7 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	Exceed2goEcho     *ebpf.ProgramSpec `ebpf:"exceed2go_echo"`
-	Exceed2goExceeded *ebpf.ProgramSpec `ebpf:"exceed2go_exceeded"`
-	Exceed2goRoot     *ebpf.ProgramSpec `ebpf:"exceed2go_root"`
+	Exceed2go *ebpf.ProgramSpec `ebpf:"exceed2go"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -67,7 +65,6 @@ type bpfProgramSpecs struct {
 type bpfMapSpecs struct {
 	Exceed2goAddrs    *ebpf.MapSpec `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.MapSpec `ebpf:"exceed2go_counters"`
-	Exceed2goJumps    *ebpf.MapSpec `ebpf:"exceed2go_jumps"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -91,14 +88,12 @@ func (o *bpfObjects) Close() error {
 type bpfMaps struct {
 	Exceed2goAddrs    *ebpf.Map `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.Map `ebpf:"exceed2go_counters"`
-	Exceed2goJumps    *ebpf.Map `ebpf:"exceed2go_jumps"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.Exceed2goAddrs,
 		m.Exceed2goCounters,
-		m.Exceed2goJumps,
 	)
 }
 
@@ -106,16 +101,12 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	Exceed2goEcho     *ebpf.Program `ebpf:"exceed2go_echo"`
-	Exceed2goExceeded *ebpf.Program `ebpf:"exceed2go_exceeded"`
-	Exceed2goRoot     *ebpf.Program `ebpf:"exceed2go_root"`
+	Exceed2go *ebpf.Program `ebpf:"exceed2go"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.Exceed2goEcho,
-		p.Exceed2goExceeded,
-		p.Exceed2goRoot,
+		p.Exceed2go,
 	)
 }
 

@@ -5,9 +5,6 @@
 #define DEFAULT_ACTION XDP_PASS
 #define MAX_ADDRS      32
 
-#define JMP_IDX_REPLY_EXCEEDED 0
-#define JMP_IDX_REPLY_ECHO     1
-
 #define ETH_HLEN            14
 #define ETH_ALEN            6
 #define ETH_TLEN            2
@@ -21,10 +18,7 @@
 #define ICMP6_ECHO_REPLY    129
 #define ADJ_LEN             (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
-#define bpf_memcpy __builtin_memcpy
-#define IN6_ARE_ADDR_EQUAL(a, b) \
-  ((((const __u64 *)(a))[0] == ((const __u64 *)(b))[0]) && \
-   (((const __u64 *)(a))[1] == ((const __u64 *)(b))[1]))
+#define bpf_memcpy     __builtin_memcpy
 #define next_header(h) ((void *)(h + 1))
 #define assert_boundary(h, end, ret) \
   if (next_header(h) > end) \
@@ -57,11 +51,17 @@ enum exceed_counter_key {
   COUNTER_KEY_UNREACH,
 };
 
-static void counter_increment(__u32 key) {
+static __always_inline void counter_increment(__u32 key) {
   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
   if (value) {
     __sync_fetch_and_add(value, 1);
   }
+}
+
+static __always_inline bool in6_addr_equal(const struct in6_addr *a,
+                                           const struct in6_addr *b) {
+  return ((a->in6_u.u6_addr64[0] == b->in6_u.u6_addr64[0]) &&
+          (a->in6_u.u6_addr64[1] == b->in6_u.u6_addr64[1]));
 }
 
 struct target_search_cb_ctx {
@@ -83,7 +83,7 @@ static long target_search_cb(void                        *map,
   if (!value || !((const __u32 *)(value))[0])
     return 1;
 
-  if (IN6_ARE_ADDR_EQUAL(&cb_ctx->needle, value)) {
+  if (in6_addr_equal(&cb_ctx->needle, value)) {
     /* Found the destination address in our list. Exit from the iteration. */
     cb_ctx->found = true;
     cb_ctx->key   = *key;
@@ -142,20 +142,10 @@ static __always_inline __wsum icmp6_csum(struct icmp6hdr *icmp6,
 /* Create a ICMPv6 time exceeded message for the current packet and send it
  * from the given src_addr.
  */
-SEC("xdp")
-int exceed2go_exceeded(struct xdp_md *ctx) {
-  void *data      = (void *)(unsigned long)ctx->data;
-  void *data_end  = (void *)(unsigned long)ctx->data_end;
-  void *data_meta = (void *)(unsigned long)ctx->data_meta;
-
-  assert_boundary((struct in6_addr *)data_meta, data, DEFAULT_ACTION);
-  /* We need meta data with the found source address to use, otherwise we can't
-   * proceed.
-   */
-  struct in6_addr src_addr = *(struct in6_addr *)data_meta;
-
-  if (src_addr.in6_u.u6_addr32[0] == 0)
-    return DEFAULT_ACTION;
+static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
+                                              const struct in6_addr *src_addr) {
+  void *data     = (void *)(unsigned long)ctx->data;
+  void *data_end = (void *)(unsigned long)ctx->data_end;
 
   /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
   int   head_len_adjust = 0 - (int)ADJ_LEN;
@@ -167,10 +157,6 @@ int exceed2go_exceeded(struct xdp_md *ctx) {
   if (tail_len_adjust > 0 && ip_pkt_len % 4) {
     tail_len_adjust = -(ip_pkt_len % 4);
   }
-
-  /* Remove meta data as it is not needed anymore. */
-  assert_equal(bpf_xdp_adjust_meta(ctx, IPV6_ALEN), 0, XDP_ABORTED);
-  assert_equal(ctx->data, ctx->data_meta, XDP_ABORTED);
 
   /* Move head to get space needed for moving ethernet header and adding new
    * IPv6 and ICMPv6 header before the received IPv6 header.
@@ -193,65 +179,66 @@ int exceed2go_exceeded(struct xdp_md *ctx) {
   assert_boundary(orig_ipv6, data_end, XDP_ABORTED);
 
   /* Initialize new headers. */
-  struct ethhdr  *eth  = (void *)data;
-  struct ipv6hdr *ipv6 = next_header(eth);
-
-  /* Relocate ethernet header data and swap mac addresses. */
-  bpf_memcpy(eth->h_source, orig_eth->h_dest, ETH_ALEN);
-  bpf_memcpy(eth->h_dest, orig_eth->h_source, ETH_ALEN);
-  eth->h_proto = orig_eth->h_proto;
-
-  /* Create new ICMP6 layer. */
+  struct ethhdr   *eth   = (void *)data;
+  struct ipv6hdr  *ipv6  = next_header(eth);
   struct icmp6hdr *icmp6 = next_header(ipv6);
 
-  __u16 payload_len = data_end - (void *)icmp6;
+  /* Relocate ethernet header data and swap mac addresses. */
+  bpf_memcpy(&eth->h_source, &orig_eth->h_dest, ETH_ALEN);
+  bpf_memcpy(&eth->h_dest, &orig_eth->h_source, ETH_ALEN);
+  eth->h_proto = orig_eth->h_proto;
 
-  ipv6->version     = 6;
-  ipv6->priority    = 0;
-  ipv6->flow_lbl[0] = 0;
-  ipv6->flow_lbl[1] = 0;
-  ipv6->flow_lbl[2] = 0;
-  ipv6->payload_len = bpf_htons(payload_len);
-  ipv6->nexthdr     = IPPROTO_ICMPV6;
-  ipv6->hop_limit   = IPV6_HOP_LIMIT;
-  ipv6->saddr       = src_addr;
+  /* Define new headers on stack and make sure all fields that are not set
+   * dynamically later are initialized with 0.
+   */
+  const struct ipv6hdr ipv6_new = {
+      .version     = 6,
+      .priority    = 0,
+      .flow_lbl[0] = 0,
+      .flow_lbl[1] = 0,
+      .flow_lbl[2] = 0,
+      .nexthdr     = IPPROTO_ICMPV6,
+      .hop_limit   = IPV6_HOP_LIMIT,
+  };
+  const struct icmp6hdr icmp6_new = {
+      .icmp6_type                = ICMP6_TIME_EXCEEDED,
+      .icmp6_code                = 0,
+      .icmp6_cksum               = 0,
+      /* Time exceeded has 4 bytes unused space before payload starts. */
+      .icmp6_dataun.un_data32[0] = 0,
+  };
+
+  /* Copy non address fields of the new headers. */
+  bpf_memcpy(ipv6, &ipv6_new, sizeof(struct in6_addr) - 2 * IPV6_ALEN);
+  bpf_memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
+
+  /* Set dynamic values. */
+  ipv6->payload_len = bpf_htons(data_end - (void *)icmp6);
+  ipv6->saddr       = *src_addr;
   ipv6->daddr       = orig_ipv6->saddr;
 
-  icmp6->icmp6_type                = ICMP6_TIME_EXCEEDED;
-  icmp6->icmp6_code                = 0;
-  /* Set checksum to zero for calculation. */
-  icmp6->icmp6_cksum               = 0;
-  /* Time exceeded has 4 bytes inused space before payload starts. */
-  icmp6->icmp6_dataun.un_data32[0] = 0;
-
-  icmp6->icmp6_cksum = csum_fold(icmp6_csum(icmp6, ipv6, (void *)data_end));
+  icmp6->icmp6_cksum = csum_fold(icmp6_csum(icmp6, ipv6, data_end));
 
   return XDP_TX;
 }
 
 /* Create ICMPv6 echo reply message for the given packet. */
-SEC("xdp")
-int exceed2go_echo(struct xdp_md *ctx) {
-  void *data     = (void *)(unsigned long)ctx->data;
-  void *data_end = (void *)(unsigned long)ctx->data_end;
-
-  struct ethhdr   *eth   = data;
-  struct ipv6hdr  *ipv6  = next_header(eth);
-  struct icmp6hdr *icmp6 = next_header(ipv6);
-
-  assert_boundary(icmp6, data_end, DEFAULT_ACTION);
-
-  assert_equal(eth->h_proto, bpf_htons(ETH_P_IPV6), DEFAULT_ACTION);
+static __always_inline int
+exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
   assert_equal(ipv6->nexthdr, IPPROTO_ICMPV6, DEFAULT_ACTION);
   counter_increment(COUNTER_KEY_ICMP);
+
+  struct icmp6hdr *icmp6 = next_header(ipv6);
+  assert_boundary(icmp6, data_end, DEFAULT_ACTION);
+
   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, DEFAULT_ACTION);
   counter_increment(COUNTER_KEY_ICMP_ECHO_REQ);
 
   /* Swap ethernet addresses. */
-  char tmphwaddr[ETH_ALEN];
-  bpf_memcpy(tmphwaddr, (const void *)&eth->h_source, ETH_ALEN);
-  bpf_memcpy((void *)eth->h_source, (const void *)&eth->h_dest, ETH_ALEN);
-  bpf_memcpy((void *)eth->h_dest, tmphwaddr, ETH_ALEN);
+  __u64 tmphwaddr = 0;
+  bpf_memcpy(&tmphwaddr, &eth->h_source, ETH_ALEN);
+  bpf_memcpy(&eth->h_source, &eth->h_dest, ETH_ALEN);
+  bpf_memcpy(&eth->h_dest, &tmphwaddr, ETH_ALEN);
 
   /* Swap IPv6 addresses. */
   struct in6_addr tmpipv6addr = ipv6->saddr;
@@ -269,23 +256,8 @@ int exceed2go_echo(struct xdp_md *ctx) {
   return XDP_TX;
 }
 
-/* After defining the programs to jump to, create and initialize the jump map.
- */
-struct {
-  __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
-  __uint(max_entries, 2);
-  __uint(key_size, sizeof(__u32));
-  __array(values, int(void *));
-} exceed2go_jumps SEC(".maps") = {
-    .values =
-        {
-                 [JMP_IDX_REPLY_EXCEEDED] = (void *)&exceed2go_exceeded,
-                 [JMP_IDX_REPLY_ECHO]     = (void *)&exceed2go_echo,
-                 },
-};
-
-SEC("xdp")
-int exceed2go_root(struct xdp_md *ctx) {
+SEC("xdp/exceed2go")
+int exceed2go(struct xdp_md *ctx) {
   void *data     = (void *)(unsigned long)ctx->data;
   void *data_end = (void *)(unsigned long)ctx->data_end;
 
@@ -327,30 +299,12 @@ int exceed2go_root(struct xdp_md *ctx) {
    * addresses. Otherwise proceed and reply with ICMP time exceeded message.
    */
   if (!exceed_addr || !(exceed_addr->in6_u.u6_addr32[0])) {
-    bpf_tail_call(ctx, &exceed2go_jumps, JMP_IDX_REPLY_ECHO);
-
-    /* Should never be reached. */
-    counter_increment(COUNTER_KEY_UNREACH);
-    return DEFAULT_ACTION;
+    return exceed2go_echo(data_end, eth, ipv6);
   }
 
   counter_increment(COUNTER_KEY_FOUND);
 
-  /* Get space for communicating the address that should be used as source
-   * address for the time exceeded message.
-   */
-  assert_equal(bpf_xdp_adjust_meta(ctx, -(int)IPV6_ALEN), 0, DEFAULT_ACTION);
-
-  struct in6_addr *src_addr = (void *)(unsigned long)ctx->data_meta;
-
-  /* Validate boundary necessary for the verifier. */
-  assert_boundary(src_addr, (void *)(unsigned long)ctx->data, DEFAULT_ACTION);
-  bpf_memcpy(src_addr, exceed_addr, IPV6_ALEN);
-  bpf_tail_call(ctx, &exceed2go_jumps, JMP_IDX_REPLY_EXCEEDED);
-
-  /* Should never be reached. */
-  counter_increment(COUNTER_KEY_UNREACH);
-  return DEFAULT_ACTION;
+  return exceed2go_exceeded(ctx, exceed_addr);
 }
 
 char _license[] SEC("license") = "GPL";
