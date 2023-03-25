@@ -94,10 +94,15 @@ static long target_search_cb(void                        *map,
   return 0;
 }
 
+static __always_inline __wsum csum_add(__wsum csum, __be32 addend) {
+  csum += addend;
+  return csum + (csum < addend);
+}
+
 /* Fold a 32bit integer checksum down to 16bit value as needed in protocol
  * headers.
  */
-static __u16 csum_fold(__u32 sum) {
+static __always_inline __sum16 csum_fold(__wsum sum) {
   sum = (sum & 0xffff) + (sum >> 16);
   sum = (sum & 0xffff) + (sum >> 16);
   return (__u16)~sum;
@@ -106,39 +111,29 @@ static __u16 csum_fold(__u32 sum) {
 /* Calculate ICMPv6 header checksum. This sums up the IPv6 pseudo header of the
  * given ipv6hdr struct, the ICMPv6 header and the payload.
  */
-static __u32
-icmp6_csum(struct icmp6hdr *icmp6, struct ipv6hdr *ipv6, void *data_end) {
-  /* Value is already in network byte order. */
-  __be32 len     = ((__u32)ipv6->payload_len) << 16;
-  __be32 nexthdr = ((__u32)ipv6->nexthdr) << 24;
-  __be32 sum     = 0;
+static __always_inline __wsum icmp6_csum(struct icmp6hdr *icmp6,
+                                         struct ipv6hdr  *ipv6,
+                                         void            *data_end) {
+  __wsum sum = 0;
 
   /* Sum up IPv6 pseudo header. */
-  sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->saddr, IPV6_ALEN, sum);
-  sum = bpf_csum_diff(NULL, 0, (__be32 *)&ipv6->daddr, IPV6_ALEN, sum);
-  sum = bpf_csum_diff(NULL, 0, &len, sizeof(len), sum);
-  sum = bpf_csum_diff(NULL, 0, &nexthdr, sizeof(nexthdr), sum);
+  sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
+  /* Payload_len is already in network byte order. */
+  sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
+  sum = csum_add(sum, ((__u32)IPPROTO_ICMPV6) << 24);
 
-  /* Sum up ICMP6 header and payload. */
-  __be32 *buf = (void *)icmp6;
-  for (int i = 0; i < ETH_HLEN + IPV6_MTU_MIN; i += 4) {
-    if ((void *)(buf + 1) > data_end) {
-      break;
-    }
-    sum = bpf_csum_diff(NULL, 0, buf, sizeof(*buf), sum);
-    buf++;
-  }
-
-  /* In case there are some bytes left because the packet length is not a
-   * multiple of 4.
+  /* Sum up ICMP6 header and payload.
+   * Walk in biggest possible chunks (bpf_csum_diff can take max 512 byte).
+   * Packet size may not exceed IPV6_MTU_MIN + eth_hdr, so 1024 is biggest chunk
+   * we need to process.
    */
-  if (data_end - (void *)buf > 0) {
-    __u8  r[4];
-    void *buf2 = (void *)buf;
-    for (int i = 0; i < 4; i++) {
-      r[i] = (void *)(buf2 + 1) > data_end ? 0 : *(__u8 *)buf2++;
+  void *buf = icmp6;
+  for (__u16 i = 1024; i >= 4; i = (i > 512) ? (i - 512) : i >> 1) {
+    __u16 j = (i >= 512) ? 512 : i;
+    if (buf + j <= data_end) {
+      sum = bpf_csum_diff(NULL, 0, buf, j, sum);
+      buf += j;
     }
-    sum = bpf_csum_diff(NULL, 0, (__be32 *)&r, sizeof(__be32), sum);
   }
 
   return sum;
@@ -163,8 +158,15 @@ int exceed2go_exceeded(struct xdp_md *ctx) {
     return DEFAULT_ACTION;
 
   /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
-  int head_len_adjust = 0 - (int)ADJ_LEN;
-  int tail_len_adjust = ETH_HLEN + IPV6_MTU_MIN - ADJ_LEN - (data_end - data);
+  int   head_len_adjust = 0 - (int)ADJ_LEN;
+  __u16 ip_pkt_len      = ADJ_LEN + (data_end - data) - ETH_HLEN;
+  int   tail_len_adjust = IPV6_MTU_MIN - ip_pkt_len;
+  /* Ensure the resulting paxket is always a multiple of 4 so it works with the
+   * check sum implementation.
+   */
+  if (tail_len_adjust > 0 && ip_pkt_len % 4) {
+    tail_len_adjust = -(ip_pkt_len % 4);
+  }
 
   /* Remove meta data as it is not needed anymore. */
   assert_equal(bpf_xdp_adjust_meta(ctx, IPV6_ALEN), 0, XDP_ABORTED);

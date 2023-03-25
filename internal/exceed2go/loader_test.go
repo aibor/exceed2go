@@ -241,7 +241,7 @@ func TestTTLMaxSize(t *testing.T) {
 	for _, payload := range payloads {
 		t.Run(fmt.Sprintf("payload size %d", len(payload.payload)), func(t *testing.T) {
 			ip := mapIPs()[0]
-			pktSize := len(payload.payload) + 110
+			pktSize := (len(payload.payload) & ^3) + 110
 			if payload.truncated {
 				pktSize = 1294
 			}
