@@ -33,8 +33,10 @@ clean:
 .PHONY: cleangen
 cleangen:
 	@rm -frv \
-		$(BPF2GO_FILE) \
-		$(patsubst %.go,%.o,$(BPF2GO_FILE))
+		$(patsubst %.go,%.*,$(BPF2GO_FILE))
+
+.PHONY: bpf
+bpf: $(BPF2GO_FILE)
 
 $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 	pushd $(@D)
@@ -43,6 +45,12 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 		-cflags "$(CFLAGS)" \
 		-no-strip \
 		bpf $$(popd >/dev/null; realpath $(BPF_FILE))
+	llvm-objdump \
+		--source \
+		--no-show-raw-insn \
+		-g \
+		$(patsubst %.go,%.o,$(@F)) \
+		> $(patsubst %.go,%.dump,$(@F))
 
 $(TEST_INIT_FILE): $(BPF_TEST_FILE) $(BPF2GO_FILE)
 	go test -tags pidone -c -o $@ ./$(<D)
