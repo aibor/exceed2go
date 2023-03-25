@@ -42,6 +42,7 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h $(BTF_FILE)
 	GOPACKAGE=exceed2go go run github.com/cilium/ebpf/cmd/bpf2go -cc $(CLANG) \
 		-target bpfel \
 		-cflags "$(CFLAGS)" \
+		-no-strip \
 		bpf $$(popd >/dev/null; realpath $(BPF_FILE))
 
 $(TEST_INIT_FILE): $(BPF_TEST_FILE) $(BPF2GO_FILE)
