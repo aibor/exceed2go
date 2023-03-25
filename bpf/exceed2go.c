@@ -1,6 +1,6 @@
-#include "btf/vmlinux.h"
-#include <bpf/bpf_endian.h>
-#include <bpf/bpf_helpers.h>
+#include "types.h"
+#include "libbpf/bpf_endian.h"
+#include "libbpf/bpf_helpers.h"
 
 #define DEFAULT_ACTION XDP_PASS
 #define MAX_ADDRS      32

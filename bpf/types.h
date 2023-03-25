@@ -1,10 +1,3 @@
-#ifndef __VMLINUX_H__
-#define __VMLINUX_H__
-
-#ifndef BPF_NO_PRESERVE_ACCESS_INDEX
-#pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record)
-#endif
-
 typedef _Bool bool;
 
 enum {
@@ -34,6 +27,7 @@ typedef __u64 u64;
 
 typedef __u16 __be16;
 typedef __u32 __be32;
+typedef __u64 __be64;
 
 typedef __u16 __sum16;
 typedef __u32 __wsum;
@@ -49,6 +43,7 @@ struct in6_addr {
 		__u8 u6_addr8[16];
 		__be16 u6_addr16[8];
 		__be32 u6_addr32[4];
+		__be64 u6_addr64[2];
 	} in6_u;
 };
 
@@ -61,24 +56,6 @@ struct ipv6hdr {
 	__u8 hop_limit;
 	struct in6_addr saddr;
 	struct in6_addr daddr;
-};
-
-struct icmpv6_nd_advt {
-	__u32 reserved: 5;
-	__u32 override: 1;
-	__u32 solicited: 1;
-	__u32 router: 1;
-	__u32 reserved2: 24;
-};
-
-struct icmpv6_nd_ra {
-	__u8 hop_limit;
-	__u8 reserved: 3;
-	__u8 router_pref: 2;
-	__u8 home_agent: 1;
-	__u8 other: 1;
-	__u8 managed: 1;
-	__be16 rt_lifetime;
 };
 
 struct icmpv6_echo {
@@ -95,8 +72,6 @@ struct icmp6hdr {
 		__be16 un_data16[2];
 		__u8 un_data8[4];
 		struct icmpv6_echo u_echo;
-		struct icmpv6_nd_advt u_nd_advt;
-		struct icmpv6_nd_ra u_nd_ra;
 	} icmp6_dataun;
 };
 
@@ -358,9 +333,3 @@ enum bpf_func_id {
 	BPF_FUNC_dynptr_data = 203,
 	__BPF_FUNC_MAX_ID = 204,
 };
-
-#ifndef BPF_NO_PRESERVE_ACCESS_INDEX
-#pragma clang attribute pop
-#endif
-
-#endif /* __VMLINUX_H__ */

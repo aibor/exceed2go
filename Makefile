@@ -11,7 +11,6 @@ INITRD_FILE ?= rootrd.gz
 TEST_INIT_FILE ?= rootrd/init
 KERNEL_FILE ?= /boot/vmlinuz-linux
 LIBBPF ?= bpf/libbpf
-BTF_FILE ?= bpf/btf/vmlinux.h
 
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc
@@ -37,7 +36,7 @@ cleangen:
 		$(BPF2GO_FILE) \
 		$(patsubst %.go,%.o,$(BPF2GO_FILE))
 
-$(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h $(BTF_FILE)
+$(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 	pushd $(@D)
 	GOPACKAGE=exceed2go go run github.com/cilium/ebpf/cmd/bpf2go -cc $(CLANG) \
 		-target bpfel \

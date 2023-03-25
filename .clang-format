@@ -10,3 +10,4 @@ AlignConsecutiveDeclarations: AcrossComments
 AlignEscapedNewlines: DontAlign
 BinPackParameters: false
 BinPackArguments: false
+SortIncludes: false
