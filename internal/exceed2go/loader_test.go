@@ -182,10 +182,6 @@ func statsPrint(tb testing.TB) {
 //	}
 //}
 
-func TestLoad(t *testing.T) {
-	load(t)
-}
-
 func TestTTL(t *testing.T) {
 	objs := load(t)
 	setMapIPs(t)
