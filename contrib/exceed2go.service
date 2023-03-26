@@ -1,0 +1,17 @@
+[Unit]
+Description=Exceed2go ICMPv6 time-Exceeded responder
+After=local-fs.target network.target network-online.target
+Documentation=https://github.com/aibor/exceed2go
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+
+EnvironmentFile=/etc/exceed2go.conf
+
+ExecStart=/usr/local/bin/exceed2go load $INTERFACE $ADDRS
+ExecStop=/usr/local/bin/exceed2go cleanup
+TimeoutSec=2
+
+[Install]
+WantedBy=multi-user.target
