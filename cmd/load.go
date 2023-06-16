@@ -32,25 +32,25 @@ func loadCmd() *cobra.Command {
 
 			objs, err := exceed2go.Load()
 			if err != nil {
-				return fmt.Errorf("load objects: %w", err)
+				return fmt.Errorf("load objects: %v", err)
 			}
 
 			defer objs.Close()
 
 			if err := objs.PinObjs(); err != nil {
-				return fmt.Errorf("pin maps: %w", err)
+				return fmt.Errorf("pin maps: %v", err)
 			}
 
 			for idx, addr := range hopAddrs {
 				if err := exceed2go.SetAddr(idx, addr); err != nil {
 					exceed2go.Cleanup()
-					return fmt.Errorf("set address: %w", err)
+					return fmt.Errorf("set address: %v", err)
 				}
 			}
 
 			if err := objs.AttachProg(ifName); err != nil {
 				exceed2go.Cleanup()
-				return fmt.Errorf("attach program: %w", err)
+				return fmt.Errorf("attach program: %v", err)
 			}
 
 			return nil

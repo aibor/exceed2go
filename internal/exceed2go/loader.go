@@ -23,13 +23,13 @@ type MapIP struct {
 // attaching it to an interface.
 func Load() (*bpfObjects, error) {
 	if err := os.MkdirAll(pinPath, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create bpf pin dir: %w", err)
+		return nil, fmt.Errorf("create bpf pin dir: %v", err)
 	}
 
 	objs := bpfObjects{}
 	err := loadBpfObjects(&objs, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load objects: %w", err)
+		return nil, fmt.Errorf("load objects: %w", err)
 	}
 
 	return &objs, nil
@@ -37,11 +37,11 @@ func Load() (*bpfObjects, error) {
 
 func (o *bpfObjects) PinObjs() error {
 	if err := o.Exceed2goCounters.Pin(statsPinPath()); err != nil {
-		return fmt.Errorf("failed to pin stats map: %w", err)
+		return fmt.Errorf("pin stats map: %v", err)
 	}
 
 	if err := o.Exceed2goAddrs.Pin(configPinPath()); err != nil {
-		return fmt.Errorf("failed to pin config map: %w", err)
+		return fmt.Errorf("pin config map: %v", err)
 	}
 
 	return nil
@@ -52,7 +52,7 @@ func (o *bpfObjects) PinObjs() error {
 func (o *bpfObjects) AttachProg(ifName string) error {
 	iface, err := net.InterfaceByName(ifName)
 	if err != nil {
-		return fmt.Errorf("interface not found: %s: %w", ifName, err)
+		return fmt.Errorf("interface by name: %s: %v", ifName, err)
 	}
 
 	link, err := link.AttachXDP(link.XDPOptions{
@@ -60,13 +60,13 @@ func (o *bpfObjects) AttachProg(ifName string) error {
 		Interface: iface.Index,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to load XDP program: %w", err)
+		return fmt.Errorf("load XDP program: %v", err)
 	}
 
 	defer link.Close()
 
 	if err := link.Pin(linkPinPath()); err != nil {
-		return fmt.Errorf("failed to pin link: %w", err)
+		return fmt.Errorf("pin link: %v", err)
 	}
 
 	return nil
@@ -81,16 +81,16 @@ func Cleanup() {
 func SetAddr(hop int, addr string) error {
 	config, err := getPinnedConfigMap()
 	if err != nil {
-		return fmt.Errorf("failed to get config map: %w", err)
+		return fmt.Errorf("get config map: %v", err)
 	}
 
 	ip := net.ParseIP(addr)
 	if ip == nil {
-		return fmt.Errorf("Cannot parse IP: %s", addr)
+		return fmt.Errorf("failed to parse IP: %s", addr)
 	}
 
 	if err := config.Put(uint32(hop), []byte(ip)); err != nil {
-		return fmt.Errorf("map load error: %w", err)
+		return fmt.Errorf("load error: %v", err)
 	}
 
 	return nil
@@ -106,12 +106,12 @@ func GetStats() ([]uint32, error) {
 
 	stats, err := getPinnedStatsMap()
 	if err != nil {
-		return lookupValues, fmt.Errorf("failed to get stats map: %w", err)
+		return lookupValues, fmt.Errorf("get stats map: %v", err)
 	}
 
 	_, err = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 	if err != nil {
-		return lookupValues, fmt.Errorf("failed to lookup stats: %w", err)
+		return lookupValues, fmt.Errorf("lookup stats: %v", err)
 	}
 
 	return lookupValues, nil
