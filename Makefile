@@ -7,8 +7,6 @@ BINARY ?= $(BIN_DIR)/exceed2go
 BPF_FILE := bpf/exceed2go.c
 BPF2GO_FILE := internal/exceed2go/bpf_bpfel.go
 BPF_TEST_FILE := internal/exceed2go/loader_test.go
-INITRD_FILE ?= rootrd.gz
-TEST_INIT_FILE ?= rootrd/init
 KERNEL_FILE ?= /boot/vmlinuz-linux
 LIBBPF ?= bpf/libbpf
 
@@ -26,9 +24,7 @@ $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 .PHONY: clean
 clean:
 	@rm -frv \
-		$(BINARY) \
-		$(INITRD_FILE) \
-		$(TEST_INIT_FILE)
+		$(BINARY)
 
 .PHONY: cleangen
 cleangen:
@@ -52,21 +48,6 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 		$(patsubst %.go,%.o,$(@F)) \
 		> $(patsubst %.go,%.dump,$(@F))
 
-$(TEST_INIT_FILE): $(BPF_TEST_FILE) $(BPF2GO_FILE)
-	go test -tags pidone -c -o $@ ./$(<D)
-
-$(INITRD_FILE): $(TEST_INIT_FILE)
-	pushd $(<D)
-	find . | cpio -o -H newc | gzip -c > ../$@
-
 .PHONY: testbpf
-testbpf: $(INITRD_FILE)
-	@qemu-system-x86_64 \
-		-kernel $(KERNEL_FILE) \
-		-initrd $< \
-		-enable-kvm \
-		-m 128 \
-		-serial stdio \
-		-display none \
-		-append 'root=/dev/ram0 console=ttyAMA0 console=ttyS0 panic=-1 quiet -- -test.v' \
-		< /dev/null
+testbpf: $(BPF_TEST_FILE) $(BPF2GO_FILE)
+	go test -tags pidone -exec $$(realpath scripts/run-qemu-test.sh) ./$(<D) -v
