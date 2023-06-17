@@ -3,13 +3,15 @@ module github.com/aibor/exceed2go
 go 1.20
 
 require (
+	github.com/aibor/go-pidonetest v0.0.0-20230617200840-60925bbb1527
 	github.com/cilium/ebpf v0.10.0
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
+	github.com/cavaliergopher/cpio v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

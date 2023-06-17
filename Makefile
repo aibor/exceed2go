@@ -50,4 +50,7 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 
 .PHONY: testbpf
 testbpf: $(BPF_TEST_FILE) $(BPF2GO_FILE)
-	go test -tags pidone -exec $$(realpath scripts/run-qemu-test.sh) ./$(<D) -v
+	go test \
+		-exec "go run github.com/aibor/go-pidonetest/cmd/pidonetest" \
+		-v \
+		./$(<D)
