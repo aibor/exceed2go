@@ -1,5 +1,7 @@
-github.com/aibor/go-pidonetest v0.0.0-20230617200840-60925bbb1527 h1:NeCJEJdkOjfRtxqMLKyXGh5voQqsBh7dVjBUpaT+Fdc=
-github.com/aibor/go-pidonetest v0.0.0-20230617200840-60925bbb1527/go.mod h1:yB7NO1AgdDhS0LKdFGQgZ1Lgmz62sCNkbww2xIxwcAE=
+github.com/aibor/go-pidonetest v0.0.0-20230618011904-a05e13877be1 h1:Jgyp1800EVsIg4oXntjzoFO0gGT3PYZaKs3rQXJLQrk=
+github.com/aibor/go-pidonetest v0.0.0-20230618011904-a05e13877be1/go.mod h1:yB7NO1AgdDhS0LKdFGQgZ1Lgmz62sCNkbww2xIxwcAE=
+github.com/aibor/go-pidonetest v0.0.0-20230618125631-a9667c6929d0 h1:xw7owL1K2n+hhjRK/f96cf+eW1qqZrrwxq8SWA45PDA=
+github.com/aibor/go-pidonetest v0.0.0-20230618125631-a9667c6929d0/go.mod h1:yB7NO1AgdDhS0LKdFGQgZ1Lgmz62sCNkbww2xIxwcAE=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/cilium/ebpf v0.10.0 h1:nk5HPMeoBXtOzbkZBWym+ZWq1GIiHUsBFXxwewXAHLQ=
