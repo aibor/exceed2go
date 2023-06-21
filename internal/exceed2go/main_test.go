@@ -1,7 +1,6 @@
 package exceed2go
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -9,9 +8,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	rc, err := pidonetest.Run(m)
-	if err != nil {
-		fmt.Printf("Error: %v", err)
-	}
-	os.Exit(rc)
+	pidonetest.Run(m)
+	os.Exit(1)
 }
