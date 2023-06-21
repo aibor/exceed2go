@@ -45,6 +45,7 @@ $(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
 .PHONY: testbpf
 testbpf: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
 	go test \
+		-tags pidonetest \
 		-exec "$(PIDONETEST)" \
 		-v \
 		./$(<D)

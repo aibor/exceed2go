@@ -1,13 +1,17 @@
+//go:build pidonetest
+
 package exceed2go
 
 import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/aibor/go-pidonetest"
 	"github.com/cilium/ebpf"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -369,4 +373,9 @@ func TestChecksum(t *testing.T) {
 		chksum := icmp6Checksum(t, c.src, c.dst, timeExceededTC, []byte(strings.Join(c.payload, "")))
 		assert.Equal(t, uint16(c.chksum), chksum, "must match: %d", idx)
 	}
+}
+
+func TestMain(m *testing.M) {
+	pidonetest.Run(m)
+	os.Exit(1)
 }
