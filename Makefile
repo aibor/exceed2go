@@ -53,6 +53,7 @@ testbpf: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
 .PHONY: testbpf-arm64
 testbpf-arm64: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
 	GOARCH=arm64 go test \
+		-tags pidonetest \
 		-exec "$(PIDONETEST) \
 			-kernel $$(realpath kernel/vmlinuz.arm64) \
 			-qemu-bin qemu-system-aarch64 \
