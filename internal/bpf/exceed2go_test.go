@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
 
-	"github.com/aibor/go-pidonetest"
 	"github.com/cilium/ebpf"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -19,11 +17,6 @@ import (
 
 	"github.com/aibor/exceed2go/internal/bpf"
 )
-
-func TestMain(m *testing.M) {
-	pidonetest.Run(m)
-	os.Exit(1)
-}
 
 var LoadFailed atomic.Bool
 var timeExceededTC = layers.CreateICMPv6TypeCode(layers.ICMPv6TypeTimeExceeded, 0)

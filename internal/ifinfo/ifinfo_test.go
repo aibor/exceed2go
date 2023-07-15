@@ -2,19 +2,12 @@ package ifinfo_test
 
 import (
 	"net"
-	"os"
 	"testing"
 
-	"github.com/aibor/go-pidonetest"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aibor/exceed2go/internal/ifinfo"
 )
-
-func TestMain(m *testing.M) {
-	pidonetest.Run(m)
-	os.Exit(1)
-}
 
 func TestIfUpNameList(t *testing.T) {
 	tests := []struct {

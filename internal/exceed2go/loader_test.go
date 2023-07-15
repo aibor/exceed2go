@@ -3,21 +3,14 @@ package exceed2go_test
 import (
 	"net"
 	"net/netip"
-	"os"
 	"testing"
 
-	"github.com/aibor/go-pidonetest"
 	"github.com/cilium/ebpf/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aibor/exceed2go/internal/exceed2go"
 )
-
-func TestMain(m *testing.M) {
-	pidonetest.Run(m)
-	os.Exit(1)
-}
 
 func TestLoadAndPin(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)

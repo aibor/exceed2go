@@ -21,6 +21,9 @@ BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc
 
+PIDONETEST_KERNEL ?= /boot/vmlinuz-linux
+PIDONETEST_ARGS ?= 
+
 export CGO_ENABLED := 0
 export GOBIN
 
@@ -58,18 +61,22 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 		-trimprefix Exceed2GoCounterKey \
 		exceed2go_bpfel.go
 
-.PHONY: test
-test: $(BPF2GO_FILE) $(PIDONETEST)
+.PHONY: pidonetest
+pidonetest: $(BPF2GO_FILE) $(PIDONETEST)
 	go test \
-		-exec "$(PIDONETEST)" \
+		-tags pidonetest \
+		-exec "$(PIDONETEST) \
+			-kernel $(PIDONETEST_KERNEL) \
+			$(PIDONETEST_ARGS)" \
 		-v \
 		./...
 
-.PHONY: test-arm64
-test-arm64: $(BPF2GO_FILE) $(PIDONETEST)
+.PHONY: pidonetest-arm64
+pidonetest-arm64: $(BPF2GO_FILE) $(PIDONETEST)
 	GOARCH=arm64 go test \
+		-tags pidonetest \
 		-exec "$(PIDONETEST) \
-			-kernel $$(realpath kernel/vmlinuz.arm64) \
+			-kernel $(PIDONETEST_KERNEL) \
 			-qemu-bin qemu-system-aarch64 \
 			-machine virt \
 			-cpu neoverse-n1 \
