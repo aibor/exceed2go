@@ -16,7 +16,9 @@ func statsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("% d\n", stats)
+			for _, stat := range stats {
+				fmt.Printf("%-25s  %d\n", stat.Name, stat.Count)
+			}
 			return nil
 		},
 	}

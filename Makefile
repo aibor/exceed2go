@@ -2,15 +2,21 @@ MAKEFLAGS := --no-builtin-rules
 SHELL := bash
 .ONESHELL:
 
-GOBIN := $(shell realpath ./gobin)
 BIN_DIR ?= bin
+BPF_PACKAGE_DIR := ./internal/bpf
+
 BINARY ?= $(BIN_DIR)/exceed2go
-BPF_FILE := bpf/exceed2go.c
-BPF2GO_FILE := internal/exceed2go/bpf_bpfel.go
-BPF_TEST_FILE := internal/exceed2go/loader_test.go
+
 KERNEL_FILE ?= /boot/vmlinuz-linux
+
+GOBIN := $(shell realpath ./gobin)
+PIDONETEST := $(GOBIN)/pidonetest
+BPF2GO := $(GOBIN)/bpf2go
+STRINGER := $(GOBIN)/stringer
+
 LIBBPF ?= bpf/libbpf
-PIDONETEST ?= $(GOBIN)/pidonetest
+BPF_SRC_FILE := bpf/exceed2go.c
+BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc
@@ -24,36 +30,44 @@ bpf: $(BPF2GO_FILE)
 $(PIDONETEST):
 	go install github.com/aibor/go-pidonetest/cmd/pidonetest
 
+$(BPF2GO):
+	go install github.com/cilium/ebpf/cmd/bpf2go
+
+$(STRINGER):
+	go install golang.org/x/tools/cmd/stringer
+
 $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 	go build -o "$@"
 
-$(BPF2GO_FILE): $(BPF_FILE) $(LIBBPF)/*.h
+$(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 	pushd $(@D)
-	GOPACKAGE=exceed2go go run github.com/cilium/ebpf/cmd/bpf2go -cc $(CLANG) \
+	GOPACKAGE=bpf $(BPF2GO) \
+		-cc $(CLANG) \
 		-target bpfel \
 		-cflags "$(CFLAGS)" \
 		-no-strip \
-		bpf $$(popd >/dev/null; realpath $(BPF_FILE))
+		Exceed2Go $$(popd >/dev/null; realpath $(BPF_SRC_FILE))
 	llvm-objdump \
 		--source \
 		--no-show-raw-insn \
 		-g \
 		$(patsubst %.go,%.o,$(@F)) \
 		> $(patsubst %.go,%.dump,$(@F))
+	$(STRINGER) \
+		-type Exceed2GoCounterKey \
+		-trimprefix Exceed2GoCounterKey \
+		exceed2go_bpfel.go
 
-
-.PHONY: testbpf
-testbpf: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
+.PHONY: test
+test: $(BPF2GO_FILE) $(PIDONETEST)
 	go test \
-		-tags pidonetest \
 		-exec "$(PIDONETEST)" \
 		-v \
-		./$(<D)
+		./...
 
-.PHONY: testbpf-arm64
-testbpf-arm64: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
+.PHONY: test-arm64
+test-arm64: $(BPF2GO_FILE) $(PIDONETEST)
 	GOARCH=arm64 go test \
-		-tags pidonetest \
 		-exec "$(PIDONETEST) \
 			-kernel $$(realpath kernel/vmlinuz.arm64) \
 			-qemu-bin qemu-system-aarch64 \
@@ -61,7 +75,7 @@ testbpf-arm64: $(BPF_TEST_FILE) $(BPF2GO_FILE) $(PIDONETEST)
 			-cpu neoverse-n1 \
 			-nokvm" \
 		-v \
-		./$(<D)
+		./...
 
 .PHONY: clean
 clean:
@@ -71,4 +85,5 @@ clean:
 .PHONY: cleangen
 cleangen:
 	@rm -frv \
-		$(patsubst %.go,%.*,$(BPF2GO_FILE))
+		$(patsubst %.go,%.*,$(BPF2GO_FILE)) \
+		$(BPF_PACKAGE_DIR)/*_string.go
