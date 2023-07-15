@@ -7,7 +7,6 @@
 
 #define ETH_HLEN            14
 #define ETH_ALEN            6
-#define ETH_TLEN            2
 #define ETH_P_IPV6          0x86DD
 #define IPV6_MTU_MIN        1280
 #define IPV6_ALEN           16
@@ -29,6 +28,9 @@
   if (unlikely(f != e)) \
   return ret
 
+/* Definition of hop addresses in the order they are traversed by the packet.
+ * 0 is an invalid hop number. Last entry is the actual target address.
+ */
 struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
   __type(key, __u32);
@@ -36,25 +38,24 @@ struct {
   __uint(max_entries, MAX_ADDRS);
 } exceed2go_addrs SEC(".maps");
 
-struct {
-  __uint(type, BPF_MAP_TYPE_ARRAY);
-  __type(key, __u32);
-  __type(value, __u32);
-  __uint(max_entries, 8);
-} exceed2go_counters SEC(".maps");
-
-enum exceed_counter_key {
-  COUNTER_KEY_IPV6,
-  COUNTER_KEY_TARGET,
-  COUNTER_KEY_FOUND,
-  COUNTER_KEY_ABORTED,
-  COUNTER_KEY_ICMP,
-  COUNTER_KEY_ICMP_ECHO_REQ,
-  COUNTER_KEY_ICMP_WRONG_CSUM,
-  COUNTER_KEY_UNREACH,
+enum counter_key {
+  IPV6_PACKET,
+  TO_TARGET,
+  HOP_FOUND,
+  ICMP_PACKET,
+  ICMP_ECHO_REQUEST,
+  ICMP_CORRECT_CHECKSUM,
+  COUNTER_MAX_ENTRIES,
 };
 
-static __always_inline void counter_increment(__u32 key) {
+struct {
+  __uint(type, BPF_MAP_TYPE_ARRAY);
+  __type(key, enum counter_key);
+  __type(value, __u32);
+  __uint(max_entries, COUNTER_MAX_ENTRIES);
+} exceed2go_counters SEC(".maps");
+
+static __always_inline void count(const enum counter_key key) {
   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
   if (likely(value)) {
     __sync_fetch_and_add(value, 1);
@@ -99,6 +100,10 @@ static long target_search_cb(void                        *map,
                              __u32                       *key,
                              struct in6_addr             *value,
                              struct target_search_cb_ctx *cb_ctx) {
+  /* 0 is an invalid hop number, so skip it. */
+  if (*key == 0) {
+    return 0;
+  }
   /* If lookup returns nothing or found address is zero exit as that indicates
    *we are through the list of configured addresses.
    */
@@ -253,19 +258,20 @@ static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
 static __always_inline int
 exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
   assert_equal(ipv6->nexthdr, IPPROTO_ICMPV6, DEFAULT_ACTION);
-  counter_increment(COUNTER_KEY_ICMP);
+  count(ICMP_PACKET);
 
   struct icmp6hdr *icmp6 = next_header(ipv6);
   assert_boundary(icmp6, data_end, DEFAULT_ACTION);
 
   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, DEFAULT_ACTION);
   assert_equal(icmp6->icmp6_code, 0, DEFAULT_ACTION);
-  counter_increment(COUNTER_KEY_ICMP_ECHO_REQ);
+  count(ICMP_ECHO_REQUEST);
+
   /* Validate check sum. */
   assert_equal(csum_fold(icmp6_csum(icmp6, ipv6, data_end, false)),
                0xffff,
                DEFAULT_ACTION);
-  counter_increment(COUNTER_KEY_ICMP_WRONG_CSUM);
+  count(ICMP_CORRECT_CHECKSUM);
 
   /* Swap ethernet addresses. */
   __u64 tmphwaddr = 0;
@@ -303,7 +309,7 @@ int exceed2go(struct xdp_md *ctx) {
   struct ethhdr *eth = data;
   assert_boundary(eth, data_end, DEFAULT_ACTION);
   assert_equal(eth->h_proto, bpf_htons(ETH_P_IPV6), DEFAULT_ACTION);
-  counter_increment(COUNTER_KEY_IPV6);
+  count(IPV6_PACKET);
 
   struct ipv6hdr *ipv6 = next_header(eth);
   assert_boundary(ipv6, data_end, DEFAULT_ACTION);
@@ -317,18 +323,14 @@ int exceed2go(struct xdp_md *ctx) {
    * requests.
    */
   assert_equal(target.found, true, DEFAULT_ACTION);
-  counter_increment(COUNTER_KEY_TARGET);
-
-  /* Address map array is 0 indexed, but the lowest hop_limit that will reach us
-   * is 1, so decrement the hop_key by 1.
-   */
-  __u32 hop_key = ipv6->hop_limit > 0 ? ipv6->hop_limit - 1 : 0;
+  count(TO_TARGET);
 
   /* Only reply with time exceeded messages, if the hop_limit is not above the
    * index of the destination address. All the addresses above should be ignored
    * as the destination has already been reached so all addrs after are not
    * relevant.
    */
+  __u32            hop_key     = ipv6->hop_limit;
   struct in6_addr *exceed_addr = NULL;
   if (target.key > hop_key)
     exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
@@ -341,7 +343,7 @@ int exceed2go(struct xdp_md *ctx) {
     return exceed2go_echo(data_end, eth, ipv6);
   }
 
-  counter_increment(COUNTER_KEY_FOUND);
+  count(HOP_FOUND);
 
   return exceed2go_exceeded(ctx, exceed_addr);
 }

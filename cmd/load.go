@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/aibor/exceed2go/internal/exceed2go"
+	"github.com/aibor/exceed2go/internal/ifinfo"
 	"github.com/spf13/cobra"
 )
 
@@ -15,41 +17,42 @@ func loadCmd() *cobra.Command {
 	hop addresses are used as hops in the order given. So ping the last address
 	the get a traceroute with all the given addresses in that order.`,
 		Args: cobra.MinimumNArgs(3),
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) (
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, _ string) (
 			[]string, cobra.ShellCompDirective,
 		) {
+			comps := make([]string, 0)
 			flags := cobra.ShellCompDirectiveNoFileComp
 
 			if len(args) == 0 {
-				return exceed2go.IfUpNameList(), flags
-			}
-
-			return exceed2go.IPv6AddrsList(args[0]), flags
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ifName := args[0]
-			hopAddrs := args[1:]
-
-			objs, err := exceed2go.Load()
-			if err != nil {
-				return fmt.Errorf("load objects: %v", err)
-			}
-
-			defer objs.Close()
-
-			if err := objs.PinObjs(); err != nil {
-				return fmt.Errorf("pin maps: %v", err)
-			}
-
-			for idx, addr := range hopAddrs {
-				if err := exceed2go.SetAddr(idx, addr); err != nil {
-					exceed2go.Cleanup()
-					return fmt.Errorf("set address: %v", err)
+				if ifaceList, err := net.Interfaces(); err == nil {
+					comps = ifinfo.IfUpNameList(ifaceList)
 				}
 			}
 
-			if err := objs.AttachProg(ifName); err != nil {
-				exceed2go.Cleanup()
+			return comps, flags
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			iface, err := net.InterfaceByName(args[0])
+			if err != nil {
+				return fmt.Errorf("interface by name: %s: %v", args[0], err)
+			}
+
+			hopList, err := exceed2go.ParseHopList(args[1:])
+			if err != nil {
+				return err
+			}
+
+			if err := exceed2go.LoadAndPin(); err != nil {
+				return fmt.Errorf("load: %v", err)
+			}
+
+			if err := exceed2go.SetAddrs(hopList); err != nil {
+				exceed2go.Remove()
+				return fmt.Errorf("set address: %v", err)
+			}
+
+			if err := exceed2go.AttachProg(iface); err != nil {
+				exceed2go.Remove()
 				return fmt.Errorf("attach program: %v", err)
 			}
 

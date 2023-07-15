@@ -3,182 +3,208 @@ package exceed2go
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
-	"path"
+	"path/filepath"
 
+	"github.com/aibor/exceed2go/internal/bpf"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 )
 
-const pinPath = "/sys/fs/bpf/exceed2go"
+// BPFFSDir is the bpffs sub directory containing all bpf pin files.
+const BPFFSDir = "/sys/fs/bpf/exceed2go"
 
-// MapIP contains an IPv6 addresses that is supposed to be returned for the
-// given hop limit of incoming packets.
-type MapIP struct {
-	hopLimit int
-	addr     string
+// PinFileName is the file name for a bpf object in [BPFFSDir].
+type PinFileName string
+
+// PinFileNames of the bpf objects used by the program.
+const (
+	PinFileNameXDPProg   PinFileName = "xdp_prog"
+	PinFileNameXDPLink   PinFileName = "xdp_link"
+	PinFileNameStatsMap  PinFileName = "stats_map"
+	PinFileNameConfigMap PinFileName = "config_map"
+)
+
+type pinner interface {
+	Pin(string) error
 }
 
-// Load the BPF objects and return the object collection for further use, like
-// attaching it to an interface.
-func Load() (*bpfObjects, error) {
-	if err := os.MkdirAll(pinPath, 0755); err != nil {
-		return nil, fmt.Errorf("create bpf pin dir: %v", err)
+// BPFFSPath returns the absolute path for the given [PinFileName].
+func BPFFSPath(path PinFileName) string {
+	return filepath.Join(BPFFSDir, string(path))
+}
+
+// LoadAndPin loads the eBPF objects into the kernel and pins them to the bpffs.
+//
+// This is the initial action. If there are already loaded objects before, they
+// are removed and so any state of them.
+//
+// Call [Remove] to unload the objects and clear the bpffs files.
+func LoadAndPin() error {
+	Remove()
+
+	if err := os.MkdirAll(BPFFSPath(""), 0755); err != nil {
+		return fmt.Errorf("create bpf pin dir: %v", err)
 	}
 
-	objs := bpfObjects{}
-	err := loadBpfObjects(&objs, nil)
+	objs := bpf.Exceed2GoObjects{}
+	err := bpf.LoadExceed2GoObjects(&objs, nil)
+	defer objs.Exceed2GoPrograms.Close()
 	if err != nil {
-		return nil, fmt.Errorf("load objects: %w", err)
+		Remove()
+		return fmt.Errorf("load maps: %w", err)
 	}
 
-	return &objs, nil
-}
-
-func (o *bpfObjects) PinObjs() error {
-	if err := o.Exceed2goCounters.Pin(statsPinPath()); err != nil {
-		return fmt.Errorf("pin stats map: %v", err)
+	pinners := map[pinner]PinFileName{
+		objs.Exceed2go:         PinFileNameXDPProg,
+		objs.Exceed2goCounters: PinFileNameStatsMap,
+		objs.Exceed2goAddrs:    PinFileNameConfigMap,
 	}
 
-	if err := o.Exceed2goAddrs.Pin(configPinPath()); err != nil {
-		return fmt.Errorf("pin config map: %v", err)
+	for pinner, path := range pinners {
+		if err := pinner.Pin(BPFFSPath(path)); err != nil {
+			Remove()
+			return fmt.Errorf("pin %s: %v", path, err)
+		}
 	}
 
 	return nil
 }
 
-// AttachProg attaches the XDP program to the interface with the given name. It
-// pins the link in the directory for the program.
-func (o *bpfObjects) AttachProg(ifName string) error {
-	iface, err := net.InterfaceByName(ifName)
+// AttachProg attaches the XDP program to the given [net.Interface].
+//
+// Am eBPF link is created to keep the eBPF program attached to the interface
+// beyond the lifetime of the process.
+func AttachProg(iface *net.Interface) error {
+	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(PinFileNameXDPProg), nil)
 	if err != nil {
-		return fmt.Errorf("interface by name: %s: %v", ifName, err)
+		return fmt.Errorf("load pinned program: %v", err)
 	}
+	defer prog.Close()
 
 	link, err := link.AttachXDP(link.XDPOptions{
-		Program:   o.Exceed2go,
+		Program:   prog,
 		Interface: iface.Index,
 	})
 	if err != nil {
 		return fmt.Errorf("load XDP program: %v", err)
 	}
-
 	defer link.Close()
 
-	if err := link.Pin(linkPinPath()); err != nil {
+	if err := link.Pin(BPFFSPath(PinFileNameXDPLink)); err != nil {
 		return fmt.Errorf("pin link: %v", err)
 	}
 
 	return nil
 }
 
-// Cleanup unpins and closes all objects.
-func Cleanup() {
-	_ = os.RemoveAll(pinPath)
+// Remove unpins and closes all objects.
+func Remove() {
+	_ = os.RemoveAll(BPFFSPath(""))
 }
 
-// SetAddr puts the given address for the given hop number.
-func SetAddr(hop int, addr string) error {
-	config, err := getPinnedConfigMap()
+// SetAddrs puts the given addresses for the given hop numbers (indexes).
+//
+// It overrides the whole eBPF map, so no incremental changes possible.
+func SetAddrs(hops HopList) error {
+	config, err := ebpf.LoadPinnedMap(BPFFSPath(PinFileNameConfigMap), nil)
 	if err != nil {
 		return fmt.Errorf("get config map: %v", err)
 	}
+	defer config.Close()
 
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		return fmt.Errorf("failed to parse IP: %s", addr)
+	maxEntries := int(config.MaxEntries())
+	if len(hops) >= maxEntries {
+		return fmt.Errorf("too many hops %d, max %d", len(hops), maxEntries-1)
+	}
+	keys := make([]uint32, maxEntries)
+	values := make([][16]byte, maxEntries)
+
+	for idx, addr := range hops {
+		// 0 is an invalid hop number, so it is left out.
+		keys[idx] = uint32(idx + 1)
+		values[idx] = addr.As16()
 	}
 
-	if err := config.Put(uint32(hop), []byte(ip)); err != nil {
+	if _, err := config.BatchUpdate(keys, values, nil); err != nil {
 		return fmt.Errorf("load error: %v", err)
 	}
 
 	return nil
 }
 
-// GetStats returns the current stats counter.
-func GetStats() ([]uint32, error) {
+// GetAddrs returns the content of the eBPF map.
+func GetAddrs() (HopList, error) {
+	var output = make(HopList, 0)
+
+	config, err := ebpf.LoadPinnedMap(BPFFSPath(PinFileNameConfigMap), nil)
+	if err != nil {
+		return output, fmt.Errorf("get config map: %v", err)
+	}
+	defer config.Close()
+
 	var (
 		nextKey      uint32
-		lookupKeys   = make([]uint32, 8)
-		lookupValues = make([]uint32, 8)
+		lookupKeys   = make([]uint32, config.MaxEntries())
+		lookupValues = make([][16]byte, config.MaxEntries())
 	)
 
-	stats, err := getPinnedStatsMap()
+	_, err = config.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 	if err != nil {
-		return lookupValues, fmt.Errorf("get stats map: %v", err)
+		return output, fmt.Errorf("lookup stats: %v", err)
 	}
+
+	for idx := range lookupKeys {
+		// 0 is an invalid hop number, so it is left out.
+		if idx == 0 {
+			continue
+		}
+		addr := netip.AddrFrom16(lookupValues[idx])
+		if addr.IsUnspecified() {
+			break
+		}
+		output = append(output, addr)
+	}
+
+	return output, nil
+}
+
+// Stat represents a single counter value from the eBPF counters map.
+type Stat struct {
+	Name  string
+	Count int
+}
+
+// Stats is a list of [Stat]s.
+type Stats []Stat
+
+// GetStats returns the current stats counters.
+func GetStats() (Stats, error) {
+	var output = make(Stats, 0)
+
+	stats, err := ebpf.LoadPinnedMap(BPFFSPath(PinFileNameStatsMap), nil)
+	if err != nil {
+		return output, fmt.Errorf("get stats map: %v", err)
+	}
+	defer stats.Close()
+
+	var (
+		nextKey      uint32
+		lookupKeys   = make([]uint32, stats.MaxEntries())
+		lookupValues = make([]uint32, stats.MaxEntries())
+	)
 
 	_, err = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
 	if err != nil {
-		return lookupValues, fmt.Errorf("lookup stats: %v", err)
+		return output, fmt.Errorf("lookup stats: %v", err)
 	}
 
-	return lookupValues, nil
-}
-
-// IfUpNameList returns a list of names of all interfaces that are up and not a
-// loopback interface.
-func IfUpNameList() []string {
-	ifNameList := make([]string, 0)
-
-	ifList, err := net.Interfaces()
-	if err != nil {
-		return ifNameList
+	for idx, key := range lookupKeys {
+		output = append(output, Stat{
+			Name:  bpf.Exceed2GoCounterKey(key).String(),
+			Count: int(lookupValues[idx]),
+		})
 	}
-
-	// fetch names for links that are up ant not loopback
-	for _, iface := range ifList {
-		if iface.Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
-			continue
-		}
-		ifNameList = append(ifNameList, iface.Name)
-	}
-
-	return ifNameList
-}
-
-// IPv6AddrsList fetches a list of all globally routable unicast IPv6 addresses
-// of the interface identified by the given name.
-func IPv6AddrsList(ifName string) []string {
-	ipv6AddrList := make([]string, 0)
-
-	iface, err := net.InterfaceByName(ifName)
-	if err != nil {
-		return ipv6AddrList
-	}
-
-	addrList, err := iface.Addrs()
-	if err != nil {
-		return ipv6AddrList
-	}
-
-	for _, addr := range addrList {
-		ip := net.ParseIP(addr.String())
-		if ip.IsGlobalUnicast() {
-			ipv6AddrList = append(ipv6AddrList, addr.String())
-		}
-	}
-
-	return ipv6AddrList
-}
-
-func linkPinPath() string {
-	return path.Join(pinPath, "xdp_link")
-}
-
-func statsPinPath() string {
-	return path.Join(pinPath, "stats_map")
-}
-
-func configPinPath() string {
-	return path.Join(pinPath, "config_map")
-}
-
-func getPinnedStatsMap() (*ebpf.Map, error) {
-	return ebpf.LoadPinnedMap(statsPinPath(), nil)
-}
-
-func getPinnedConfigMap() (*ebpf.Map, error) {
-	return ebpf.LoadPinnedMap(configPinPath(), nil)
+	return output, nil
 }
