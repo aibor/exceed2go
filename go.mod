@@ -3,7 +3,7 @@ module github.com/aibor/exceed2go
 go 1.20
 
 require (
-	github.com/aibor/go-pidonetest v0.2.0
+	github.com/aibor/go-pidonetest v0.2.1
 	github.com/cilium/ebpf v0.11.0
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.7.0
