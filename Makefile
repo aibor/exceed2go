@@ -69,6 +69,8 @@ pidonetest: $(BPF2GO_FILE) $(PIDONETEST)
 			-kernel $(PIDONETEST_KERNEL) \
 			$(PIDONETEST_ARGS)" \
 		-v \
+		-cover \
+		-covermode atomic \
 		./...
 
 .PHONY: pidonetest-arm64
@@ -82,6 +84,8 @@ pidonetest-arm64: $(BPF2GO_FILE) $(PIDONETEST)
 			-cpu neoverse-n1 \
 			-nokvm" \
 		-v \
+		-cover \
+		-covermode atomic \
 		./...
 
 .PHONY: clean
