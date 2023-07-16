@@ -1,5 +1,5 @@
-github.com/aibor/go-pidonetest v0.1.0 h1:fOWvhyyQ3AcS/rJtt7G1Y8rxUnvrWIC03toQ3iSlzUs=
-github.com/aibor/go-pidonetest v0.1.0/go.mod h1:yB7NO1AgdDhS0LKdFGQgZ1Lgmz62sCNkbww2xIxwcAE=
+github.com/aibor/go-pidonetest v0.2.0 h1:mX7zvB1d9LIGyknd2YNAOjIYYSQJiiGdR1iYiu8o0QY=
+github.com/aibor/go-pidonetest v0.2.0/go.mod h1:yB7NO1AgdDhS0LKdFGQgZ1Lgmz62sCNkbww2xIxwcAE=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/cilium/ebpf v0.11.0 h1:V8gS/bTCCjX9uUnkUFUpPsksM8n1lXBAvHcpiFk1X2Y=
