@@ -3,6 +3,6 @@
 package tools
 
 import (
-	_ "github.com/aibor/go-pidonetest/cmd/pidonetest"
+	_ "github.com/aibor/pidonetest/cmd/pidonetest"
 	_ "golang.org/x/tools/cmd/stringer"
 )

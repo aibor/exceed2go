@@ -31,7 +31,7 @@ build: $(BINARY)
 bpf: $(BPF2GO_FILE)
 
 $(PIDONETEST):
-	go install github.com/aibor/go-pidonetest/cmd/pidonetest
+	go install github.com/aibor/pidonetest/cmd/pidonetest
 
 $(BPF2GO):
 	go install github.com/cilium/ebpf/cmd/bpf2go

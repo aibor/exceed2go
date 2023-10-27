@@ -1,9 +1,9 @@
 module github.com/aibor/exceed2go
 
-go 1.20
+go 1.21
 
 require (
-	github.com/aibor/go-pidonetest v0.2.1
+	github.com/aibor/pidonetest v0.4.1
 	github.com/cilium/ebpf v0.11.0
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.7.0
@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9 // indirect
 	github.com/cavaliergopher/cpio v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
