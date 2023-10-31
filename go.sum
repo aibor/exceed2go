@@ -1,7 +1,7 @@
-github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9 h1:DN5tj70Sk2byizVklOg0eUkSVE87xi9O3Qb4M42sVnA=
-github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9/go.mod h1:dZxrRAzYoiC9i1qMP6ikPmdDuAlWTSQqrC5q+iVmaP0=
-github.com/aibor/pidonetest v0.4.1 h1:pv6E6KzniuC4NseQo5nXuc8TwiL5x8CQ0D0Hb85D414=
-github.com/aibor/pidonetest v0.4.1/go.mod h1:BT3bz9ipF70mYFeXqXQtdSUxZyB81jKrkXWzjnl091A=
+github.com/aibor/initramfs v0.1.0 h1:O9v6Bu0q3chR7n7OkqRntOPnJoPJGm30z9Z/clSXuNE=
+github.com/aibor/initramfs v0.1.0/go.mod h1:dZxrRAzYoiC9i1qMP6ikPmdDuAlWTSQqrC5q+iVmaP0=
+github.com/aibor/pidonetest v0.5.0 h1:aDaCX+vgnrvaxGg7EUhGwbQCPq55LM+v2OHS/Of811o=
+github.com/aibor/pidonetest v0.5.0/go.mod h1:YuriBP5qQiPGtzMDa2Ac2xr8sb5/lbe899rsoSluf0o=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/cilium/ebpf v0.12.2 h1:cP3qL4kkl19kr/F+hKqUo9F9pPMVz1oms8C7Qj0AwWk=

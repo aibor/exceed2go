@@ -64,7 +64,6 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 .PHONY: pidonetest
 pidonetest: $(BPF2GO_FILE) $(PIDONETEST)
 	go test \
-		-tags pidonetest \
 		-exec "$(PIDONETEST) \
 			-kernel $(PIDONETEST_KERNEL) \
 			$(PIDONETEST_ARGS)" \
@@ -78,11 +77,13 @@ pidonetest-arm64: $(BPF2GO_FILE) $(PIDONETEST)
 	GOARCH=arm64 go test \
 		-tags pidonetest \
 		-exec "$(PIDONETEST) \
+		    -nokvm \
+		    -standalone \
 			-kernel $(PIDONETEST_KERNEL) \
 			-qemu-bin qemu-system-aarch64 \
 			-machine virt \
-			-cpu neoverse-n1 \
-			-nokvm" \
+			-cpu max
+			$(PIDONETEST_ARGS)" \
 		-v \
 		-cover \
 		-covermode atomic \
