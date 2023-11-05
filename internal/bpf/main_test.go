@@ -9,5 +9,5 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	pidonetest.Run(m)
+	pidonetest.RunTests(m)
 }

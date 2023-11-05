@@ -19,7 +19,7 @@ BPF_SRC_FILE := bpf/exceed2go.c
 BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 
 CLANG ?= clang
-CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc
+CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc -v
 
 PIDONETEST_KERNEL ?= /boot/vmlinuz-linux
 PIDONETEST_ARGS ?= 
@@ -66,7 +66,7 @@ pidonetest: $(BPF2GO_FILE) $(PIDONETEST)
 	go test \
 		-exec "$(PIDONETEST) \
 			-kernel $(PIDONETEST_KERNEL) \
-			$(PIDONETEST_ARGS)" \
+			-transport 0" \
 		-v \
 		-cover \
 		-covermode atomic \
@@ -77,13 +77,9 @@ pidonetest-arm64: $(BPF2GO_FILE) $(PIDONETEST)
 	GOARCH=arm64 go test \
 		-tags pidonetest \
 		-exec "$(PIDONETEST) \
-		    -nokvm \
 		    -standalone \
-			-kernel $(PIDONETEST_KERNEL) \
-			-qemu-bin qemu-system-aarch64 \
-			-machine virt \
-			-cpu max
-			$(PIDONETEST_ARGS)" \
+			-verbose \
+			-kernel $(PIDONETEST_KERNEL)" \
 		-v \
 		-cover \
 		-covermode atomic \
