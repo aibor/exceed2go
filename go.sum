@@ -1,7 +1,7 @@
 github.com/aibor/initramfs v0.1.1 h1:+voQVjX4xDuUa4OCoRhs5CxB5Zxny6ddpEOGRy7K1Fo=
 github.com/aibor/initramfs v0.1.1/go.mod h1:GxeQc9Q9e4qohPa0VDzy8yRBw9Dt/p98dBe2fxRMga4=
-github.com/aibor/pidonetest v0.6.0 h1:RuX9rcPczYIAl2qWx3BN0uIXyGi/M/QN3ryG0yOXQIU=
-github.com/aibor/pidonetest v0.6.0/go.mod h1:8kpbTYyiMrRWkFdcnpnNW9y9bRQcByXtf7j3yzmNNU8=
+github.com/aibor/virtrun v0.7.0 h1:UEULRDiDn2695SZyJHDQxjMs+J4YZcVHq56Nkif9HLc=
+github.com/aibor/virtrun v0.7.0/go.mod h1:ZlGI+YC6rTDpLVl9/INXUdPPV/ZiNkRcEBdgzUEUA3A=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/cilium/ebpf v0.12.2 h1:cP3qL4kkl19kr/F+hKqUo9F9pPMVz1oms8C7Qj0AwWk=

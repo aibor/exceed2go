@@ -10,7 +10,7 @@ BINARY ?= $(BIN_DIR)/exceed2go
 KERNEL_FILE ?= /boot/vmlinuz-linux
 
 GOBIN := $(shell realpath ./gobin)
-PIDONETEST := $(GOBIN)/pidonetest
+VIRTRUN := $(GOBIN)/virtrun
 BPF2GO := $(GOBIN)/bpf2go
 STRINGER := $(GOBIN)/stringer
 
@@ -21,8 +21,8 @@ BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc -v
 
-PIDONETEST_KERNEL ?= /boot/vmlinuz-linux
-PIDONETEST_ARGS ?= 
+VIRTRUN_KERNEL ?= /boot/vmlinuz-linux
+VIRTRUN_ARGS ?= 
 
 export CGO_ENABLED := 0
 export GOBIN
@@ -30,8 +30,8 @@ export GOBIN
 build: $(BINARY)
 bpf: $(BPF2GO_FILE)
 
-$(PIDONETEST):
-	go install github.com/aibor/pidonetest/cmd/pidonetest
+$(VIRTRUN):
+	go install github.com/aibor/virtrun/cmd/virtrun
 
 $(BPF2GO):
 	go install github.com/cilium/ebpf/cmd/bpf2go
@@ -62,21 +62,20 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 		exceed2go_bpfel.go
 
 .PHONY: pidonetest
-pidonetest: $(BPF2GO_FILE) $(PIDONETEST)
+pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
 	go test \
-		-exec "$(PIDONETEST) \
-			-kernel $(PIDONETEST_KERNEL) \
-			-transport 0" \
+		-exec "$(VIRTRUN) \
+			-kernel $(PIDONETEST_KERNEL)" \
 		-v \
 		-cover \
 		-covermode atomic \
 		./...
 
 .PHONY: pidonetest-arm64
-pidonetest-arm64: $(BPF2GO_FILE) $(PIDONETEST)
+pidonetest-arm64: $(BPF2GO_FILE) $(VIRTRUN)
 	GOARCH=arm64 go test \
 		-tags pidonetest \
-		-exec "$(PIDONETEST) \
+		-exec "$(VIRTRUN) \
 		    -standalone \
 			-verbose \
 			-kernel $(PIDONETEST_KERNEL)" \
