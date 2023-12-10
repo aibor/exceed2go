@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
 
       - uses: actions/checkout@v3
 
@@ -36,7 +36,7 @@ jobs:
           version: latest
 
       - name: Run go test
-        run: sudo go test -v -cover -coverprofile cover.out ./...
+        run: sudo $(which go) test -v -cover -coverprofile cover.out ./...
 
       - name: Run go tool cover
         run: go tool cover -func=cover.out

@@ -21,9 +21,6 @@ BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 CLANG ?= clang
 CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc -v
 
-VIRTRUN_KERNEL ?= /boot/vmlinuz-linux
-VIRTRUN_ARGS ?= 
-
 export CGO_ENABLED := 0
 export GOBIN
 
@@ -31,7 +28,7 @@ build: $(BINARY)
 bpf: $(BPF2GO_FILE)
 
 $(VIRTRUN):
-	go install github.com/aibor/virtrun/cmd/virtrun
+	go install github.com/aibor/virtrun
 
 $(BPF2GO):
 	go install github.com/cilium/ebpf/cmd/bpf2go
@@ -65,19 +62,6 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
 	go test \
 		-exec "$(VIRTRUN) \
-			-kernel $(PIDONETEST_KERNEL)" \
-		-v \
-		-cover \
-		-covermode atomic \
-		./...
-
-.PHONY: pidonetest-arm64
-pidonetest-arm64: $(BPF2GO_FILE) $(VIRTRUN)
-	GOARCH=arm64 go test \
-		-tags pidonetest \
-		-exec "$(VIRTRUN) \
-		    -standalone \
-			-verbose \
 			-kernel $(PIDONETEST_KERNEL)" \
 		-v \
 		-cover \
