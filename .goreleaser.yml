@@ -5,7 +5,6 @@ builds:
         -s -w
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm64
@@ -35,6 +34,5 @@ nfpms:
     formats:
       - deb
       - rpm
-      - apk
       - archlinux
     file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
