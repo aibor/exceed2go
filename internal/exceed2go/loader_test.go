@@ -15,20 +15,21 @@ import (
 func TestLoadAndPin(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)
 	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCProg))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPProg))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameConfigMap))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameStatsMap))
 	assert.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin again")
 }
 
-func TestAttachProg(t *testing.T) {
+func TestAttachXDPProg(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)
 	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
 
 	iface, err := net.InterfaceByName("lo")
 	require.NotEmpty(t, iface.Index, "must be valid test interface index")
 	require.NoError(t, err, "get test interface")
-	require.NoError(t, exceed2go.AttachProg(iface), "AttachProg")
+	require.NoError(t, exceed2go.AttachXDPProg(iface), "AttachXDPProg")
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPLink))
 
 	lnk, err := link.LoadPinnedLink(exceed2go.BPFFSPath(exceed2go.PinFileNameXDPLink), nil)

@@ -51,7 +51,7 @@ func loadCmd() *cobra.Command {
 				return fmt.Errorf("set address: %v", err)
 			}
 
-			if err := exceed2go.AttachProg(iface); err != nil {
+			if err := exceed2go.AttachXDPProg(iface); err != nil {
 				exceed2go.Remove()
 				return fmt.Errorf("attach program: %v", err)
 			}

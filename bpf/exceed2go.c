@@ -2,8 +2,7 @@
 #include "libbpf/bpf_endian.h"
 #include "libbpf/bpf_helpers.h"
 
-#define DEFAULT_ACTION XDP_PASS
-#define MAX_ADDRS      32
+#define MAX_ADDRS 32
 
 #define ETH_HLEN            14
 #define ETH_ALEN            6
@@ -185,44 +184,35 @@ static __always_inline __wsum icmp6_csum(struct icmp6hdr *icmp6,
   return sum;
 }
 
+/* Calculate if the packet end needs to be adjusted. It must not be longer than
+ * the IPv6 minimum MTU and should always be a multiple of 4 bytes long so it
+ * works with our check sum implementation. Returns a signed value that can be
+ * passed to bpf_xdp_adjust_tail and bpf_skb_change_tail.
+ */
+static __always_inline int tail_adjust(int pkt_len) {
+  /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
+  __u16 new_ip_pkt_len = ADJ_LEN + pkt_len - ETH_HLEN;
+  int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
+
+  /* Ensure the resulting packet is always a multiple of 4 so it works with the
+   * check sum implementation.
+   */
+  if (tail_adj > 0 && new_ip_pkt_len % 4) {
+    tail_adj = -(new_ip_pkt_len % 4);
+  }
+
+  return tail_adj < 0 ? tail_adj : 0;
+}
+
 /* Create a ICMPv6 time exceeded message for the current packet and send it
  * from the given src_addr.
  */
-static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
-                                              const struct in6_addr *src_addr) {
-  void *data     = (void *)(unsigned long)ctx->data;
-  void *data_end = (void *)(unsigned long)ctx->data_end;
-
-  /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
-  int   head_len_adjust = 0 - (int)ADJ_LEN;
-  __u16 ip_pkt_len      = ADJ_LEN + (data_end - data) - ETH_HLEN;
-  int   tail_len_adjust = IPV6_MTU_MIN - ip_pkt_len;
-  /* Ensure the resulting paxket is always a multiple of 4 so it works with the
-   * check sum implementation.
-   */
-  if (tail_len_adjust > 0 && ip_pkt_len % 4) {
-    tail_len_adjust = -(ip_pkt_len % 4);
-  }
-
-  /* Move head to get space needed for moving ethernet header and adding new
-   * IPv6 and ICMPv6 header before the received IPv6 header.
-   */
-  assert_equal(bpf_xdp_adjust_head(ctx, head_len_adjust), 0, XDP_ABORTED);
-
-  /* If the packet would be longer than it is supposed to be (max IPv6 minimum
-   * MTU) cut off the excess data.
-   */
-  if (tail_len_adjust < 0)
-    assert_equal(bpf_xdp_adjust_tail(ctx, tail_len_adjust), 0, XDP_ABORTED);
-
-  /* Reinitialize after length change. */
-  data     = (void *)(unsigned long)ctx->data;
-  data_end = (void *)(unsigned long)ctx->data_end;
-
+static __always_inline bool exceed2go_exceeded(
+    void *data, void *data_end, const struct in6_addr *src_addr) {
   /* Initialize former header positions. */
-  struct ethhdr  *orig_eth  = (void *)data + (int)ADJ_LEN;
+  struct ethhdr  *orig_eth  = data + (int)ADJ_LEN;
   struct ipv6hdr *orig_ipv6 = next_header(orig_eth);
-  assert_boundary(orig_ipv6, data_end, XDP_ABORTED);
+  assert_boundary(orig_ipv6, data_end, false);
 
   /* Initialize new headers. */
   struct ethhdr   *eth   = (void *)data;
@@ -251,26 +241,28 @@ static __always_inline int exceed2go_exceeded(struct xdp_md         *ctx,
 
   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, ipv6, data_end, true));
 
-  return XDP_TX;
+  return true;
 }
 
 /* Create ICMPv6 echo reply message for the given packet. */
-static __always_inline int
-exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
-  assert_equal(ipv6->nexthdr, IPPROTO_ICMPV6, DEFAULT_ACTION);
+static __always_inline bool exceed2go_echo(void *data, void *data_end) {
+  struct ethhdr  *eth  = (void *)data;
+  struct ipv6hdr *ipv6 = next_header(eth);
+  assert_boundary(ipv6, data_end, false);
+
+  assert_equal(ipv6->nexthdr, IPPROTO_ICMPV6, false);
   count(ICMP_PACKET);
 
   struct icmp6hdr *icmp6 = next_header(ipv6);
-  assert_boundary(icmp6, data_end, DEFAULT_ACTION);
+  assert_boundary(icmp6, data_end, false);
 
-  assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, DEFAULT_ACTION);
-  assert_equal(icmp6->icmp6_code, 0, DEFAULT_ACTION);
+  assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, false);
+  assert_equal(icmp6->icmp6_code, 0, false);
   count(ICMP_ECHO_REQUEST);
 
   /* Validate check sum. */
-  assert_equal(csum_fold(icmp6_csum(icmp6, ipv6, data_end, false)),
-               0xffff,
-               DEFAULT_ACTION);
+  assert_equal(
+      csum_fold(icmp6_csum(icmp6, ipv6, data_end, false)), 0xffff, false);
   count(ICMP_CORRECT_CHECKSUM);
 
   /* Swap ethernet addresses. */
@@ -298,21 +290,23 @@ exceed2go_echo(void *data_end, struct ethhdr *eth, struct ipv6hdr *ipv6) {
   /* Only field changed that affects the check sum field is the ICMP type. */
   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
 
-  return XDP_TX;
+  return true;
 }
 
-SEC("xdp/exceed2go")
-int exceed2go(struct xdp_md *ctx) {
-  void *data     = (void *)(unsigned long)ctx->data;
-  void *data_end = (void *)(unsigned long)ctx->data_end;
-
+/* Parse packet for a known address. Returns true if the destination address
+ * is in our address map. If the packet's hop_limit is low enough, the given
+ * exceed_addr pointer will be set to to the address that we want to send a
+ * time exceed packet from.
+ */
+static __always_inline bool
+parse_packet(void *data, void *data_end, struct in6_addr **exceed_addr) {
   struct ethhdr *eth = data;
-  assert_boundary(eth, data_end, DEFAULT_ACTION);
-  assert_equal(eth->h_proto, bpf_htons(ETH_P_IPV6), DEFAULT_ACTION);
+  assert_boundary(eth, data_end, NULL);
+  assert_equal(eth->h_proto, bpf_htons(ETH_P_IPV6), NULL);
   count(IPV6_PACKET);
 
   struct ipv6hdr *ipv6 = next_header(eth);
-  assert_boundary(ipv6, data_end, DEFAULT_ACTION);
+  assert_boundary(ipv6, data_end, NULL);
 
   /* Lookup the destination address in our address table. */
   struct target_search_cb_ctx target = {.needle = ipv6->daddr, .found = false};
@@ -322,7 +316,7 @@ int exceed2go(struct xdp_md *ctx) {
    * time-exceeded message if the hop limit is low enough, or reply to echo
    * requests.
    */
-  assert_equal(target.found, true, DEFAULT_ACTION);
+  assert_equal(target.found, true, NULL);
   count(TO_TARGET);
 
   /* Only reply with time exceeded messages, if the hop_limit is not above the
@@ -330,22 +324,91 @@ int exceed2go(struct xdp_md *ctx) {
    * as the destination has already been reached so all addrs after are not
    * relevant.
    */
-  __u32            hop_key     = ipv6->hop_limit;
-  struct in6_addr *exceed_addr = NULL;
-  if (target.key > hop_key)
-    exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-
-  /* If there is no address found for the hop limit then still ICMP echo
-   * requests should be replied for the packets destined to one of the known
-   * addresses. Otherwise proceed and reply with ICMP time exceeded message.
-   */
-  if (!exceed_addr || !(exceed_addr->in6_u.u6_addr32[0])) {
-    return exceed2go_echo(data_end, eth, ipv6);
+  __u32 hop_key = ipv6->hop_limit;
+  if (target.key > hop_key) {
+    *exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
   }
 
-  count(HOP_FOUND);
+  return true;
+}
 
-  return exceed2go_exceeded(ctx, exceed_addr);
+SEC("xdp")
+int exceed2go_xdp(struct xdp_md *ctx) {
+  void            *data        = (void *)(unsigned long)ctx->data;
+  void            *data_end    = (void *)(unsigned long)ctx->data_end;
+  struct in6_addr *exceed_addr = NULL;
+
+  assert_equal(parse_packet(data, data_end, &exceed_addr), true, XDP_PASS);
+
+  /* If there is an address found for the hop limit then reply with ICMP time
+   * exceeded message. Otherwise check for ICMP echo requests destined to one
+   * of the known addresses and reply those.
+   */
+  if (exceed_addr && exceed_addr->in6_u.u6_addr32[0]) {
+    count(HOP_FOUND);
+
+    /* Calculate before any resizing. */
+    int tail_adj = tail_adjust(data_end - data);
+
+    /* Make room for additional headers. */
+    assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
+    /* Adjust packet length to match length requirements. */
+    assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
+
+    /* Reinitialize after length change. */
+    data     = (void *)(unsigned long)ctx->data;
+    data_end = (void *)(unsigned long)ctx->data_end;
+
+    if (!exceed2go_exceeded(data, data_end, exceed_addr)) {
+      return XDP_ABORTED;
+    }
+  } else {
+    if (!exceed2go_echo(data, data_end)) {
+      return XDP_PASS;
+    }
+  }
+
+  return XDP_TX;
+}
+
+SEC("tc")
+int exceed2go_tc(struct __sk_buff *ctx) {
+  void            *data        = (void *)(unsigned long)ctx->data;
+  void            *data_end    = (void *)(unsigned long)ctx->data_end;
+  struct in6_addr *exceed_addr = NULL;
+
+  assert_equal(parse_packet(data, data_end, &exceed_addr), true, TC_ACT_UNSPEC);
+
+  /* If there is an address found for the hop limit then reply with ICMP time
+   * exceeded message. Otherwise check for ICMP echo requests destined to one
+   * of the known addresses and reply those.
+   */
+  if (exceed_addr && exceed_addr->in6_u.u6_addr32[0]) {
+    count(HOP_FOUND);
+
+    /* Calculate before any resizing. */
+    int tail_adj = tail_adjust(data_end - data);
+
+    /* Make room for additional headers. */
+    assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
+    /* Adjust packet length to match length requirements. */
+    assert_equal(
+        bpf_skb_change_tail(ctx, ctx->len + tail_adj, 0), 0, TC_ACT_SHOT);
+
+    /* Reinitialize after length change. */
+    data     = (void *)(unsigned long)ctx->data;
+    data_end = (void *)(unsigned long)ctx->data_end;
+
+    if (!exceed2go_exceeded(data, data_end, exceed_addr)) {
+      return TC_ACT_SHOT;
+    }
+  } else {
+    if (!exceed2go_echo(data, data_end)) {
+      return TC_ACT_UNSPEC;
+    }
+  }
+
+  return bpf_redirect(ctx->ingress_ifindex, 0);
 }
 
 char _license[] SEC("license") = "GPL";

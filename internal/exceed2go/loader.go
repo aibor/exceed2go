@@ -20,7 +20,9 @@ type PinFileName string
 
 // PinFileNames of the bpf objects used by the program.
 const (
+	PinFileNameTCProg    PinFileName = "tc_prog"
 	PinFileNameXDPProg   PinFileName = "xdp_prog"
+	PinFileNameTCLink    PinFileName = "tc_link"
 	PinFileNameXDPLink   PinFileName = "xdp_link"
 	PinFileNameStatsMap  PinFileName = "stats_map"
 	PinFileNameConfigMap PinFileName = "config_map"
@@ -57,7 +59,8 @@ func LoadAndPin() error {
 	}
 
 	pinners := map[pinner]PinFileName{
-		objs.Exceed2go:         PinFileNameXDPProg,
+		objs.Exceed2goTc:       PinFileNameTCProg,
+		objs.Exceed2goXdp:      PinFileNameXDPProg,
 		objs.Exceed2goCounters: PinFileNameStatsMap,
 		objs.Exceed2goAddrs:    PinFileNameConfigMap,
 	}
@@ -72,27 +75,27 @@ func LoadAndPin() error {
 	return nil
 }
 
-// AttachProg attaches the XDP program to the given [net.Interface].
+// AttachXDPProg attaches the XDP program to the given [net.Interface].
 //
 // Am eBPF link is created to keep the eBPF program attached to the interface
 // beyond the lifetime of the process.
-func AttachProg(iface *net.Interface) error {
+func AttachXDPProg(iface *net.Interface) error {
 	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(PinFileNameXDPProg), nil)
 	if err != nil {
 		return fmt.Errorf("load pinned program: %v", err)
 	}
 	defer prog.Close()
 
-	link, err := link.AttachXDP(link.XDPOptions{
+	l, err := link.AttachXDP(link.XDPOptions{
 		Program:   prog,
 		Interface: iface.Index,
 	})
 	if err != nil {
 		return fmt.Errorf("load XDP program: %v", err)
 	}
-	defer link.Close()
+	defer l.Close()
 
-	if err := link.Pin(BPFFSPath(PinFileNameXDPLink)); err != nil {
+	if err := l.Pin(BPFFSPath(PinFileNameXDPLink)); err != nil {
 		return fmt.Errorf("pin link: %v", err)
 	}
 
