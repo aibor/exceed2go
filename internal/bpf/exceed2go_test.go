@@ -165,10 +165,10 @@ func setAddr(tb testing.TB, config *ebpf.Map, idx int, addr string) {
 func statsPrint(tb testing.TB, stats *ebpf.Map) {
 	tb.Helper()
 
-	var nextKey uint32
+	var cursor ebpf.BatchCursor
 	var lookupKeys = make([]uint32, stats.MaxEntries())
 	var lookupValues = make([]uint32, stats.MaxEntries())
-	_, _ = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	_, _ = stats.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
 
 	for idx, key := range lookupKeys {
 		tb.Logf("%-25s  %d", bpf.Exceed2GoCounterKey(key), lookupValues[idx])

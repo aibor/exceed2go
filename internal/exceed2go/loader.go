@@ -145,12 +145,12 @@ func GetAddrs() (HopList, error) {
 	defer config.Close()
 
 	var (
-		nextKey      uint32
+		cursor       ebpf.BatchCursor
 		lookupKeys   = make([]uint32, config.MaxEntries())
 		lookupValues = make([][16]byte, config.MaxEntries())
 	)
 
-	_, err = config.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	_, err = config.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
 	if err != nil {
 		return output, fmt.Errorf("lookup stats: %v", err)
 	}
@@ -190,12 +190,12 @@ func GetStats() (Stats, error) {
 	defer stats.Close()
 
 	var (
-		nextKey      uint32
+		cursor       ebpf.BatchCursor
 		lookupKeys   = make([]uint32, stats.MaxEntries())
 		lookupValues = make([]uint32, stats.MaxEntries())
 	)
 
-	_, err = stats.BatchLookup(nil, &nextKey, lookupKeys, lookupValues, nil)
+	_, err = stats.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
 	if err != nil {
 		return output, fmt.Errorf("lookup stats: %v", err)
 	}
