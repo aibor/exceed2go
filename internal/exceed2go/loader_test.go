@@ -44,6 +44,28 @@ func TestAttachXDPProg(t *testing.T) {
 	assert.Equal(t, iface.Index, int(xdp.Ifindex), "link interface index matches test interface")
 }
 
+func TestAttachTCProg(t *testing.T) {
+	t.Cleanup(exceed2go.Remove)
+	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
+
+	iface, err := net.InterfaceByName("lo")
+	require.NotEmpty(t, iface.Index, "must be valid test interface index")
+	require.NoError(t, err, "get test interface")
+	require.NoError(t, exceed2go.AttachTCProg(iface), "AttachTCProg")
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCLink))
+
+	lnk, err := link.LoadPinnedLink(exceed2go.BPFFSPath(exceed2go.PinFileNameTCLink), nil)
+	require.NoError(t, err, "LoadPinnedLink")
+
+	info, err := lnk.Info()
+	require.NoError(t, err, "link.Info")
+
+	tcx := info.TCX()
+	require.NotNil(t, tcx, "link.Info.TC")
+
+	assert.Equal(t, iface.Index, int(tcx.Ifindex), "link interface index matches test interface")
+}
+
 func TestSetAddrs(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)
 	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")

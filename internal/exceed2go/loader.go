@@ -102,6 +102,34 @@ func AttachXDPProg(iface *net.Interface) error {
 	return nil
 }
 
+// AttachTCProg attaches the TC program to the given [net.Interface].
+//
+// Am eBPF link is created to keep the eBPF program attached to the interface
+// beyond the lifetime of the process.
+func AttachTCProg(iface *net.Interface) error {
+	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(PinFileNameTCProg), nil)
+	if err != nil {
+		return fmt.Errorf("load pinned program: %v", err)
+	}
+	defer prog.Close()
+
+	l, err := link.AttachTCX(link.TCXOptions{
+		Program:   prog,
+		Attach:    ebpf.AttachTCXIngress,
+		Interface: iface.Index,
+	})
+	if err != nil {
+		return fmt.Errorf("load TC program: %v", err)
+	}
+	defer l.Close()
+
+	if err := l.Pin(BPFFSPath(PinFileNameTCLink)); err != nil {
+		return fmt.Errorf("pin link: %v", err)
+	}
+
+	return nil
+}
+
 // Remove unpins and closes all objects.
 func Remove() {
 	_ = os.RemoveAll(BPFFSPath(""))
