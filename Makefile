@@ -7,7 +7,7 @@ BPF_PACKAGE_DIR := ./internal/bpf
 
 BINARY ?= $(BIN_DIR)/exceed2go
 
-KERNEL_FILE ?= /boot/vmlinuz-linux
+PIDONETEST_KERNEL ?= kernel/6.6-amd64
 
 GOBIN := $(shell realpath ./gobin)
 VIRTRUN := $(GOBIN)/virtrun
@@ -58,11 +58,28 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 		-trimprefix Exceed2GoCounterKey \
 		exceed2go_bpfel.go
 
+$(PIDONETEST_KERNEL):
+	mkdir -p $(@D)
+	tar \
+		--file <(
+			curl \
+				--no-progress-meter \
+				--location \
+				--fail \
+				"https://github.com/aibor/ci-kernels/raw/master/linux-$(@F).tgz"
+		) \
+		--extract \
+		--ignore-failed-read \
+		--ignore-command-error \
+		--warning=none \
+		--transform="s@.*@$(@)@" \
+		./boot/vmlinuz
+
 .PHONY: pidonetest
-pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
+pidonetest: $(BPF2GO_FILE) $(VIRTRUN) $(PIDONETEST_KERNEL)
 	go test \
 		-exec "$(VIRTRUN) \
-			-kernel $(PIDONETEST_KERNEL)" \
+			-kernel $$(realpath $(PIDONETEST_KERNEL))" \
 		-v \
 		-cover \
 		-covermode atomic \
