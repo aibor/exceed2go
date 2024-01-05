@@ -13,7 +13,7 @@ func loadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "load INTERFACE HOP_ADDRESS ...",
 		Short: "Load and configure the program",
-		Long: `Attach the XDP program to the interface with the given name. The
+		Long: `Attach the eBPF program to the interface with the given name. The
 	hop addresses are used as hops in the order given. So ping the last address
 	the get a traceroute with all the given addresses in that order.`,
 		Args: cobra.MinimumNArgs(3),

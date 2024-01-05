@@ -9,7 +9,7 @@ func cleanupCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup the program",
-		Long:  `Dettach the XDP program and unload all objects.`,
+		Long:  `Detach the eBPF program and unload all objects.`,
 		Run: func(_ *cobra.Command, _ []string) {
 			exceed2go.Remove()
 		},

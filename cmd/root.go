@@ -1,6 +1,3 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -10,7 +7,7 @@ import (
 func RootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "exceed2go",
-		Short: "XDP TTL responder",
+		Short: "eBPF TTL responder",
 		Long:  `Respond with time exceed ICMP messages to the given IPv6 addresses.`,
 	}
 
