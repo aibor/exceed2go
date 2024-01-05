@@ -10,7 +10,9 @@ import (
 )
 
 func loadCmd() *cobra.Command {
-	return &cobra.Command{
+	var tc bool
+
+	cmd := &cobra.Command{
 		Use:   "load INTERFACE HOP_ADDRESS ...",
 		Short: "Load and configure the program",
 		Long: `Attach the eBPF program to the interface with the given name. The
@@ -51,7 +53,12 @@ func loadCmd() *cobra.Command {
 				return fmt.Errorf("set address: %v", err)
 			}
 
-			if err := exceed2go.AttachXDPProg(iface); err != nil {
+			attachProgFunc := exceed2go.AttachXDPProg
+			if tc {
+				attachProgFunc = exceed2go.AttachTCProg
+			}
+
+			if err := attachProgFunc(iface); err != nil {
 				exceed2go.Remove()
 				return fmt.Errorf("attach program: %v", err)
 			}
@@ -59,4 +66,13 @@ func loadCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(
+		&tc,
+		"tc",
+		tc,
+		"Attach to TC instead of XDP generic. Requires linux >= 6.6",
+	)
+
+	return cmd
 }
