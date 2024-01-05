@@ -64,8 +64,6 @@ func TestGetStats(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)
 	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
 
-	stats, err := exceed2go.GetStats()
-	if assert.NoError(t, err, "GetStats") {
-		t.Log(stats)
-	}
+	_, err := exceed2go.GetStats()
+	assert.NoError(t, err, "GetStats")
 }
