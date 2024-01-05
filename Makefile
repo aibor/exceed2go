@@ -83,6 +83,7 @@ pidonetest: $(BPF2GO_FILE) $(VIRTRUN) $(PIDONETEST_KERNEL)
 		-v \
 		-cover \
 		-covermode atomic \
+		$(PIDONETEST_FLAGS) \
 		./...
 
 .PHONY: clean
