@@ -35,8 +35,13 @@ jobs:
         with:
           version: latest
 
+      - name: Install packages for virtrun
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86
+
       - name: Run go test
-        run: sudo $(which go) test -v -cover -coverprofile cover.out ./...
+        run: make pidonetest PIDONETEST_FLAGS=-coverprofile=cover.out
 
       - name: Run go tool cover
         run: go tool cover -func=cover.out
