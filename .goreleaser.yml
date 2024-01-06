@@ -36,3 +36,9 @@ nfpms:
       - rpm
       - archlinux
     file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    contents:
+      - src: extra/exceed2go.conf
+        dst: /etc/exceed2go.conf
+        type: config|noreplace
+      - src: extra/exceed2go.service
+        dst: /usr/lib/systemd/system/exceed2go.service
