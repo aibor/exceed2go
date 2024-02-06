@@ -11,7 +11,7 @@ jobs:
     name: Clang Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run clang-format
         uses: DoozyX/clang-format-lint-action@v0.14
         with:
@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '1.21'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
