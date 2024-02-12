@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/aibor/virtrun v0.8.3
+	github.com/aibor/virtrun v0.9.2
 	github.com/cilium/ebpf v0.12.4-0.20240105165847-3aa8352f9e86
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.8.0
@@ -22,6 +22,6 @@ require (
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
