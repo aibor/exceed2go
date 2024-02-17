@@ -20,8 +20,10 @@ type PinFileName string
 
 // PinFileNames of the bpf objects used by the program.
 const (
-	PinFileNameTCProg    PinFileName = "tc_prog"
-	PinFileNameXDPProg   PinFileName = "xdp_prog"
+	PinFileNameTCL2Prog  PinFileName = "tc_l2_prog"
+	PinFileNameTCL3Prog  PinFileName = "tc_l3_prog"
+	PinFileNameXDPL2Prog PinFileName = "xdp_l2_prog"
+	PinFileNameXDPL3Prog PinFileName = "xdp_l3_prog"
 	PinFileNameTCLink    PinFileName = "tc_link"
 	PinFileNameXDPLink   PinFileName = "xdp_link"
 	PinFileNameStatsMap  PinFileName = "stats_map"
@@ -59,8 +61,10 @@ func LoadAndPin() error {
 	}
 
 	pinners := map[pinner]PinFileName{
-		objs.Exceed2goTc:       PinFileNameTCProg,
-		objs.Exceed2goXdp:      PinFileNameXDPProg,
+		objs.Exceed2goTcL2:     PinFileNameTCL2Prog,
+		objs.Exceed2goTcL3:     PinFileNameTCL3Prog,
+		objs.Exceed2goXdpL2:    PinFileNameXDPL2Prog,
+		objs.Exceed2goXdpL3:    PinFileNameXDPL3Prog,
 		objs.Exceed2goCounters: PinFileNameStatsMap,
 		objs.Exceed2goAddrs:    PinFileNameConfigMap,
 	}
@@ -80,7 +84,11 @@ func LoadAndPin() error {
 // Am eBPF link is created to keep the eBPF program attached to the interface
 // beyond the lifetime of the process.
 func AttachXDPProg(iface *net.Interface) error {
-	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(PinFileNameXDPProg), nil)
+	pinFileName := PinFileNameXDPL2Prog
+	if iface.HardwareAddr == nil {
+		pinFileName = PinFileNameXDPL3Prog
+	}
+	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(pinFileName), nil)
 	if err != nil {
 		return fmt.Errorf("load pinned program: %v", err)
 	}
@@ -107,7 +115,11 @@ func AttachXDPProg(iface *net.Interface) error {
 // Am eBPF link is created to keep the eBPF program attached to the interface
 // beyond the lifetime of the process.
 func AttachTCProg(iface *net.Interface) error {
-	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(PinFileNameTCProg), nil)
+	pinFileName := PinFileNameTCL2Prog
+	if iface.HardwareAddr == nil {
+		pinFileName = PinFileNameTCL3Prog
+	}
+	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(pinFileName), nil)
 	if err != nil {
 		return fmt.Errorf("load pinned program: %v", err)
 	}

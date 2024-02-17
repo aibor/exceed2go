@@ -15,8 +15,10 @@ import (
 func TestLoadAndPin(t *testing.T) {
 	t.Cleanup(exceed2go.Remove)
 	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
-	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCProg))
-	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPProg))
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCL2Prog))
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCL3Prog))
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPL2Prog))
+	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPL3Prog))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameConfigMap))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameStatsMap))
 	assert.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin again")

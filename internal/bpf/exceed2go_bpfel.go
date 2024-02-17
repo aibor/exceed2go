@@ -67,8 +67,10 @@ type Exceed2GoSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type Exceed2GoProgramSpecs struct {
-	Exceed2goTc  *ebpf.ProgramSpec `ebpf:"exceed2go_tc"`
-	Exceed2goXdp *ebpf.ProgramSpec `ebpf:"exceed2go_xdp"`
+	Exceed2goTcL2  *ebpf.ProgramSpec `ebpf:"exceed2go_tc_l2"`
+	Exceed2goTcL3  *ebpf.ProgramSpec `ebpf:"exceed2go_tc_l3"`
+	Exceed2goXdpL2 *ebpf.ProgramSpec `ebpf:"exceed2go_xdp_l2"`
+	Exceed2goXdpL3 *ebpf.ProgramSpec `ebpf:"exceed2go_xdp_l3"`
 }
 
 // Exceed2GoMapSpecs contains maps before they are loaded into the kernel.
@@ -113,14 +115,18 @@ func (m *Exceed2GoMaps) Close() error {
 //
 // It can be passed to LoadExceed2GoObjects or ebpf.CollectionSpec.LoadAndAssign.
 type Exceed2GoPrograms struct {
-	Exceed2goTc  *ebpf.Program `ebpf:"exceed2go_tc"`
-	Exceed2goXdp *ebpf.Program `ebpf:"exceed2go_xdp"`
+	Exceed2goTcL2  *ebpf.Program `ebpf:"exceed2go_tc_l2"`
+	Exceed2goTcL3  *ebpf.Program `ebpf:"exceed2go_tc_l3"`
+	Exceed2goXdpL2 *ebpf.Program `ebpf:"exceed2go_xdp_l2"`
+	Exceed2goXdpL3 *ebpf.Program `ebpf:"exceed2go_xdp_l3"`
 }
 
 func (p *Exceed2GoPrograms) Close() error {
 	return _Exceed2GoClose(
-		p.Exceed2goTc,
-		p.Exceed2goXdp,
+		p.Exceed2goTcL2,
+		p.Exceed2goTcL3,
+		p.Exceed2goXdpL2,
+		p.Exceed2goXdpL3,
 	)
 }
 
