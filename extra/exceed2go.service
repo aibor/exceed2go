@@ -9,7 +9,7 @@ RemainAfterExit=yes
 
 EnvironmentFile=/etc/exceed2go.conf
 
-ExecStart=/usr/bin/exceed2go load $ARGS $INTERFACE $ADDRS
+ExecStart=/usr/bin/exceed2go load $ARGS $ADDRS
 ExecStop=/usr/bin/exceed2go cleanup
 TimeoutSec=2
 

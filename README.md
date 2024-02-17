@@ -20,17 +20,19 @@ reverse DNS entries for addresses.
 Then load `exceed2go` for those addresses:
 
 ```
-# exceed2go load eth0 2001:db8::5 2001:db8::aa 2001:db8::dd 2001:db8::ee 2001:db8::ff
+# exceed2go load --iface eth0 2001:db8::5 2001:db8::aa 2001:db8::dd 2001:db8::ee 2001:db8::ff
 ```
 
 or a bit more convenient with the help of bash expansion:
 
 ```
-# exceed2go load eth0 2001:db8::{5,aa,dd,ee,ff}
+# exceed2go load --iface eth0 2001:db8::{5,aa,dd,ee,ff}
 ```
 
-`eth0` is the name of the interface to attach the XDP program to. So it should
-be the interface the packets reach your server at.
+`eth0` is the name of the interface to attach the eBPF program to. So it should
+be the interface the packets reach your server at. Additional interfaces can
+be given by using the flag repeatedly or specify the interfaces as 
+comma-separated list.
 
 The last address (2001:db8::ff in the example) is the target address to run
 a traceroute to.
@@ -61,7 +63,7 @@ In case the program didn't exit correctly the XDP program might be still
 attached. It can be easily detached with:
 
 ```
-ip link set dev eth0 xdpgeneric off
+ip link set dev eth0 xdp off
 ```
 
 If the traceroute doesn't work you can check the eBPF maps the program uses:
