@@ -1,6 +1,7 @@
 package exceed2go_test
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"testing"
@@ -24,48 +25,76 @@ func TestLoadAndPin(t *testing.T) {
 	assert.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin again")
 }
 
-func TestAttachXDPProg(t *testing.T) {
-	t.Cleanup(exceed2go.Remove)
-	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
-
+func TestAttachProg(t *testing.T) {
 	iface, err := net.InterfaceByName("lo")
-	require.NotEmpty(t, iface.Index, "must be valid test interface index")
 	require.NoError(t, err, "get test interface")
-	require.NoError(t, exceed2go.AttachXDPProg(iface), "AttachXDPProg")
-	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPLink))
 
-	lnk, err := link.LoadPinnedLink(exceed2go.BPFFSPath(exceed2go.PinFileNameXDPLink), nil)
-	require.NoError(t, err, "LoadPinnedLink")
+	tests := []struct {
+		name         string
+		prog         exceed2go.PinFileName
+		infoTestFunc func(*testing.T, *link.Info)
+	}{
+		{
+			name: "xdp_l2",
+			prog: exceed2go.PinFileNameXDPL2Prog,
+			infoTestFunc: func(t *testing.T, i *link.Info) {
+				xdp := i.XDP()
+				require.NotNil(t, xdp, "link.Info.XDP")
+				assert.Equal(t, iface.Index, int(xdp.Ifindex), "link interface index matches test interface")
+			},
+		},
+		{
+			name: "xdp_l3",
+			prog: exceed2go.PinFileNameXDPL3Prog,
+			infoTestFunc: func(t *testing.T, i *link.Info) {
+				xdp := i.XDP()
+				require.NotNil(t, xdp, "link.Info.XDP")
+				assert.Equal(t, iface.Index, int(xdp.Ifindex), "link interface index matches test interface")
+			},
+		},
+		{
+			name: "tc_l2",
+			prog: exceed2go.PinFileNameTCL2Prog,
+			infoTestFunc: func(t *testing.T, i *link.Info) {
+				tcx := i.TCX()
+				require.NotNil(t, tcx, "link.Info.TC")
+				assert.Equal(t, iface.Index, int(tcx.Ifindex), "link interface index matches test interface")
+			},
+		},
+		{
+			name: "tc_l3",
+			prog: exceed2go.PinFileNameTCL3Prog,
+			infoTestFunc: func(t *testing.T, i *link.Info) {
+				tcx := i.TCX()
+				require.NotNil(t, tcx, "link.Info.TC")
+				assert.Equal(t, iface.Index, int(tcx.Ifindex), "link interface index matches test interface")
+			},
+		},
+	}
 
-	info, err := lnk.Info()
-	require.NoError(t, err, "link.Info")
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(exceed2go.Remove)
+			require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
 
-	xdp := info.XDP()
-	require.NotNil(t, xdp, "link.Info.XDP")
+			require.NotEmpty(t, iface.Index, "must be valid test interface index")
+			require.NoError(t, exceed2go.AttachProg(tt.prog, iface), "attach must succeed")
 
-	assert.Equal(t, iface.Index, int(xdp.Ifindex), "link interface index matches test interface")
-}
+			linkName := exceed2go.PinFileName(
+				fmt.Sprintf("%s-%d", exceed2go.PinFileNameLink, iface.Index),
+			)
+			require.FileExists(t, exceed2go.BPFFSPath(linkName))
 
-func TestAttachTCProg(t *testing.T) {
-	t.Cleanup(exceed2go.Remove)
-	require.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin")
+			lnk, err := link.LoadPinnedLink(exceed2go.BPFFSPath(linkName), nil)
+			require.NoError(t, err, "LoadPinnedLink")
 
-	iface, err := net.InterfaceByName("lo")
-	require.NotEmpty(t, iface.Index, "must be valid test interface index")
-	require.NoError(t, err, "get test interface")
-	require.NoError(t, exceed2go.AttachTCProg(iface), "AttachTCProg")
-	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCLink))
+			info, err := lnk.Info()
+			require.NoError(t, err, "link.Info")
 
-	lnk, err := link.LoadPinnedLink(exceed2go.BPFFSPath(exceed2go.PinFileNameTCLink), nil)
-	require.NoError(t, err, "LoadPinnedLink")
-
-	info, err := lnk.Info()
-	require.NoError(t, err, "link.Info")
-
-	tcx := info.TCX()
-	require.NotNil(t, tcx, "link.Info.TC")
-
-	assert.Equal(t, iface.Index, int(tcx.Ifindex), "link interface index matches test interface")
+			tt.infoTestFunc(t, info)
+		})
+	}
 }
 
 func TestSetAddrs(t *testing.T) {

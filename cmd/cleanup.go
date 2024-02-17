@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/spf13/cobra"
+
+	"github.com/aibor/exceed2go/internal/exceed2go"
 )
 
 func cleanupCmd() *cobra.Command {

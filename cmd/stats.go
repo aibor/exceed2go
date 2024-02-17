@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/spf13/cobra"
+
+	"github.com/aibor/exceed2go/internal/exceed2go"
 )
 
 func statsCmd() *cobra.Command {

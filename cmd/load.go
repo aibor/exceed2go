@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/spf13/cobra"
+
 	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/aibor/exceed2go/internal/ifinfo"
-	"github.com/spf13/cobra"
 )
 
 func loadCmd() *cobra.Command {
@@ -53,12 +54,12 @@ func loadCmd() *cobra.Command {
 				return fmt.Errorf("set address: %v", err)
 			}
 
-			attachProgFunc := exceed2go.AttachXDPProg
+			prog := exceed2go.PinFileNameXDPProg
 			if tc {
-				attachProgFunc = exceed2go.AttachTCProg
+				prog = exceed2go.PinFileNameTCProg
 			}
 
-			if err := attachProgFunc(iface); err != nil {
+			if err := exceed2go.AttachProg(prog, iface); err != nil {
 				exceed2go.Remove()
 				return fmt.Errorf("attach program: %v", err)
 			}

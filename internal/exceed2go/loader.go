@@ -7,9 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/exceed2go/internal/bpf"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
+
+	"github.com/aibor/exceed2go/internal/bpf"
 )
 
 // BPFFSDir is the bpffs sub directory containing all bpf pin files.
@@ -24,8 +25,7 @@ const (
 	PinFileNameTCL3Prog  PinFileName = "tc_l3_prog"
 	PinFileNameXDPL2Prog PinFileName = "xdp_l2_prog"
 	PinFileNameXDPL3Prog PinFileName = "xdp_l3_prog"
-	PinFileNameTCLink    PinFileName = "tc_link"
-	PinFileNameXDPLink   PinFileName = "xdp_link"
+	PinFileNameLink      PinFileName = "link"
 	PinFileNameStatsMap  PinFileName = "stats_map"
 	PinFileNameConfigMap PinFileName = "config_map"
 )
@@ -79,63 +79,40 @@ func LoadAndPin() error {
 	return nil
 }
 
-// AttachXDPProg attaches the XDP program to the given [net.Interface].
+// AttachProg attaches the given program to the given [net.Interface].
 //
-// Am eBPF link is created to keep the eBPF program attached to the interface
+// An eBPF link is created to keep the eBPF program attached to the interface
 // beyond the lifetime of the process.
-func AttachXDPProg(iface *net.Interface) error {
-	pinFileName := PinFileNameXDPL2Prog
-	if iface.HardwareAddr == nil {
-		pinFileName = PinFileNameXDPL3Prog
-	}
-	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(pinFileName), nil)
+func AttachProg(progFileName PinFileName, iface *net.Interface) error {
+	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(progFileName), nil)
 	if err != nil {
 		return fmt.Errorf("load pinned program: %v", err)
 	}
 	defer prog.Close()
 
-	l, err := link.AttachXDP(link.XDPOptions{
-		Program:   prog,
-		Interface: iface.Index,
-	})
+	var lnk link.Link
+	switch prog.Type() {
+	case ebpf.XDP:
+		lnk, err = link.AttachXDP(link.XDPOptions{
+			Program:   prog,
+			Interface: iface.Index,
+		})
+	case ebpf.SchedCLS, ebpf.SchedACT:
+		lnk, err = link.AttachTCX(link.TCXOptions{
+			Program:   prog,
+			Attach:    ebpf.AttachTCXIngress,
+			Interface: iface.Index,
+		})
+	default:
+		return fmt.Errorf("program type not supported: %s", prog.Type().String())
+	}
 	if err != nil {
-		return fmt.Errorf("load XDP program: %v", err)
+		return fmt.Errorf("attach program: %v", err)
 	}
-	defer l.Close()
+	defer lnk.Close()
 
-	if err := l.Pin(BPFFSPath(PinFileNameXDPLink)); err != nil {
-		return fmt.Errorf("pin link: %v", err)
-	}
-
-	return nil
-}
-
-// AttachTCProg attaches the TC program to the given [net.Interface].
-//
-// Am eBPF link is created to keep the eBPF program attached to the interface
-// beyond the lifetime of the process.
-func AttachTCProg(iface *net.Interface) error {
-	pinFileName := PinFileNameTCL2Prog
-	if iface.HardwareAddr == nil {
-		pinFileName = PinFileNameTCL3Prog
-	}
-	prog, err := ebpf.LoadPinnedProgram(BPFFSPath(pinFileName), nil)
-	if err != nil {
-		return fmt.Errorf("load pinned program: %v", err)
-	}
-	defer prog.Close()
-
-	l, err := link.AttachTCX(link.TCXOptions{
-		Program:   prog,
-		Attach:    ebpf.AttachTCXIngress,
-		Interface: iface.Index,
-	})
-	if err != nil {
-		return fmt.Errorf("load TC program: %v", err)
-	}
-	defer l.Close()
-
-	if err := l.Pin(BPFFSPath(PinFileNameTCLink)); err != nil {
+	linkName := fmt.Sprintf("%s-%d", PinFileNameLink, iface.Index)
+	if err := lnk.Pin(BPFFSPath(PinFileName(linkName))); err != nil {
 		return fmt.Errorf("pin link: %v", err)
 	}
 
