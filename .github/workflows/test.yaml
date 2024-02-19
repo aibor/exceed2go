@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Run clang-format
         uses: DoozyX/clang-format-lint-action@v0.17
         with:
           source: bpf
           exclude: libbpf
           extensions: c
-          clangFormatVersion: 14
+          clangFormatVersion: 16
 
   go:
     name: Go Lint and Test
