@@ -1,12 +1,11 @@
 module github.com/aibor/exceed2go
 
 go 1.21
-
-toolchain go1.21.4
+toolchain go1.22.0
 
 require (
 	github.com/aibor/virtrun v0.9.2
-	github.com/cilium/ebpf v0.12.4-0.20240105165847-3aa8352f9e86
+	github.com/cilium/ebpf v0.13.0
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
