@@ -176,7 +176,7 @@ func GetAddrs() (HopList, error) {
 	defer config.Close()
 
 	var (
-		cursor       ebpf.BatchCursor
+		cursor       ebpf.MapBatchCursor
 		lookupKeys   = make([]uint32, config.MaxEntries())
 		lookupValues = make([][16]byte, config.MaxEntries())
 	)
@@ -221,7 +221,7 @@ func GetStats() (Stats, error) {
 	defer stats.Close()
 
 	var (
-		cursor       ebpf.BatchCursor
+		cursor       ebpf.MapBatchCursor
 		lookupKeys   = make([]uint32, stats.MaxEntries())
 		lookupValues = make([]uint32, stats.MaxEntries())
 	)

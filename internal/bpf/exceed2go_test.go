@@ -166,7 +166,7 @@ func setAddr(tb testing.TB, config *ebpf.Map, idx int, addr string) {
 func statsPrint(tb testing.TB, stats *ebpf.Map) {
 	tb.Helper()
 
-	var cursor ebpf.BatchCursor
+	var cursor ebpf.MapBatchCursor
 	var lookupKeys = make([]uint32, stats.MaxEntries())
 	var lookupValues = make([]uint32, stats.MaxEntries())
 	_, _ = stats.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
