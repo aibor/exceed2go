@@ -8,6 +8,7 @@ AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveDeclarations: AcrossComments
 AlignEscapedNewlines: DontAlign
+AlwaysBreakAfterReturnType: All
 BinPackParameters: false
 BinPackArguments: false
 SortIncludes: false
