@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 [Unit]
 Description=Exceed2go ICMPv6 time-Exceeded responder
 After=local-fs.target network.target network-online.target

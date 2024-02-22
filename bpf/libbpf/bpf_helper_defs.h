@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2015 The Libbpf Authors */
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
+
 /* This is auto-generated file. See bpf_doc.py for details. */
 
 /* Forward declarations of BPF structs */

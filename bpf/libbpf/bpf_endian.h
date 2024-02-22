@@ -1,4 +1,5 @@
-/* SPDX-License-Identifier: (LGPL-2.1 OR BSD-2-Clause) */
+/* SPDX-FileCopyrightText: 2015 The Libbpf Authors */
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
 #ifndef __BPF_ENDIAN__
 #define __BPF_ENDIAN__
 

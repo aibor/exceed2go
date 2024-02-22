@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # exceed2go
 
 Exceed2go is an eBPF based ICMPv6 time-exceeded packet generator. It attaches 

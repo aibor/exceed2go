@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 module github.com/aibor/exceed2go
 
 go 1.21.0
