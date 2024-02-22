@@ -1,6 +1,0 @@
-# bpf
-* use map of maps for supporting multiple target addresses (with daemon less mode)
-* use log ring buffer
-
-# cli
-* separately configure maps
