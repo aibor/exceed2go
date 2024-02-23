@@ -60,6 +60,7 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
 	$(STRINGER) \
 		-type Exceed2GoCounterKey \
 		-trimprefix Exceed2GoCounterKey \
+		-output exceed2go_counter_key_string.go \
 		exceed2go_bpfel.go
 
 $(PIDONETEST_KERNEL):
@@ -98,5 +99,7 @@ clean:
 .PHONY: cleangen
 cleangen:
 	@rm -frv \
-		$(patsubst %.go,%.*,$(BPF2GO_FILE)) \
+		$(BPF2GO_FILE) \
+		$(patsubst %.go,%.dump,$(BPF2GO_FILE)) \
+		$(patsubst %.go,%.o,$(BPF2GO_FILE)) \
 		$(BPF_PACKAGE_DIR)/*_string.go
