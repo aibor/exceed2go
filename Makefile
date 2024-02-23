@@ -22,8 +22,8 @@ LIBBPF ?= bpf/libbpf
 BPF_SRC_FILE := bpf/exceed2go.c
 BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 
-CLANG ?= clang
-CFLAGS := -O2 -g -Wall -Werror -Wshadow -I$(realpath $LIBBPF) $(CFLAGS) -nostdinc -v
+CC = clang
+CFLAGS := -O2 -g -v -Wall -Werror -Wshadow -nostdinc -I$(shell realpath $(LIBBPF)) $(CFLAGS)
 
 export CGO_ENABLED := 0
 export GOBIN
@@ -43,10 +43,10 @@ $(STRINGER):
 $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 	go build -o "$@"
 
-$(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h
+$(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h Makefile
 	pushd $(@D)
 	GOPACKAGE=bpf $(BPF2GO) \
-		-cc $(CLANG) \
+		-cc $(CC) \
 		-target bpfel \
 		-cflags "$(CFLAGS)" \
 		-no-strip \
