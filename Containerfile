@@ -4,14 +4,13 @@
 #
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.22
-ARG ALPINE_VERSION=3.19
 ARG KERNEL_VERSION=6.6
 
-FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS go-image
+FROM alpine:3.19 AS go-image
 
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
+    go \
     make
 
 # Build:
