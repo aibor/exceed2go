@@ -65,10 +65,11 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h Makefile
 
 .PHONY: pidonetest
 pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
-	go test \
+	CGO_ENABLED=1 go test \
 		-exec "$(VIRTRUN) \
 			-kernel $$(realpath $(PIDONETEST_KERNEL))" \
 		-v \
+		-race \
 		-cover \
 		-covermode atomic \
 		$(PIDONETEST_FLAGS) \
