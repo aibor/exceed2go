@@ -80,5 +80,5 @@ COPY --from=test-kernel /boot/vmlinuz /vmlinuz
 ENV KERNEL=/vmlinuz
 CMD make pidonetest PIDONETEST_KERNEL=${KERNEL}
 
-FROM build-bpf-image
+FROM build-image
 
