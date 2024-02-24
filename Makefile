@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 MAKEFLAGS := --no-builtin-rules
-SHELL := bash
 .ONESHELL:
 
 BIN_DIR ?= bin
@@ -11,7 +10,7 @@ BPF_PACKAGE_DIR := ./internal/bpf
 
 BINARY ?= $(BIN_DIR)/exceed2go
 
-PIDONETEST_KERNEL ?= kernel/6.6-amd64
+PIDONETEST_KERNEL ?= test-kernel
 
 GOBIN := $(shell realpath ./gobin)
 VIRTRUN := $(GOBIN)/virtrun
@@ -44,13 +43,13 @@ $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 	go build -o "$@"
 
 $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h Makefile
-	pushd $(@D)
+	cd $(@D)
 	GOPACKAGE=bpf $(BPF2GO) \
 		-cc $(CC) \
 		-target bpfel \
 		-cflags "$(CFLAGS)" \
 		-no-strip \
-		Exceed2Go $$(popd >/dev/null; realpath $(BPF_SRC_FILE))
+		Exceed2Go $(shell realpath $(BPF_SRC_FILE))
 	llvm-objdump \
 		--source \
 		--no-show-raw-insn \
@@ -63,25 +62,9 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h Makefile
 		-output exceed2go_counter_key_string.go \
 		exceed2go_bpfel.go
 
-$(PIDONETEST_KERNEL):
-	mkdir -p $(@D)
-	tar \
-		--file <(
-			curl \
-				--no-progress-meter \
-				--location \
-				--fail \
-				"https://github.com/aibor/ci-kernels/raw/master/linux-$(@F).tgz"
-		) \
-		--extract \
-		--ignore-failed-read \
-		--ignore-command-error \
-		--warning=none \
-		--transform="s@.*@$(@)@" \
-		./boot/vmlinuz
 
 .PHONY: pidonetest
-pidonetest: $(BPF2GO_FILE) $(VIRTRUN) $(PIDONETEST_KERNEL)
+pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
 	go test \
 		-exec "$(VIRTRUN) \
 			-kernel $$(realpath $(PIDONETEST_KERNEL))" \
