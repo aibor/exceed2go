@@ -9,7 +9,7 @@ on:
     branches: [ "**" ]
 
 jobs:
-  clangFormat:
+  c-lint:
     name: Clang Format
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +23,7 @@ jobs:
           extensions: c
           clangFormatVersion: 16
 
-  go:
+  go-lint-and-test:
     name: Go Lint and Test
     runs-on: ubuntu-latest
     steps:
@@ -39,21 +39,30 @@ jobs:
         with:
           version: latest
 
-      - name: Install packages for virtrun
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends qemu-system-x86
+      - name: Build test container
+        run: docker build --rm --tag exceed2go-test --target test-image --file Containerfile .
 
       - name: Run go test
-        run: make pidonetest PIDONETEST_FLAGS=-coverprofile=cover.out
+        run: docker run --rm --volume $PWD:/data --device /dev/kvm exceed2go-test:latest
 
-      - name: Run go tool cover
-        run: go tool cover -func=cover.out
-
-  reuseCheck:
+  reuse-lint:
     name: FSFE REUSE Compliance Check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: REUSE Compliance Check
       uses: fsfe/reuse-action@v2
+
+  results:
+    if: always()
+    runs-on: ubuntu-latest
+    name: Test Results
+    needs:
+    - c-lint
+    - go-lint-and-test
+    - reuse-lint
+    steps:
+    - run: exit 1
+      if: |
+        contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
