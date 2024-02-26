@@ -4,6 +4,7 @@
 
 CompileFlags:
   Add: [
+    -xc,
     -emit-llvm,
     -Wall,
     -Werror,
