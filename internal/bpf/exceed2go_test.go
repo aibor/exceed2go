@@ -216,14 +216,6 @@ var progTests = map[string]progTest{
 		passRC:     2,
 		noEth:      false,
 	},
-	"xdp_l3": {
-		getProgFunc: func(objs *bpf.Exceed2GoObjects) *ebpf.Program {
-			return objs.Exceed2goXdpL3
-		},
-		redirectRC: 3,
-		passRC:     2,
-		noEth:      true,
-	},
 	"tc_l2": {
 		getProgFunc: func(objs *bpf.Exceed2GoObjects) *ebpf.Program {
 			return objs.Exceed2goTcL2

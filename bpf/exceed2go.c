@@ -463,11 +463,9 @@ exceed2go_xdp_l2(struct xdp_md *ctx) {
   return exceed2go_xdp(ctx, BASE_LAYER_L2);
 }
 
-SEC("xdp")
-int
-exceed2go_xdp_l3(struct xdp_md *ctx) {
-  return exceed2go_xdp(ctx, BASE_LAYER_L3);
-}
+// L3 interfaces do not support XDP and L3 interfaces are not supported in
+// generic mode. It always expects an ethernet header:
+// https://github.com/torvalds/linux/blob/04b8076df2534f08bb4190f90a24e0f7f8930aca/net/core/dev.c#L4891
 
 SEC("tc")
 int

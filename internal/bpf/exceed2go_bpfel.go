@@ -70,7 +70,6 @@ type Exceed2GoProgramSpecs struct {
 	Exceed2goTcL2  *ebpf.ProgramSpec `ebpf:"exceed2go_tc_l2"`
 	Exceed2goTcL3  *ebpf.ProgramSpec `ebpf:"exceed2go_tc_l3"`
 	Exceed2goXdpL2 *ebpf.ProgramSpec `ebpf:"exceed2go_xdp_l2"`
-	Exceed2goXdpL3 *ebpf.ProgramSpec `ebpf:"exceed2go_xdp_l3"`
 }
 
 // Exceed2GoMapSpecs contains maps before they are loaded into the kernel.
@@ -118,7 +117,6 @@ type Exceed2GoPrograms struct {
 	Exceed2goTcL2  *ebpf.Program `ebpf:"exceed2go_tc_l2"`
 	Exceed2goTcL3  *ebpf.Program `ebpf:"exceed2go_tc_l3"`
 	Exceed2goXdpL2 *ebpf.Program `ebpf:"exceed2go_xdp_l2"`
-	Exceed2goXdpL3 *ebpf.Program `ebpf:"exceed2go_xdp_l3"`
 }
 
 func (p *Exceed2GoPrograms) Close() error {
@@ -126,7 +124,6 @@ func (p *Exceed2GoPrograms) Close() error {
 		p.Exceed2goTcL2,
 		p.Exceed2goTcL3,
 		p.Exceed2goXdpL2,
-		p.Exceed2goXdpL3,
 	)
 }
 

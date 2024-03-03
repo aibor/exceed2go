@@ -8,29 +8,29 @@ Disassembly of section .text:
        0:	r0 = 0x0
 ;   if (*key == 0) {
        1:	r1 = *(u32 *)(r2 + 0x0)
-       2:	if r1 == 0x0 goto +0xe <LBB4_6>
+       2:	if r1 == 0x0 goto +0xe <LBB3_6>
        3:	r0 = 0x1
 ;   if (!value || !((const __u32 *)(value))[0])
-       4:	if r3 == 0x0 goto +0xc <LBB4_6>
+       4:	if r3 == 0x0 goto +0xc <LBB3_6>
        5:	r2 = *(u32 *)(r3 + 0x0)
-       6:	if r2 == 0x0 goto +0xa <LBB4_6>
+       6:	if r2 == 0x0 goto +0xa <LBB3_6>
 ;   return ((a->in6_u.u6_addr64[0] == b->in6_u.u6_addr64[0]) &&
        7:	r2 = *(u64 *)(r3 + 0x0)
        8:	r5 = *(u64 *)(r4 + 0x0)
        9:	r0 = 0x0
-      10:	if r5 != r2 goto +0x6 <LBB4_6>
+      10:	if r5 != r2 goto +0x6 <LBB3_6>
 ;           (a->in6_u.u6_addr64[1] == b->in6_u.u6_addr64[1]));
       11:	r2 = *(u64 *)(r3 + 0x8)
       12:	r3 = *(u64 *)(r4 + 0x8)
 ;   if (in6_addr_equal(&cb_ctx->needle, value)) {
-      13:	if r3 != r2 goto +0x3 <LBB4_6>
+      13:	if r3 != r2 goto +0x3 <LBB3_6>
 ;     cb_ctx->key   = *key;
       14:	*(u32 *)(r4 + 0x10) = r1
       15:	r0 = 0x1
 ;     cb_ctx->found = true;
       16:	*(u8 *)(r4 + 0x14) = r0
 
-0000000000000088 <LBB4_6>:
+0000000000000088 <LBB3_6>:
 ; }
       17:	exit
 
@@ -654,562 +654,6 @@ Disassembly of section xdp:
      425:	r0 = r6
      426:	exit
 
-0000000000000d58 <exceed2go_xdp_l3>:
-; exceed2go_xdp_l3(struct xdp_md *ctx) {
-     427:	r6 = 0x2
-;   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     428:	r9 = *(u32 *)(r1 + 0x4)
-     429:	*(u64 *)(r10 - 0x38) = r1
-     430:	r2 = *(u32 *)(r1 + 0x0)
-;   assert_boundary(pkt->ipv6, pkt->end, false);
-     431:	r8 = r2
-     432:	r8 += 0x28
-     433:	if r8 > r9 goto +0x181 <LBB1_72>
-;   assert_equal(pkt->ipv6->version, 6, false);
-     434:	r1 = *(u8 *)(r2 + 0x0)
-     435:	r1 &= 0xf0
-     436:	if r1 != 0x60 goto +0x17e <LBB1_72>
-     437:	*(u64 *)(r10 - 0x30) = r2
-     438:	r6 = 0x0
-     439:	*(u32 *)(r10 - 0x20) = r6
-     440:	r2 = r10
-     441:	r2 += -0x20
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     442:	r1 = 0x0 ll
-     444:	call 0x1
-;   if (likely(value)) {
-     445:	if r0 == 0x0 goto +0x2 <LBB1_4>
-     446:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     447:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000e00 <LBB1_4>:
-     448:	r2 = *(u64 *)(r10 - 0x30)
-;       .needle = pkt->ipv6->daddr,
-     449:	r1 = *(u64 *)(r2 + 0x20)
-     450:	*(u64 *)(r10 - 0x18) = r1
-     451:	r1 = *(u64 *)(r2 + 0x18)
-     452:	*(u64 *)(r10 - 0x20) = r1
-;   struct target_search_cb_ctx target = {
-     453:	*(u8 *)(r10 - 0xc) = r6
-     454:	*(u32 *)(r10 - 0x10) = r6
-     455:	r3 = r10
-;       .needle = pkt->ipv6->daddr,
-     456:	r3 += -0x20
-;   bpf_for_each_map_elem(&exceed2go_addrs, target_search_cb, &target, 0);
-     457:	r1 = 0x0 ll
-     459:	r2 = 0x0 ll
-     461:	r4 = 0x0
-     462:	call 0xa4
-;   assert_equal(target.found, true, PKT_UNRELATED);
-     463:	r1 = *(u8 *)(r10 - 0xc)
-     464:	if r1 != 0x0 goto +0x2 <LBB1_6>
-
-0000000000000e88 <LBB1_5>:
-     465:	r6 = 0x2
-     466:	goto +0x160 <LBB1_72>
-
-0000000000000e98 <LBB1_6>:
-     467:	r6 = 0x1
-     468:	*(u32 *)(r10 - 0x4) = r6
-     469:	r2 = r10
-     470:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     471:	r1 = 0x0 ll
-     473:	call 0x1
-;   if (likely(value)) {
-     474:	if r0 == 0x0 goto +0x1 <LBB1_8>
-;     __sync_fetch_and_add(value, 1);
-     475:	lock *(u32 *)(r0 + 0x0) += r6
-
-0000000000000ee0 <LBB1_8>:
-     476:	r6 = *(u64 *)(r10 - 0x30)
-;   __u32 hop_key = pkt->ipv6->hop_limit;
-     477:	r1 = *(u8 *)(r6 + 0x7)
-     478:	*(u32 *)(r10 - 0x24) = r1
-;   if (target.key > hop_key) {
-     479:	r2 = *(u32 *)(r10 - 0x10)
-     480:	if r1 >= r2 goto +0x83 <LBB1_32>
-     481:	r2 = r10
-;     pkt->exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-     482:	r2 += -0x24
-     483:	r1 = 0x0 ll
-     485:	call 0x1
-;     if (pkt->exceed_addr != NULL) {
-     486:	if r0 == 0x0 goto +0x7d <LBB1_32>
-     487:	*(u64 *)(r10 - 0x40) = r0
-     488:	r1 = 0x2
-     489:	*(u32 *)(r10 - 0x4) = r1
-     490:	r2 = r10
-     491:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     492:	r1 = 0x0 ll
-     494:	call 0x1
-;   if (likely(value)) {
-     495:	if r0 == 0x0 goto +0x2 <LBB1_12>
-     496:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     497:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000f90 <LBB1_12>:
-;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
-     498:	r9 -= r6
-;   __u16 new_ip_pkt_len = ADJ_LEN + ipv6_pkt_len;
-     499:	r1 = r9
-     500:	r1 += 0x30
-;   int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
-     501:	r1 &= 0xffff
-     502:	r7 = 0x500
-     503:	r7 -= r1
-;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-     504:	if r1 > 0x4ff goto +0x4 <LBB1_15>
-     505:	r9 &= 0x3
-;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-     506:	if r9 == 0x0 goto +0x2 <LBB1_15>
-;     tail_adj = -(new_ip_pkt_len % 4);
-     507:	r9 = -r9
-     508:	r7 = r9
-
-0000000000000fe8 <LBB1_15>:
-;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
-     509:	r1 = *(u64 *)(r10 - 0x38)
-     510:	r2 = 0xffffffd0 ll
-     512:	call 0x2c
-     513:	r6 = 0x0
-;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
-     514:	if r0 != 0x0 goto +0x130 <LBB1_72>
-;   return tail_adj < 0 ? tail_adj : 0;
-     515:	if r6 s> r7 goto +0x1 <LBB1_18>
-     516:	r7 = 0x0
-
-0000000000001028 <LBB1_18>:
-;     assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
-     517:	r1 = *(u64 *)(r10 - 0x38)
-     518:	r2 = r7
-     519:	call 0x41
-     520:	if r0 != 0x0 goto +0x12a <LBB1_72>
-     521:	r1 = *(u64 *)(r10 - 0x38)
-;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     522:	r8 = *(u32 *)(r1 + 0x4)
-     523:	r9 = *(u32 *)(r1 + 0x0)
-;   assert_boundary(orig_ipv6, pkt->end, false);
-     524:	r1 = r9
-     525:	r1 += 0x58
-     526:	if r1 > r8 goto +0x124 <LBB1_72>
-     527:	r1 = 0x60
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     528:	*(u32 *)(r9 + 0x0) = r1
-     529:	r1 = 0x403a
-     530:	*(u16 *)(r9 + 0x6) = r1
-;   struct icmp6hdr *icmp6     = next_header(pkt->ipv6);
-     531:	r7 = r9
-     532:	r7 += 0x28
-;   pkt->ipv6->payload_len = bpf_htons(pkt->end - (void *)icmp6);
-     533:	r1 = r8
-     534:	r1 -= r7
-     535:	r1 = be16 r1
-     536:	*(u16 *)(r9 + 0x4) = r1
-     537:	r2 = *(u64 *)(r10 - 0x40)
-;   pkt->ipv6->saddr       = *pkt->exceed_addr;
-     538:	r1 = *(u64 *)(r2 + 0x8)
-     539:	r2 = *(u64 *)(r2 + 0x0)
-     540:	r3 = 0x3
-;   bpf_memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
-     541:	*(u32 *)(r9 + 0x28) = r3
-;   pkt->ipv6->saddr       = *pkt->exceed_addr;
-     542:	*(u64 *)(r9 + 0x8) = r2
-     543:	*(u64 *)(r9 + 0x10) = r1
-;   pkt->ipv6->daddr       = orig_ipv6->saddr;
-     544:	r1 = *(u64 *)(r9 + 0x38)
-     545:	*(u64 *)(r9 + 0x18) = r1
-     546:	r1 = *(u64 *)(r9 + 0x40)
-     547:	*(u64 *)(r9 + 0x20) = r1
-     548:	r1 = 0x0
-;   bpf_memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
-     549:	*(u32 *)(r9 + 0x2c) = r1
-;   pkt->ipv6->saddr       = *pkt->exceed_addr;
-     550:	r3 = r9
-     551:	r3 += 0x8
-;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     552:	r2 = 0x0
-     553:	r4 = 0x20
-     554:	r5 = 0x0
-     555:	call 0x1c
-     556:	r1 = r0
-     557:	r1 <<= 0x20
-     558:	r1 >>= 0x20
-;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     559:	r0 = *(u16 *)(r9 + 0x4)
-     560:	r0 <<= 0x10
-     561:	r0 <<= 0x20
-     562:	r0 >>= 0x20
-;   csum += addend;
-     563:	r0 += r1
-     564:	r3 = r0
-     565:	r3 <<= 0x20
-     566:	r3 >>= 0x20
-     567:	r1 = 0x1
-     568:	r2 = 0x1
-     569:	if r3 != r0 goto +0x1 <LBB1_22>
-     570:	r2 = 0x0
-
-00000000000011d8 <LBB1_22>:
-     571:	*(u64 *)(r10 - 0x30) = r9
-;   return csum + (csum < addend);
-     572:	r0 += r2
-     573:	r2 = r0
-     574:	r2 <<= 0x20
-     575:	r2 >>= 0x20
-     576:	r3 = 0xc5ffffff ll
-     578:	if r2 > r3 goto +0x1 <LBB1_24>
-     579:	r1 = 0x0
-
-0000000000001220 <LBB1_24>:
-;   csum += addend;
-     580:	r0 += r1
-     581:	r9 = 0x400
-;   return csum + (csum < addend);
-     582:	r0 += 0x3a000000
-     583:	goto +0x4 <LBB1_26>
-
-0000000000001240 <LBB1_25>:
-;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     584:	r1 &= 0xffff
-     585:	r9 = r1
-     586:	if r1 > 0x4 goto +0x1 <LBB1_26>
-     587:	goto +0xca <LBB1_66>
-
-0000000000001260 <LBB1_26>:
-;     __u16 j = (i >= 512) ? 512 : i;
-     588:	r4 = r9
-     589:	r4 <<= 0x20
-     590:	r4 >>= 0x20
-     591:	r1 = 0x200
-     592:	if r1 > r4 goto +0x1 <LBB1_28>
-     593:	r4 = 0x200
-
-0000000000001290 <LBB1_28>:
-;     if (likely(buf + j <= data_end)) {
-     594:	r6 = r7
-     595:	r6 += r4
-     596:	if r6 > r8 goto +0x6 <LBB1_30>
-;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     597:	r1 = 0x0
-     598:	r2 = 0x0
-     599:	r3 = r7
-     600:	r5 = r0
-     601:	call 0x1c
-     602:	r7 = r6
-
-00000000000012d8 <LBB1_30>:
-;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     603:	r1 = r9
-     604:	r1 += 0xfe00
-     605:	r2 = r9
-     606:	r2 <<= 0x20
-     607:	r2 >>= 0x20
-     608:	if r2 > 0x200 goto -0x19 <LBB1_25>
-     609:	r9 >>= 0x1
-     610:	r1 = r9
-     611:	goto -0x1c <LBB1_25>
-
-0000000000001320 <LBB1_32>:
-;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
-     612:	r1 = *(u8 *)(r6 + 0x6)
-     613:	if r1 != 0x3a goto -0x95 <LBB1_5>
-     614:	r1 = 0x3
-     615:	*(u32 *)(r10 - 0x4) = r1
-     616:	r2 = r10
-     617:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     618:	r1 = 0x0 ll
-     620:	call 0x1
-;   if (likely(value)) {
-     621:	if r0 == 0x0 goto +0x2 <LBB1_35>
-     622:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     623:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000001380 <LBB1_35>:
-;   assert_boundary(icmp6, pkt->end, false);
-     624:	r1 = r6
-     625:	r1 += 0x30
-     626:	if r1 > r9 goto -0xa2 <LBB1_5>
-;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-     627:	r1 = *(u8 *)(r8 + 0x0)
-     628:	if r1 != 0x80 goto -0xa4 <LBB1_5>
-;   assert_equal(icmp6->icmp6_code, 0, false);
-     629:	r1 = *(u8 *)(r6 + 0x29)
-     630:	if r1 != 0x0 goto -0xa6 <LBB1_5>
-     631:	r1 = 0x4
-     632:	*(u32 *)(r10 - 0x4) = r1
-     633:	r2 = r10
-     634:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     635:	r1 = 0x0 ll
-     637:	call 0x1
-;   if (likely(value)) {
-     638:	if r0 == 0x0 goto +0x2 <LBB1_40>
-     639:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     640:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000001408 <LBB1_40>:
-;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     641:	r3 = r6
-     642:	r3 += 0x8
-     643:	r1 = 0x0
-     644:	r2 = 0x0
-     645:	*(u64 *)(r10 - 0x38) = r3
-     646:	r4 = 0x20
-     647:	r5 = 0x0
-     648:	call 0x1c
-     649:	r1 = r0
-     650:	r1 <<= 0x20
-     651:	r1 >>= 0x20
-;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     652:	r0 = *(u16 *)(r6 + 0x4)
-     653:	r0 <<= 0x10
-     654:	r0 <<= 0x20
-     655:	r0 >>= 0x20
-;   csum += addend;
-     656:	r0 += r1
-     657:	r3 = r0
-     658:	r3 <<= 0x20
-     659:	r3 >>= 0x20
-     660:	r1 = 0x1
-     661:	r2 = 0x1
-     662:	if r3 != r0 goto +0x1 <LBB1_42>
-     663:	r2 = 0x0
-
-00000000000014c0 <LBB1_42>:
-;   return csum + (csum < addend);
-     664:	r0 += r2
-     665:	r2 = r0
-     666:	r2 <<= 0x20
-     667:	r2 >>= 0x20
-     668:	r3 = 0xc5ffffff ll
-     670:	if r2 > r3 goto +0x1 <LBB1_44>
-     671:	r1 = 0x0
-
-0000000000001500 <LBB1_44>:
-     672:	r6 += 0x18
-     673:	*(u64 *)(r10 - 0x40) = r6
-;   csum += addend;
-     674:	r0 += r1
-     675:	r6 = 0x400
-;   return csum + (csum < addend);
-     676:	r0 += 0x3a000000
-     677:	goto +0x12 <LBB1_46>
-
-0000000000001530 <LBB1_45>:
-;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     678:	r1 &= 0xffff
-     679:	r6 = r1
-     680:	if r1 > 0x4 goto +0xf <LBB1_46>
-;   if (likely(buf + 4 <= data_end)) {
-     681:	r1 = r8
-     682:	r1 += 0x4
-     683:	r6 = *(u64 *)(r10 - 0x30)
-     684:	if r1 > r9 goto +0x26 <LBB1_56>
-;   csum += addend;
-     685:	r0 <<= 0x20
-     686:	r0 >>= 0x20
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     687:	r1 = *(u32 *)(r8 + 0x0)
-;   csum += addend;
-     688:	r1 += r0
-     689:	r3 = r1
-     690:	r3 <<= 0x20
-     691:	r3 >>= 0x20
-     692:	r2 = 0x1
-     693:	if r3 != r1 goto +0x1a <LBB1_55>
-     694:	r2 = 0x0
-     695:	goto +0x18 <LBB1_55>
-
-00000000000015c0 <LBB1_46>:
-;     __u16 j = (i >= 512) ? 512 : i;
-     696:	r4 = r6
-     697:	r4 <<= 0x20
-     698:	r4 >>= 0x20
-     699:	r1 = 0x200
-     700:	if r1 > r4 goto +0x1 <LBB1_48>
-     701:	r4 = 0x200
-
-00000000000015f0 <LBB1_48>:
-;     if (likely(buf + j <= data_end)) {
-     702:	r7 = r8
-     703:	r7 += r4
-     704:	if r7 > r9 goto +0x6 <LBB1_50>
-;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     705:	r1 = 0x0
-     706:	r2 = 0x0
-     707:	r3 = r8
-     708:	r5 = r0
-     709:	call 0x1c
-     710:	r8 = r7
-
-0000000000001638 <LBB1_50>:
-;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     711:	r1 = r6
-     712:	r1 += 0xfe00
-     713:	r2 = r6
-     714:	r2 <<= 0x20
-     715:	r2 >>= 0x20
-     716:	if r2 > 0x200 goto -0x27 <LBB1_45>
-     717:	r6 >>= 0x1
-     718:	r1 = r6
-     719:	goto -0x2a <LBB1_45>
-
-0000000000001680 <LBB1_55>:
-;   return csum + (csum < addend);
-     720:	r1 += r2
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     721:	r8 += 0x1
-     722:	r0 = r1
-
-0000000000001698 <LBB1_56>:
-     723:	r1 = 0x0
-;   if (likely(buf + 2 <= data_end)) {
-     724:	r2 = r8
-     725:	r2 += 0x2
-     726:	if r2 > r9 goto +0x2 <LBB1_58>
-;     addend = *(__be16 *)buf++;
-     727:	r1 = *(u16 *)(r8 + 0x0)
-     728:	r8 += 0x1
-
-00000000000016c8 <LBB1_58>:
-;   if (likely(buf + 1 <= data_end)) {
-     729:	r2 = r8
-     730:	r2 += 0x1
-     731:	if r2 > r9 goto +0x2 <LBB1_60>
-;     addend += *(__u8 *)buf++;
-     732:	r2 = *(u8 *)(r8 + 0x0)
-     733:	r1 += r2
-
-00000000000016f0 <LBB1_60>:
-;   csum += addend;
-     734:	r0 <<= 0x20
-     735:	r0 >>= 0x20
-     736:	r1 += r0
-     737:	r3 = r1
-     738:	r3 <<= 0x20
-     739:	r3 >>= 0x20
-     740:	r2 = 0x1
-     741:	if r3 != r1 goto +0x1 <LBB1_62>
-     742:	r2 = 0x0
-
-0000000000001738 <LBB1_62>:
-;   return csum + (csum < addend);
-     743:	r1 += r2
-     744:	r2 = 0xffff0000 ll
-;   return csum + (csum < addend);
-     746:	r3 = r1
-     747:	r3 &= r2
-;   sum = (sum & 0xffff) + (sum >> 16);
-     748:	r1 &= 0xffff
-     749:	r3 >>= 0x10
-     750:	r1 += r3
-;   sum = (sum & 0xffff) + (sum >> 16);
-     751:	r2 = r1
-     752:	r2 >>= 0x10
-     753:	r2 += r1
-;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
-     754:	r2 &= 0xffff
-     755:	if r2 != 0xffff goto -0x123 <LBB1_5>
-     756:	r1 = 0x5
-     757:	*(u32 *)(r10 - 0x4) = r1
-     758:	r2 = r10
-     759:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     760:	r1 = 0x0 ll
-     762:	call 0x1
-;   if (likely(value)) {
-     763:	if r0 == 0x0 goto +0x2 <LBB1_65>
-     764:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     765:	lock *(u32 *)(r0 + 0x0) += r1
-
-00000000000017f0 <LBB1_65>:
-     766:	r1 = 0x60
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     767:	*(u32 *)(r6 + 0x0) = r1
-     768:	r1 = 0x403a
-     769:	*(u16 *)(r6 + 0x6) = r1
-     770:	r2 = *(u64 *)(r10 - 0x38)
-;   struct in6_addr tmpipv6addr = pkt->ipv6->saddr;
-     771:	r1 = *(u64 *)(r2 + 0x8)
-     772:	*(u64 *)(r10 - 0x18) = r1
-     773:	r1 = *(u64 *)(r2 + 0x0)
-     774:	*(u64 *)(r10 - 0x20) = r1
-     775:	r3 = *(u64 *)(r10 - 0x40)
-;   pkt->ipv6->saddr            = pkt->ipv6->daddr;
-     776:	r1 = *(u64 *)(r3 + 0x8)
-     777:	*(u64 *)(r2 + 0x8) = r1
-     778:	r1 = *(u64 *)(r3 + 0x0)
-     779:	*(u64 *)(r2 + 0x0) = r1
-;   pkt->ipv6->daddr            = tmpipv6addr;
-     780:	r1 = *(u64 *)(r10 - 0x18)
-     781:	*(u64 *)(r3 + 0x8) = r1
-     782:	r1 = *(u64 *)(r10 - 0x20)
-     783:	*(u64 *)(r3 + 0x0) = r1
-     784:	r1 = 0x81
-;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
-     785:	*(u16 *)(r6 + 0x28) = r1
-;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
-     786:	r1 = *(u16 *)(r6 + 0x2a)
-     787:	r1 += -0x1
-     788:	*(u16 *)(r6 + 0x2a) = r1
-     789:	goto +0x1c <LBB1_71>
-
-00000000000018b0 <LBB1_66>:
-;   if (likely(buf + 4 <= data_end)) {
-     790:	r1 = r7
-     791:	r1 += 0x4
-     792:	r4 = *(u64 *)(r10 - 0x30)
-     793:	if r1 > r8 goto +0xc <LBB1_70>
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     794:	r1 = *(u32 *)(r7 + 0x0)
-;   csum += addend;
-     795:	r0 <<= 0x20
-     796:	r0 >>= 0x20
-     797:	r1 += r0
-     798:	r3 = r1
-     799:	r3 <<= 0x20
-     800:	r3 >>= 0x20
-     801:	r2 = 0x1
-     802:	if r3 != r1 goto +0x1 <LBB1_69>
-     803:	r2 = 0x0
-
-0000000000001920 <LBB1_69>:
-;   return csum + (csum < addend);
-     804:	r1 += r2
-     805:	r0 = r1
-
-0000000000001930 <LBB1_70>:
-     806:	r1 = 0xffff0000 ll
-;   sum = (sum & 0xffff) + (sum >> 16);
-     808:	r2 = r0
-     809:	r2 &= r1
-     810:	r2 >>= 0x10
-     811:	r0 &= 0xffff
-     812:	r0 += r2
-;   sum = (sum & 0xffff) + (sum >> 16);
-     813:	r1 = r0
-     814:	r1 >>= 0x10
-     815:	r1 += r0
-;   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
-     816:	r1 ^= -0x1
-     817:	*(u16 *)(r4 + 0x2a) = r1
-
-0000000000001990 <LBB1_71>:
-     818:	r6 = 0x3
-
-0000000000001998 <LBB1_72>:
-;   return exceed2go_xdp(ctx, BASE_LAYER_L3);
-     819:	r0 = r6
-     820:	exit
-
 Disassembly of section tc:
 
 0000000000000000 <exceed2go_tc_l2>:
@@ -1223,20 +667,20 @@ Disassembly of section tc:
 ;   assert_boundary(pkt->ipv6, pkt->end, false);
        5:	r9 = r2
        6:	r9 += 0x36
-       7:	if r9 > r7 goto +0x1ab <LBB2_78>
+       7:	if r9 > r7 goto +0x1ab <LBB1_78>
 ;   if (pkt->eth != NULL) {
-       8:	if r2 == 0x0 goto +0x2 <LBB2_3>
+       8:	if r2 == 0x0 goto +0x2 <LBB1_3>
 ;     assert_equal(pkt->eth->h_proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
        9:	r1 = *(u16 *)(r2 + 0xc)
-      10:	if r1 != 0xdd86 goto +0x1a8 <LBB2_78>
+      10:	if r1 != 0xdd86 goto +0x1a8 <LBB1_78>
 
-0000000000000058 <LBB2_3>:
+0000000000000058 <LBB1_3>:
       11:	r8 = r2
       12:	r8 += 0xe
 ;   assert_equal(pkt->ipv6->version, 6, false);
       13:	r1 = *(u8 *)(r8 + 0x0)
       14:	r1 &= 0xf0
-      15:	if r1 != 0x60 goto +0x1a3 <LBB2_78>
+      15:	if r1 != 0x60 goto +0x1a3 <LBB1_78>
       16:	*(u64 *)(r10 - 0x30) = r2
       17:	r6 = 0x0
       18:	*(u32 *)(r10 - 0x20) = r6
@@ -1246,12 +690,12 @@ Disassembly of section tc:
       21:	r1 = 0x0 ll
       23:	call 0x1
 ;   if (likely(value)) {
-      24:	if r0 == 0x0 goto +0x2 <LBB2_6>
+      24:	if r0 == 0x0 goto +0x2 <LBB1_6>
       25:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
       26:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000000d8 <LBB2_6>:
+00000000000000d8 <LBB1_6>:
       27:	r2 = *(u64 *)(r10 - 0x30)
 ;       .needle = pkt->ipv6->daddr,
       28:	r1 = *(u64 *)(r2 + 0x2e)
@@ -1271,13 +715,13 @@ Disassembly of section tc:
       41:	call 0xa4
 ;   assert_equal(target.found, true, PKT_UNRELATED);
       42:	r1 = *(u8 *)(r10 - 0xc)
-      43:	if r1 != 0x0 goto +0x3 <LBB2_8>
+      43:	if r1 != 0x0 goto +0x3 <LBB1_8>
 
-0000000000000160 <LBB2_7>:
+0000000000000160 <LBB1_7>:
       44:	r3 = 0xffffffff ll
-      46:	goto +0x184 <LBB2_78>
+      46:	goto +0x184 <LBB1_78>
 
-0000000000000178 <LBB2_8>:
+0000000000000178 <LBB1_8>:
       47:	r6 = 0x1
       48:	*(u32 *)(r10 - 0x4) = r6
       49:	r2 = r10
@@ -1286,25 +730,25 @@ Disassembly of section tc:
       51:	r1 = 0x0 ll
       53:	call 0x1
 ;   if (likely(value)) {
-      54:	if r0 == 0x0 goto +0x1 <LBB2_10>
+      54:	if r0 == 0x0 goto +0x1 <LBB1_10>
 ;     __sync_fetch_and_add(value, 1);
       55:	lock *(u32 *)(r0 + 0x0) += r6
 
-00000000000001c0 <LBB2_10>:
+00000000000001c0 <LBB1_10>:
       56:	r6 = *(u64 *)(r10 - 0x30)
 ;   __u32 hop_key = pkt->ipv6->hop_limit;
       57:	r1 = *(u8 *)(r6 + 0x15)
       58:	*(u32 *)(r10 - 0x24) = r1
 ;   if (target.key > hop_key) {
       59:	r2 = *(u32 *)(r10 - 0x10)
-      60:	if r1 >= r2 goto +0x96 <LBB2_36>
+      60:	if r1 >= r2 goto +0x96 <LBB1_36>
       61:	r2 = r10
 ;     pkt->exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
       62:	r2 += -0x24
       63:	r1 = 0x0 ll
       65:	call 0x1
 ;     if (pkt->exceed_addr != NULL) {
-      66:	if r0 == 0x0 goto +0x90 <LBB2_36>
+      66:	if r0 == 0x0 goto +0x90 <LBB1_36>
       67:	*(u64 *)(r10 - 0x30) = r0
       68:	r1 = 0x2
       69:	*(u32 *)(r10 - 0x4) = r1
@@ -1314,12 +758,12 @@ Disassembly of section tc:
       72:	r1 = 0x0 ll
       74:	call 0x1
 ;   if (likely(value)) {
-      75:	if r0 == 0x0 goto +0x2 <LBB2_14>
+      75:	if r0 == 0x0 goto +0x2 <LBB1_14>
       76:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
       77:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000270 <LBB2_14>:
+0000000000000270 <LBB1_14>:
 ;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
       78:	r7 -= r8
 ;   __u16 new_ip_pkt_len = ADJ_LEN + ipv6_pkt_len;
@@ -1330,15 +774,15 @@ Disassembly of section tc:
       82:	r6 = 0x500
       83:	r6 -= r1
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-      84:	if r1 > 0x4ff goto +0x4 <LBB2_17>
+      84:	if r1 > 0x4ff goto +0x4 <LBB1_17>
       85:	r7 &= 0x3
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-      86:	if r7 == 0x0 goto +0x2 <LBB2_17>
+      86:	if r7 == 0x0 goto +0x2 <LBB1_17>
 ;     tail_adj = -(new_ip_pkt_len % 4);
       87:	r7 = -r7
       88:	r6 = r7
 
-00000000000002c8 <LBB2_17>:
+00000000000002c8 <LBB1_17>:
       89:	r7 = 0x0
 ;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
       90:	r1 = *(u64 *)(r10 - 0x38)
@@ -1347,12 +791,12 @@ Disassembly of section tc:
       93:	call 0x2b
       94:	r3 = 0x2
 ;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-      95:	if r0 != 0x0 goto +0x153 <LBB2_78>
+      95:	if r0 != 0x0 goto +0x153 <LBB1_78>
 ;   return tail_adj < 0 ? tail_adj : 0;
-      96:	if r7 s> r6 goto +0x1 <LBB2_20>
+      96:	if r7 s> r6 goto +0x1 <LBB1_20>
       97:	r6 = 0x0
 
-0000000000000310 <LBB2_20>:
+0000000000000310 <LBB1_20>:
       98:	r1 = *(u64 *)(r10 - 0x38)
 ;     int new_len = ctx->len + pkt.tail_adjust;
       99:	r2 = *(u32 *)(r1 + 0x0)
@@ -1362,7 +806,7 @@ Disassembly of section tc:
      102:	call 0x26
      103:	r3 = 0x2
 ;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     104:	if r0 != 0x0 goto +0x14a <LBB2_78>
+     104:	if r0 != 0x0 goto +0x14a <LBB1_78>
      105:	r1 = *(u64 *)(r10 - 0x38)
 ;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
      106:	r6 = *(u32 *)(r1 + 0x4c)
@@ -1370,12 +814,12 @@ Disassembly of section tc:
 ;   assert_boundary(orig_ipv6, pkt->end, false);
      108:	r1 = r6
      109:	r1 += 0x66
-     110:	if r1 > r9 goto +0x144 <LBB2_78>
+     110:	if r1 > r9 goto +0x144 <LBB1_78>
      111:	r2 = *(u64 *)(r10 - 0x30)
      112:	r8 = r6
      113:	r8 += 0x36
 ;   if (pkt->eth != NULL) {
-     114:	if r6 == 0x0 goto +0xe <LBB2_24>
+     114:	if r6 == 0x0 goto +0xe <LBB1_24>
 ;   bpf_memcpy(&new->h_source, &old->h_dest, ETH_ALEN);
      115:	r1 = *(u16 *)(r6 + 0x32)
      116:	*(u16 *)(r6 + 0x8) = r1
@@ -1400,7 +844,7 @@ Disassembly of section tc:
      127:	r1 = *(u16 *)(r6 + 0x3c)
      128:	*(u16 *)(r6 + 0xc) = r1
 
-0000000000000408 <LBB2_24>:
+0000000000000408 <LBB1_24>:
      129:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
      130:	*(u32 *)(r6 + 0xe) = r1
@@ -1451,10 +895,10 @@ Disassembly of section tc:
      165:	r3 >>= 0x20
      166:	r1 = 0x1
      167:	r2 = 0x1
-     168:	if r3 != r0 goto +0x1 <LBB2_26>
+     168:	if r3 != r0 goto +0x1 <LBB1_26>
      169:	r2 = 0x0
 
-0000000000000550 <LBB2_26>:
+0000000000000550 <LBB1_26>:
      170:	*(u64 *)(r10 - 0x30) = r6
 ;   return csum + (csum < addend);
      171:	r0 += r2
@@ -1462,38 +906,38 @@ Disassembly of section tc:
      173:	r2 <<= 0x20
      174:	r2 >>= 0x20
      175:	r3 = 0xc5ffffff ll
-     177:	if r2 > r3 goto +0x1 <LBB2_28>
+     177:	if r2 > r3 goto +0x1 <LBB1_28>
      178:	r1 = 0x0
 
-0000000000000598 <LBB2_28>:
+0000000000000598 <LBB1_28>:
 ;   csum += addend;
      179:	r0 += r1
      180:	r6 = 0x400
 ;   return csum + (csum < addend);
      181:	r0 += 0x3a000000
-     182:	goto +0x4 <LBB2_30>
+     182:	goto +0x4 <LBB1_30>
 
-00000000000005b8 <LBB2_29>:
+00000000000005b8 <LBB1_29>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      183:	r1 &= 0xffff
      184:	r6 = r1
-     185:	if r1 > 0x4 goto +0x1 <LBB2_30>
-     186:	goto +0xd7 <LBB2_72>
+     185:	if r1 > 0x4 goto +0x1 <LBB1_30>
+     186:	goto +0xd7 <LBB1_72>
 
-00000000000005d8 <LBB2_30>:
+00000000000005d8 <LBB1_30>:
 ;     __u16 j = (i >= 512) ? 512 : i;
      187:	r4 = r6
      188:	r4 <<= 0x20
      189:	r4 >>= 0x20
      190:	r1 = 0x200
-     191:	if r1 > r4 goto +0x1 <LBB2_32>
+     191:	if r1 > r4 goto +0x1 <LBB1_32>
      192:	r4 = 0x200
 
-0000000000000608 <LBB2_32>:
+0000000000000608 <LBB1_32>:
 ;     if (likely(buf + j <= data_end)) {
      193:	r7 = r8
      194:	r7 += r4
-     195:	if r7 > r9 goto +0x6 <LBB2_34>
+     195:	if r7 > r9 goto +0x6 <LBB1_34>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
      196:	r1 = 0x0
      197:	r2 = 0x0
@@ -1502,22 +946,22 @@ Disassembly of section tc:
      200:	call 0x1c
      201:	r8 = r7
 
-0000000000000650 <LBB2_34>:
+0000000000000650 <LBB1_34>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      202:	r1 = r6
      203:	r1 += 0xfe00
      204:	r2 = r6
      205:	r2 <<= 0x20
      206:	r2 >>= 0x20
-     207:	if r2 > 0x200 goto -0x19 <LBB2_29>
+     207:	if r2 > 0x200 goto -0x19 <LBB1_29>
      208:	r6 >>= 0x1
      209:	r1 = r6
-     210:	goto -0x1c <LBB2_29>
+     210:	goto -0x1c <LBB1_29>
 
-0000000000000698 <LBB2_36>:
+0000000000000698 <LBB1_36>:
 ;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
      211:	r1 = *(u8 *)(r6 + 0x14)
-     212:	if r1 != 0x3a goto -0xa9 <LBB2_7>
+     212:	if r1 != 0x3a goto -0xa9 <LBB1_7>
      213:	r1 = 0x3
      214:	*(u32 *)(r10 - 0x4) = r1
      215:	r2 = r10
@@ -1526,22 +970,22 @@ Disassembly of section tc:
      217:	r1 = 0x0 ll
      219:	call 0x1
 ;   if (likely(value)) {
-     220:	if r0 == 0x0 goto +0x2 <LBB2_39>
+     220:	if r0 == 0x0 goto +0x2 <LBB1_39>
      221:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      222:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000006f8 <LBB2_39>:
+00000000000006f8 <LBB1_39>:
 ;   assert_boundary(icmp6, pkt->end, false);
      223:	r1 = r6
      224:	r1 += 0x3e
-     225:	if r1 > r7 goto -0xb6 <LBB2_7>
+     225:	if r1 > r7 goto -0xb6 <LBB1_7>
 ;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
      226:	r1 = *(u8 *)(r9 + 0x0)
-     227:	if r1 != 0x80 goto -0xb8 <LBB2_7>
+     227:	if r1 != 0x80 goto -0xb8 <LBB1_7>
 ;   assert_equal(icmp6->icmp6_code, 0, false);
      228:	r1 = *(u8 *)(r6 + 0x37)
-     229:	if r1 != 0x0 goto -0xba <LBB2_7>
+     229:	if r1 != 0x0 goto -0xba <LBB1_7>
      230:	r1 = 0x4
      231:	*(u32 *)(r10 - 0x4) = r1
      232:	r2 = r10
@@ -1550,12 +994,12 @@ Disassembly of section tc:
      234:	r1 = 0x0 ll
      236:	call 0x1
 ;   if (likely(value)) {
-     237:	if r0 == 0x0 goto +0x2 <LBB2_44>
+     237:	if r0 == 0x0 goto +0x2 <LBB1_44>
      238:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      239:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000780 <LBB2_44>:
+0000000000000780 <LBB1_44>:
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
      240:	r3 = r6
      241:	r3 += 0x16
@@ -1580,20 +1024,20 @@ Disassembly of section tc:
      258:	r3 >>= 0x20
      259:	r1 = 0x1
      260:	r2 = 0x1
-     261:	if r3 != r0 goto +0x1 <LBB2_46>
+     261:	if r3 != r0 goto +0x1 <LBB1_46>
      262:	r2 = 0x0
 
-0000000000000838 <LBB2_46>:
+0000000000000838 <LBB1_46>:
 ;   return csum + (csum < addend);
      263:	r0 += r2
      264:	r2 = r0
      265:	r2 <<= 0x20
      266:	r2 >>= 0x20
      267:	r3 = 0xc5ffffff ll
-     269:	if r2 > r3 goto +0x1 <LBB2_48>
+     269:	if r2 > r3 goto +0x1 <LBB1_48>
      270:	r1 = 0x0
 
-0000000000000878 <LBB2_48>:
+0000000000000878 <LBB1_48>:
      271:	r6 += 0x26
      272:	*(u64 *)(r10 - 0x48) = r6
 ;   csum += addend;
@@ -1601,18 +1045,18 @@ Disassembly of section tc:
      274:	r6 = 0x400
 ;   return csum + (csum < addend);
      275:	r0 += 0x3a000000
-     276:	goto +0x12 <LBB2_50>
+     276:	goto +0x12 <LBB1_50>
 
-00000000000008a8 <LBB2_49>:
+00000000000008a8 <LBB1_49>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      277:	r1 &= 0xffff
      278:	r6 = r1
-     279:	if r1 > 0x4 goto +0xf <LBB2_50>
+     279:	if r1 > 0x4 goto +0xf <LBB1_50>
 ;   if (likely(buf + 4 <= data_end)) {
      280:	r1 = r9
      281:	r1 += 0x4
      282:	r6 = *(u64 *)(r10 - 0x30)
-     283:	if r1 > r7 goto +0x26 <LBB2_60>
+     283:	if r1 > r7 goto +0x26 <LBB1_60>
 ;   csum += addend;
      284:	r0 <<= 0x20
      285:	r0 >>= 0x20
@@ -1624,24 +1068,24 @@ Disassembly of section tc:
      289:	r3 <<= 0x20
      290:	r3 >>= 0x20
      291:	r2 = 0x1
-     292:	if r3 != r1 goto +0x1a <LBB2_59>
+     292:	if r3 != r1 goto +0x1a <LBB1_59>
      293:	r2 = 0x0
-     294:	goto +0x18 <LBB2_59>
+     294:	goto +0x18 <LBB1_59>
 
-0000000000000938 <LBB2_50>:
+0000000000000938 <LBB1_50>:
 ;     __u16 j = (i >= 512) ? 512 : i;
      295:	r4 = r6
      296:	r4 <<= 0x20
      297:	r4 >>= 0x20
      298:	r1 = 0x200
-     299:	if r1 > r4 goto +0x1 <LBB2_52>
+     299:	if r1 > r4 goto +0x1 <LBB1_52>
      300:	r4 = 0x200
 
-0000000000000968 <LBB2_52>:
+0000000000000968 <LBB1_52>:
 ;     if (likely(buf + j <= data_end)) {
      301:	r8 = r9
      302:	r8 += r4
-     303:	if r8 > r7 goto +0x6 <LBB2_54>
+     303:	if r8 > r7 goto +0x6 <LBB1_54>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
      304:	r1 = 0x0
      305:	r2 = 0x0
@@ -1650,45 +1094,45 @@ Disassembly of section tc:
      308:	call 0x1c
      309:	r9 = r8
 
-00000000000009b0 <LBB2_54>:
+00000000000009b0 <LBB1_54>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      310:	r1 = r6
      311:	r1 += 0xfe00
      312:	r2 = r6
      313:	r2 <<= 0x20
      314:	r2 >>= 0x20
-     315:	if r2 > 0x200 goto -0x27 <LBB2_49>
+     315:	if r2 > 0x200 goto -0x27 <LBB1_49>
      316:	r6 >>= 0x1
      317:	r1 = r6
-     318:	goto -0x2a <LBB2_49>
+     318:	goto -0x2a <LBB1_49>
 
-00000000000009f8 <LBB2_59>:
+00000000000009f8 <LBB1_59>:
 ;   return csum + (csum < addend);
      319:	r1 += r2
 ;     sum = csum_add(sum, *(__be32 *)buf++);
      320:	r9 += 0x1
      321:	r0 = r1
 
-0000000000000a10 <LBB2_60>:
+0000000000000a10 <LBB1_60>:
      322:	r1 = 0x0
 ;   if (likely(buf + 2 <= data_end)) {
      323:	r2 = r9
      324:	r2 += 0x2
-     325:	if r2 > r7 goto +0x2 <LBB2_62>
+     325:	if r2 > r7 goto +0x2 <LBB1_62>
 ;     addend = *(__be16 *)buf++;
      326:	r1 = *(u16 *)(r9 + 0x0)
      327:	r9 += 0x1
 
-0000000000000a40 <LBB2_62>:
+0000000000000a40 <LBB1_62>:
 ;   if (likely(buf + 1 <= data_end)) {
      328:	r2 = r9
      329:	r2 += 0x1
-     330:	if r2 > r7 goto +0x2 <LBB2_64>
+     330:	if r2 > r7 goto +0x2 <LBB1_64>
 ;     addend += *(__u8 *)buf++;
      331:	r2 = *(u8 *)(r9 + 0x0)
      332:	r1 += r2
 
-0000000000000a68 <LBB2_64>:
+0000000000000a68 <LBB1_64>:
 ;   csum += addend;
      333:	r0 <<= 0x20
      334:	r0 >>= 0x20
@@ -1697,10 +1141,10 @@ Disassembly of section tc:
      337:	r3 <<= 0x20
      338:	r3 >>= 0x20
      339:	r2 = 0x1
-     340:	if r3 != r1 goto +0x1 <LBB2_66>
+     340:	if r3 != r1 goto +0x1 <LBB1_66>
      341:	r2 = 0x0
 
-0000000000000ab0 <LBB2_66>:
+0000000000000ab0 <LBB1_66>:
 ;   return csum + (csum < addend);
      342:	r1 += r2
      343:	r2 = 0xffff0000 ll
@@ -1717,7 +1161,7 @@ Disassembly of section tc:
      352:	r2 += r1
 ;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
      353:	r2 &= 0xffff
-     354:	if r2 != 0xffff goto -0x137 <LBB2_7>
+     354:	if r2 != 0xffff goto -0x137 <LBB1_7>
      355:	r1 = 0x5
      356:	*(u32 *)(r10 - 0x4) = r1
      357:	r2 = r10
@@ -1726,14 +1170,14 @@ Disassembly of section tc:
      359:	r1 = 0x0 ll
      361:	call 0x1
 ;   if (likely(value)) {
-     362:	if r0 == 0x0 goto +0x2 <LBB2_69>
+     362:	if r0 == 0x0 goto +0x2 <LBB1_69>
      363:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      364:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000b68 <LBB2_69>:
+0000000000000b68 <LBB1_69>:
 ;   if (pkt->eth != NULL) {
-     365:	if r6 == 0x0 goto +0xc <LBB2_71>
+     365:	if r6 == 0x0 goto +0xc <LBB1_71>
 ;   bpf_memcpy(&tmphwaddr, &old->h_source, ETH_ALEN);
      366:	r1 = *(u16 *)(r6 + 0xa)
 ;   bpf_memcpy(&new->h_source, &old->h_dest, ETH_ALEN);
@@ -1757,7 +1201,7 @@ Disassembly of section tc:
      376:	*(u16 *)(r6 + 0x6) = r1
      377:	*(u16 *)(r6 + 0x8) = r2
 
-0000000000000bd0 <LBB2_71>:
+0000000000000bd0 <LBB1_71>:
      378:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
      379:	*(u32 *)(r6 + 0xe) = r1
@@ -1787,14 +1231,14 @@ Disassembly of section tc:
      398:	r1 = *(u16 *)(r6 + 0x38)
      399:	r1 += -0x1
      400:	*(u16 *)(r6 + 0x38) = r1
-     401:	goto +0x1c <LBB2_77>
+     401:	goto +0x1c <LBB1_77>
 
-0000000000000c90 <LBB2_72>:
+0000000000000c90 <LBB1_72>:
 ;   if (likely(buf + 4 <= data_end)) {
      402:	r1 = r8
      403:	r1 += 0x4
      404:	r4 = *(u64 *)(r10 - 0x30)
-     405:	if r1 > r9 goto +0xc <LBB2_76>
+     405:	if r1 > r9 goto +0xc <LBB1_76>
 ;     sum = csum_add(sum, *(__be32 *)buf++);
      406:	r1 = *(u32 *)(r8 + 0x0)
 ;   csum += addend;
@@ -1805,15 +1249,15 @@ Disassembly of section tc:
      411:	r3 <<= 0x20
      412:	r3 >>= 0x20
      413:	r2 = 0x1
-     414:	if r3 != r1 goto +0x1 <LBB2_75>
+     414:	if r3 != r1 goto +0x1 <LBB1_75>
      415:	r2 = 0x0
 
-0000000000000d00 <LBB2_75>:
+0000000000000d00 <LBB1_75>:
 ;   return csum + (csum < addend);
      416:	r1 += r2
      417:	r0 = r1
 
-0000000000000d10 <LBB2_76>:
+0000000000000d10 <LBB1_76>:
      418:	r1 = 0xffff0000 ll
 ;   sum = (sum & 0xffff) + (sum >> 16);
      420:	r2 = r0
@@ -1829,7 +1273,7 @@ Disassembly of section tc:
      428:	r1 ^= -0x1
      429:	*(u16 *)(r4 + 0x38) = r1
 
-0000000000000d70 <LBB2_77>:
+0000000000000d70 <LBB1_77>:
 ;   return bpf_redirect(ctx->ingress_ifindex, 0);
      430:	r1 = *(u64 *)(r10 - 0x38)
      431:	r1 = *(u32 *)(r1 + 0x24)
@@ -1837,7 +1281,7 @@ Disassembly of section tc:
      433:	call 0x17
      434:	r3 = r0
 
-0000000000000d98 <LBB2_78>:
+0000000000000d98 <LBB1_78>:
 ;   return exceed2go_tc(ctx, BASE_LAYER_L2);
      435:	r0 = r3
      436:	exit
@@ -1852,11 +1296,11 @@ Disassembly of section tc:
 ;   assert_boundary(pkt->ipv6, pkt->end, false);
      442:	r9 = r2
      443:	r9 += 0x28
-     444:	if r9 > r6 goto +0x189 <LBB3_72>
+     444:	if r9 > r6 goto +0x189 <LBB2_72>
 ;   assert_equal(pkt->ipv6->version, 6, false);
      445:	r1 = *(u8 *)(r2 + 0x0)
      446:	r1 &= 0xf0
-     447:	if r1 != 0x60 goto +0x186 <LBB3_72>
+     447:	if r1 != 0x60 goto +0x186 <LBB2_72>
      448:	*(u64 *)(r10 - 0x30) = r2
      449:	r7 = 0x0
      450:	*(u32 *)(r10 - 0x20) = r7
@@ -1866,12 +1310,12 @@ Disassembly of section tc:
      453:	r1 = 0x0 ll
      455:	call 0x1
 ;   if (likely(value)) {
-     456:	if r0 == 0x0 goto +0x2 <LBB3_4>
+     456:	if r0 == 0x0 goto +0x2 <LBB2_4>
      457:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      458:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000e58 <LBB3_4>:
+0000000000000e58 <LBB2_4>:
      459:	r2 = *(u64 *)(r10 - 0x30)
 ;       .needle = pkt->ipv6->daddr,
      460:	r1 = *(u64 *)(r2 + 0x20)
@@ -1891,13 +1335,13 @@ Disassembly of section tc:
      473:	call 0xa4
 ;   assert_equal(target.found, true, PKT_UNRELATED);
      474:	r1 = *(u8 *)(r10 - 0xc)
-     475:	if r1 != 0x0 goto +0x3 <LBB3_6>
+     475:	if r1 != 0x0 goto +0x3 <LBB2_6>
 
-0000000000000ee0 <LBB3_5>:
+0000000000000ee0 <LBB2_5>:
      476:	r3 = 0xffffffff ll
-     478:	goto +0x167 <LBB3_72>
+     478:	goto +0x167 <LBB2_72>
 
-0000000000000ef8 <LBB3_6>:
+0000000000000ef8 <LBB2_6>:
      479:	r7 = 0x1
      480:	*(u32 *)(r10 - 0x4) = r7
      481:	r2 = r10
@@ -1906,25 +1350,25 @@ Disassembly of section tc:
      483:	r1 = 0x0 ll
      485:	call 0x1
 ;   if (likely(value)) {
-     486:	if r0 == 0x0 goto +0x1 <LBB3_8>
+     486:	if r0 == 0x0 goto +0x1 <LBB2_8>
 ;     __sync_fetch_and_add(value, 1);
      487:	lock *(u32 *)(r0 + 0x0) += r7
 
-0000000000000f40 <LBB3_8>:
+0000000000000f40 <LBB2_8>:
      488:	r7 = *(u64 *)(r10 - 0x30)
 ;   __u32 hop_key = pkt->ipv6->hop_limit;
      489:	r1 = *(u8 *)(r7 + 0x7)
      490:	*(u32 *)(r10 - 0x24) = r1
 ;   if (target.key > hop_key) {
      491:	r2 = *(u32 *)(r10 - 0x10)
-     492:	if r1 >= r2 goto +0x86 <LBB3_32>
+     492:	if r1 >= r2 goto +0x86 <LBB2_32>
      493:	r2 = r10
 ;     pkt->exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
      494:	r2 += -0x24
      495:	r1 = 0x0 ll
      497:	call 0x1
 ;     if (pkt->exceed_addr != NULL) {
-     498:	if r0 == 0x0 goto +0x80 <LBB3_32>
+     498:	if r0 == 0x0 goto +0x80 <LBB2_32>
      499:	r9 = r0
      500:	r1 = 0x2
      501:	*(u32 *)(r10 - 0x4) = r1
@@ -1934,12 +1378,12 @@ Disassembly of section tc:
      504:	r1 = 0x0 ll
      506:	call 0x1
 ;   if (likely(value)) {
-     507:	if r0 == 0x0 goto +0x2 <LBB3_12>
+     507:	if r0 == 0x0 goto +0x2 <LBB2_12>
      508:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      509:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000ff0 <LBB3_12>:
+0000000000000ff0 <LBB2_12>:
 ;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
      510:	r6 -= r7
 ;   __u16 new_ip_pkt_len = ADJ_LEN + ipv6_pkt_len;
@@ -1950,15 +1394,15 @@ Disassembly of section tc:
      514:	r7 = 0x500
      515:	r7 -= r1
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-     516:	if r1 > 0x4ff goto +0x4 <LBB3_15>
+     516:	if r1 > 0x4ff goto +0x4 <LBB2_15>
      517:	r6 &= 0x3
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-     518:	if r6 == 0x0 goto +0x2 <LBB3_15>
+     518:	if r6 == 0x0 goto +0x2 <LBB2_15>
 ;     tail_adj = -(new_ip_pkt_len % 4);
      519:	r6 = -r6
      520:	r7 = r6
 
-0000000000001048 <LBB3_15>:
+0000000000001048 <LBB2_15>:
      521:	r6 = 0x0
 ;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
      522:	r1 = *(u64 *)(r10 - 0x38)
@@ -1967,12 +1411,12 @@ Disassembly of section tc:
      525:	call 0x2b
      526:	r3 = 0x2
 ;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-     527:	if r0 != 0x0 goto +0x136 <LBB3_72>
+     527:	if r0 != 0x0 goto +0x136 <LBB2_72>
 ;   return tail_adj < 0 ? tail_adj : 0;
-     528:	if r6 s> r7 goto +0x1 <LBB3_18>
+     528:	if r6 s> r7 goto +0x1 <LBB2_18>
      529:	r7 = 0x0
 
-0000000000001090 <LBB3_18>:
+0000000000001090 <LBB2_18>:
      530:	r1 = *(u64 *)(r10 - 0x38)
 ;     int new_len = ctx->len + pkt.tail_adjust;
      531:	r2 = *(u32 *)(r1 + 0x0)
@@ -1982,7 +1426,7 @@ Disassembly of section tc:
      534:	call 0x26
      535:	r3 = 0x2
 ;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     536:	if r0 != 0x0 goto +0x12d <LBB3_72>
+     536:	if r0 != 0x0 goto +0x12d <LBB2_72>
      537:	r1 = *(u64 *)(r10 - 0x38)
 ;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
      538:	r8 = *(u32 *)(r1 + 0x50)
@@ -1990,7 +1434,7 @@ Disassembly of section tc:
 ;   assert_boundary(orig_ipv6, pkt->end, false);
      540:	r1 = r7
      541:	r1 += 0x58
-     542:	if r1 > r8 goto +0x127 <LBB3_72>
+     542:	if r1 > r8 goto +0x127 <LBB2_72>
      543:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
      544:	*(u32 *)(r7 + 0x0) = r1
@@ -2044,10 +1488,10 @@ Disassembly of section tc:
      581:	r3 >>= 0x20
      582:	r1 = 0x1
      583:	r2 = 0x1
-     584:	if r3 != r0 goto +0x1 <LBB3_22>
+     584:	if r3 != r0 goto +0x1 <LBB2_22>
      585:	r2 = 0x0
 
-0000000000001250 <LBB3_22>:
+0000000000001250 <LBB2_22>:
      586:	*(u64 *)(r10 - 0x30) = r7
 ;   return csum + (csum < addend);
      587:	r0 += r2
@@ -2055,38 +1499,38 @@ Disassembly of section tc:
      589:	r2 <<= 0x20
      590:	r2 >>= 0x20
      591:	r3 = 0xc5ffffff ll
-     593:	if r2 > r3 goto +0x1 <LBB3_24>
+     593:	if r2 > r3 goto +0x1 <LBB2_24>
      594:	r1 = 0x0
 
-0000000000001298 <LBB3_24>:
+0000000000001298 <LBB2_24>:
 ;   csum += addend;
      595:	r0 += r1
      596:	r9 = 0x400
 ;   return csum + (csum < addend);
      597:	r0 += 0x3a000000
-     598:	goto +0x4 <LBB3_26>
+     598:	goto +0x4 <LBB2_26>
 
-00000000000012b8 <LBB3_25>:
+00000000000012b8 <LBB2_25>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      599:	r1 &= 0xffff
      600:	r9 = r1
-     601:	if r1 > 0x4 goto +0x1 <LBB3_26>
-     602:	goto +0xca <LBB3_66>
+     601:	if r1 > 0x4 goto +0x1 <LBB2_26>
+     602:	goto +0xca <LBB2_66>
 
-00000000000012d8 <LBB3_26>:
+00000000000012d8 <LBB2_26>:
 ;     __u16 j = (i >= 512) ? 512 : i;
      603:	r4 = r9
      604:	r4 <<= 0x20
      605:	r4 >>= 0x20
      606:	r1 = 0x200
-     607:	if r1 > r4 goto +0x1 <LBB3_28>
+     607:	if r1 > r4 goto +0x1 <LBB2_28>
      608:	r4 = 0x200
 
-0000000000001308 <LBB3_28>:
+0000000000001308 <LBB2_28>:
 ;     if (likely(buf + j <= data_end)) {
      609:	r7 = r6
      610:	r7 += r4
-     611:	if r7 > r8 goto +0x6 <LBB3_30>
+     611:	if r7 > r8 goto +0x6 <LBB2_30>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
      612:	r1 = 0x0
      613:	r2 = 0x0
@@ -2095,22 +1539,22 @@ Disassembly of section tc:
      616:	call 0x1c
      617:	r6 = r7
 
-0000000000001350 <LBB3_30>:
+0000000000001350 <LBB2_30>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      618:	r1 = r9
      619:	r1 += 0xfe00
      620:	r2 = r9
      621:	r2 <<= 0x20
      622:	r2 >>= 0x20
-     623:	if r2 > 0x200 goto -0x19 <LBB3_25>
+     623:	if r2 > 0x200 goto -0x19 <LBB2_25>
      624:	r9 >>= 0x1
      625:	r1 = r9
-     626:	goto -0x1c <LBB3_25>
+     626:	goto -0x1c <LBB2_25>
 
-0000000000001398 <LBB3_32>:
+0000000000001398 <LBB2_32>:
 ;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
      627:	r1 = *(u8 *)(r7 + 0x6)
-     628:	if r1 != 0x3a goto -0x99 <LBB3_5>
+     628:	if r1 != 0x3a goto -0x99 <LBB2_5>
      629:	r1 = 0x3
      630:	*(u32 *)(r10 - 0x4) = r1
      631:	r2 = r10
@@ -2119,22 +1563,22 @@ Disassembly of section tc:
      633:	r1 = 0x0 ll
      635:	call 0x1
 ;   if (likely(value)) {
-     636:	if r0 == 0x0 goto +0x2 <LBB3_35>
+     636:	if r0 == 0x0 goto +0x2 <LBB2_35>
      637:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      638:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000013f8 <LBB3_35>:
+00000000000013f8 <LBB2_35>:
 ;   assert_boundary(icmp6, pkt->end, false);
      639:	r1 = r7
      640:	r1 += 0x30
-     641:	if r1 > r6 goto -0xa6 <LBB3_5>
+     641:	if r1 > r6 goto -0xa6 <LBB2_5>
 ;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
      642:	r1 = *(u8 *)(r9 + 0x0)
-     643:	if r1 != 0x80 goto -0xa8 <LBB3_5>
+     643:	if r1 != 0x80 goto -0xa8 <LBB2_5>
 ;   assert_equal(icmp6->icmp6_code, 0, false);
      644:	r1 = *(u8 *)(r7 + 0x29)
-     645:	if r1 != 0x0 goto -0xaa <LBB3_5>
+     645:	if r1 != 0x0 goto -0xaa <LBB2_5>
      646:	r1 = 0x4
      647:	*(u32 *)(r10 - 0x4) = r1
      648:	r2 = r10
@@ -2143,12 +1587,12 @@ Disassembly of section tc:
      650:	r1 = 0x0 ll
      652:	call 0x1
 ;   if (likely(value)) {
-     653:	if r0 == 0x0 goto +0x2 <LBB3_40>
+     653:	if r0 == 0x0 goto +0x2 <LBB2_40>
      654:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      655:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000001480 <LBB3_40>:
+0000000000001480 <LBB2_40>:
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
      656:	r3 = r7
      657:	r3 += 0x8
@@ -2173,20 +1617,20 @@ Disassembly of section tc:
      674:	r3 >>= 0x20
      675:	r1 = 0x1
      676:	r2 = 0x1
-     677:	if r3 != r0 goto +0x1 <LBB3_42>
+     677:	if r3 != r0 goto +0x1 <LBB2_42>
      678:	r2 = 0x0
 
-0000000000001538 <LBB3_42>:
+0000000000001538 <LBB2_42>:
 ;   return csum + (csum < addend);
      679:	r0 += r2
      680:	r2 = r0
      681:	r2 <<= 0x20
      682:	r2 >>= 0x20
      683:	r3 = 0xc5ffffff ll
-     685:	if r2 > r3 goto +0x1 <LBB3_44>
+     685:	if r2 > r3 goto +0x1 <LBB2_44>
      686:	r1 = 0x0
 
-0000000000001578 <LBB3_44>:
+0000000000001578 <LBB2_44>:
      687:	r7 += 0x18
      688:	*(u64 *)(r10 - 0x48) = r7
 ;   csum += addend;
@@ -2194,18 +1638,18 @@ Disassembly of section tc:
      690:	r7 = 0x400
 ;   return csum + (csum < addend);
      691:	r0 += 0x3a000000
-     692:	goto +0x12 <LBB3_46>
+     692:	goto +0x12 <LBB2_46>
 
-00000000000015a8 <LBB3_45>:
+00000000000015a8 <LBB2_45>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      693:	r1 &= 0xffff
      694:	r7 = r1
-     695:	if r1 > 0x4 goto +0xf <LBB3_46>
+     695:	if r1 > 0x4 goto +0xf <LBB2_46>
 ;   if (likely(buf + 4 <= data_end)) {
      696:	r1 = r9
      697:	r1 += 0x4
      698:	r7 = *(u64 *)(r10 - 0x30)
-     699:	if r1 > r6 goto +0x26 <LBB3_56>
+     699:	if r1 > r6 goto +0x26 <LBB2_56>
 ;   csum += addend;
      700:	r0 <<= 0x20
      701:	r0 >>= 0x20
@@ -2217,24 +1661,24 @@ Disassembly of section tc:
      705:	r3 <<= 0x20
      706:	r3 >>= 0x20
      707:	r2 = 0x1
-     708:	if r3 != r1 goto +0x1a <LBB3_55>
+     708:	if r3 != r1 goto +0x1a <LBB2_55>
      709:	r2 = 0x0
-     710:	goto +0x18 <LBB3_55>
+     710:	goto +0x18 <LBB2_55>
 
-0000000000001638 <LBB3_46>:
+0000000000001638 <LBB2_46>:
 ;     __u16 j = (i >= 512) ? 512 : i;
      711:	r4 = r7
      712:	r4 <<= 0x20
      713:	r4 >>= 0x20
      714:	r1 = 0x200
-     715:	if r1 > r4 goto +0x1 <LBB3_48>
+     715:	if r1 > r4 goto +0x1 <LBB2_48>
      716:	r4 = 0x200
 
-0000000000001668 <LBB3_48>:
+0000000000001668 <LBB2_48>:
 ;     if (likely(buf + j <= data_end)) {
      717:	r8 = r9
      718:	r8 += r4
-     719:	if r8 > r6 goto +0x6 <LBB3_50>
+     719:	if r8 > r6 goto +0x6 <LBB2_50>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
      720:	r1 = 0x0
      721:	r2 = 0x0
@@ -2243,45 +1687,45 @@ Disassembly of section tc:
      724:	call 0x1c
      725:	r9 = r8
 
-00000000000016b0 <LBB3_50>:
+00000000000016b0 <LBB2_50>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
      726:	r1 = r7
      727:	r1 += 0xfe00
      728:	r2 = r7
      729:	r2 <<= 0x20
      730:	r2 >>= 0x20
-     731:	if r2 > 0x200 goto -0x27 <LBB3_45>
+     731:	if r2 > 0x200 goto -0x27 <LBB2_45>
      732:	r7 >>= 0x1
      733:	r1 = r7
-     734:	goto -0x2a <LBB3_45>
+     734:	goto -0x2a <LBB2_45>
 
-00000000000016f8 <LBB3_55>:
+00000000000016f8 <LBB2_55>:
 ;   return csum + (csum < addend);
      735:	r1 += r2
 ;     sum = csum_add(sum, *(__be32 *)buf++);
      736:	r9 += 0x1
      737:	r0 = r1
 
-0000000000001710 <LBB3_56>:
+0000000000001710 <LBB2_56>:
      738:	r1 = 0x0
 ;   if (likely(buf + 2 <= data_end)) {
      739:	r2 = r9
      740:	r2 += 0x2
-     741:	if r2 > r6 goto +0x2 <LBB3_58>
+     741:	if r2 > r6 goto +0x2 <LBB2_58>
 ;     addend = *(__be16 *)buf++;
      742:	r1 = *(u16 *)(r9 + 0x0)
      743:	r9 += 0x1
 
-0000000000001740 <LBB3_58>:
+0000000000001740 <LBB2_58>:
 ;   if (likely(buf + 1 <= data_end)) {
      744:	r2 = r9
      745:	r2 += 0x1
-     746:	if r2 > r6 goto +0x2 <LBB3_60>
+     746:	if r2 > r6 goto +0x2 <LBB2_60>
 ;     addend += *(__u8 *)buf++;
      747:	r2 = *(u8 *)(r9 + 0x0)
      748:	r1 += r2
 
-0000000000001768 <LBB3_60>:
+0000000000001768 <LBB2_60>:
 ;   csum += addend;
      749:	r0 <<= 0x20
      750:	r0 >>= 0x20
@@ -2290,10 +1734,10 @@ Disassembly of section tc:
      753:	r3 <<= 0x20
      754:	r3 >>= 0x20
      755:	r2 = 0x1
-     756:	if r3 != r1 goto +0x1 <LBB3_62>
+     756:	if r3 != r1 goto +0x1 <LBB2_62>
      757:	r2 = 0x0
 
-00000000000017b0 <LBB3_62>:
+00000000000017b0 <LBB2_62>:
 ;   return csum + (csum < addend);
      758:	r1 += r2
      759:	r2 = 0xffff0000 ll
@@ -2310,7 +1754,7 @@ Disassembly of section tc:
      768:	r2 += r1
 ;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
      769:	r2 &= 0xffff
-     770:	if r2 != 0xffff goto -0x127 <LBB3_5>
+     770:	if r2 != 0xffff goto -0x127 <LBB2_5>
      771:	r1 = 0x5
      772:	*(u32 *)(r10 - 0x4) = r1
      773:	r2 = r10
@@ -2319,12 +1763,12 @@ Disassembly of section tc:
      775:	r1 = 0x0 ll
      777:	call 0x1
 ;   if (likely(value)) {
-     778:	if r0 == 0x0 goto +0x2 <LBB3_65>
+     778:	if r0 == 0x0 goto +0x2 <LBB2_65>
      779:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
      780:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000001868 <LBB3_65>:
+0000000000001868 <LBB2_65>:
      781:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
      782:	*(u32 *)(r7 + 0x0) = r1
@@ -2354,14 +1798,14 @@ Disassembly of section tc:
      801:	r1 = *(u16 *)(r7 + 0x2a)
      802:	r1 += -0x1
      803:	*(u16 *)(r7 + 0x2a) = r1
-     804:	goto +0x1c <LBB3_71>
+     804:	goto +0x1c <LBB2_71>
 
-0000000000001928 <LBB3_66>:
+0000000000001928 <LBB2_66>:
 ;   if (likely(buf + 4 <= data_end)) {
      805:	r1 = r6
      806:	r1 += 0x4
      807:	r4 = *(u64 *)(r10 - 0x30)
-     808:	if r1 > r8 goto +0xc <LBB3_70>
+     808:	if r1 > r8 goto +0xc <LBB2_70>
 ;     sum = csum_add(sum, *(__be32 *)buf++);
      809:	r1 = *(u32 *)(r6 + 0x0)
 ;   csum += addend;
@@ -2372,15 +1816,15 @@ Disassembly of section tc:
      814:	r3 <<= 0x20
      815:	r3 >>= 0x20
      816:	r2 = 0x1
-     817:	if r3 != r1 goto +0x1 <LBB3_69>
+     817:	if r3 != r1 goto +0x1 <LBB2_69>
      818:	r2 = 0x0
 
-0000000000001998 <LBB3_69>:
+0000000000001998 <LBB2_69>:
 ;   return csum + (csum < addend);
      819:	r1 += r2
      820:	r0 = r1
 
-00000000000019a8 <LBB3_70>:
+00000000000019a8 <LBB2_70>:
      821:	r1 = 0xffff0000 ll
 ;   sum = (sum & 0xffff) + (sum >> 16);
      823:	r2 = r0
@@ -2396,7 +1840,7 @@ Disassembly of section tc:
      831:	r1 ^= -0x1
      832:	*(u16 *)(r4 + 0x2a) = r1
 
-0000000000001a08 <LBB3_71>:
+0000000000001a08 <LBB2_71>:
 ;   return bpf_redirect(ctx->ingress_ifindex, 0);
      833:	r1 = *(u64 *)(r10 - 0x38)
      834:	r1 = *(u32 *)(r1 + 0x24)
@@ -2404,7 +1848,7 @@ Disassembly of section tc:
      836:	call 0x17
      837:	r3 = r0
 
-0000000000001a30 <LBB3_72>:
+0000000000001a30 <LBB2_72>:
 ;   return exceed2go_tc(ctx, BASE_LAYER_L3);
      838:	r0 = r3
      839:	exit

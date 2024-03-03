@@ -68,7 +68,6 @@ func LoadAndPin() error {
 		objs.Exceed2goTcL2:     PinFileNameTCL2Prog,
 		objs.Exceed2goTcL3:     PinFileNameTCL3Prog,
 		objs.Exceed2goXdpL2:    PinFileNameXDPL2Prog,
-		objs.Exceed2goXdpL3:    PinFileNameXDPL3Prog,
 		objs.Exceed2goCounters: PinFileNameStatsMap,
 		objs.Exceed2goAddrs:    PinFileNameConfigMap,
 	}

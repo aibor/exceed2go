@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -72,10 +73,13 @@ func loadCmd() *cobra.Command {
 			// Attach the program to all interfaces. Removes all state in case
 			// of error for any interface.
 			for _, iface := range ifaces {
-				prog := program(tc, iface.HardwareAddr == nil)
+				prog, err := program(tc, iface.HardwareAddr == nil)
+				if err != nil {
+					return fmt.Errorf("iface %s: %v", iface.Name, err)
+				}
 				if err := exceed2go.AttachProg(prog, iface); err != nil {
 					exceed2go.Remove()
-					return fmt.Errorf("attach program to %s: %v", iface.Name, err)
+					return fmt.Errorf("iface %s: attach program: %v", iface.Name, err)
 				}
 			}
 
@@ -104,15 +108,15 @@ func loadCmd() *cobra.Command {
 	return cmd
 }
 
-func program(tc bool, l3 bool) exceed2go.PinFileName {
+func program(tc bool, l3 bool) (exceed2go.PinFileName, error) {
 	if tc {
 		if l3 {
-			return exceed2go.PinFileNameTCL3Prog
+			return exceed2go.PinFileNameTCL3Prog, nil
 		}
-		return exceed2go.PinFileNameTCL2Prog
+		return exceed2go.PinFileNameTCL2Prog, nil
 	}
 	if l3 {
-		return exceed2go.PinFileNameXDPL3Prog
+		return "", errors.New("L3 interfaces do not support XDP. Try TC.")
 	}
-	return exceed2go.PinFileNameXDPL2Prog
+	return exceed2go.PinFileNameXDPL2Prog, nil
 }

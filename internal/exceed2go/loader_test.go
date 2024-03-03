@@ -23,7 +23,6 @@ func TestLoadAndPin(t *testing.T) {
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCL2Prog))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameTCL3Prog))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPL2Prog))
-	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameXDPL3Prog))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameConfigMap))
 	assert.FileExists(t, exceed2go.BPFFSPath(exceed2go.PinFileNameStatsMap))
 	assert.NoError(t, exceed2go.LoadAndPin(), "LoadAndPin again")
@@ -41,15 +40,6 @@ func TestAttachProg(t *testing.T) {
 		{
 			name: "xdp_l2",
 			prog: exceed2go.PinFileNameXDPL2Prog,
-			infoTestFunc: func(t *testing.T, i *link.Info) {
-				xdp := i.XDP()
-				require.NotNil(t, xdp, "link.Info.XDP")
-				assert.Equal(t, iface.Index, int(xdp.Ifindex), "link interface index matches test interface")
-			},
-		},
-		{
-			name: "xdp_l3",
-			prog: exceed2go.PinFileNameXDPL3Prog,
 			infoTestFunc: func(t *testing.T, i *link.Info) {
 				xdp := i.XDP()
 				require.NotNil(t, xdp, "link.Info.XDP")
