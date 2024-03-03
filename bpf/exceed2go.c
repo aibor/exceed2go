@@ -43,11 +43,12 @@ enum pkt_status {
 };
 
 struct pkt_info {
-  struct ethhdr   *eth;
-  struct ipv6hdr  *ipv6;
-  struct in6_addr *exceed_addr;
-  void            *end;
-  int              tail_adjust;
+  struct ethhdr  *eth;
+  struct ipv6hdr *ipv6;
+  void           *end;
+  int             tail_adjust;
+  struct in6_addr reply_saddr;
+  struct in6_addr reply_daddr;
 };
 
 /* Definition of hop addresses in the order they are traversed by the packet.
@@ -102,6 +103,19 @@ pkt_info_set_ptrs(struct pkt_info      *pkt,
   pkt->end = (void *)(unsigned long)end;
 }
 
+static __always_inline void
+mac_addr_copy(struct mac_addr *dest, const struct mac_addr *src) {
+  (dest->mac_addr16[0] = src->mac_addr16[0]);
+  (dest->mac_addr16[1] = src->mac_addr16[1]);
+  (dest->mac_addr16[2] = src->mac_addr16[2]);
+}
+
+static __always_inline void
+in6_addr_copy(struct in6_addr *dest, const struct in6_addr *src) {
+  (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+  (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+}
+
 static __always_inline bool
 in6_addr_equal(const struct in6_addr *a, const struct in6_addr *b) {
   return ((a->in6_u.u6_addr64[0] == b->in6_u.u6_addr64[0]) &&
@@ -113,14 +127,14 @@ in6_addr_equal(const struct in6_addr *a, const struct in6_addr *b) {
  * with 0.
  */
 static __always_inline void
-ipv6_init(struct ipv6hdr *ipv6) {
+ipv6_init(struct ipv6hdr *ipv6, const __be16 payload_len) {
   const struct ipv6hdr ipv6_new = {
       .version     = 6,
       .priority    = 0,
       .flow_lbl[0] = 0,
       .flow_lbl[1] = 0,
       .flow_lbl[2] = 0,
-      .payload_len = 0,
+      .payload_len = payload_len,
       .nexthdr     = IPPROTO_ICMPV6,
       .hop_limit   = IPV6_HOP_LIMIT,
   };
@@ -138,9 +152,9 @@ struct target_search_cb_ctx {
  * map looking up the given needle by the callback context struct.
  */
 static long
-target_search_cb(void                        *map,
-                 __u32                       *key,
-                 struct in6_addr             *value,
+target_search_cb(const void                  *map,
+                 const __u32                 *key,
+                 const struct in6_addr       *value,
                  struct target_search_cb_ctx *cb_ctx) {
   /* 0 is an invalid hop number, so skip it. */
   if (*key == 0) {
@@ -233,11 +247,11 @@ icmp6_csum(struct icmp6hdr *icmp6,
 /* Swap ethernet addresses. */
 static __always_inline void
 eth_hdr_reverse(struct ethhdr *new, struct ethhdr *old) {
-  __u64 tmphwaddr = 0;
-  bpf_memcpy(&tmphwaddr, &old->h_source, ETH_ALEN);
-  bpf_memcpy(&new->h_source, &old->h_dest, ETH_ALEN);
-  bpf_memcpy(&new->h_dest, &tmphwaddr, ETH_ALEN);
-  new->h_proto = old->h_proto;
+  struct mac_addr tmphwaddr;
+  mac_addr_copy(&tmphwaddr, &old->daddr);
+  mac_addr_copy(&new->daddr, &old->saddr);
+  mac_addr_copy(&new->saddr, &tmphwaddr);
+  new->proto = old->proto;
 }
 
 /* Calculate if the packet end needs to be adjusted. It must not be longer than
@@ -248,7 +262,7 @@ eth_hdr_reverse(struct ethhdr *new, struct ethhdr *old) {
 static __always_inline int
 tail_adjust(int ipv6_pkt_len) {
   /* The ICMP time exceeded packet may not be longer than IPv6 minimum MTU. */
-  __u16 new_ip_pkt_len = ADJ_LEN + ipv6_pkt_len;
+  __u32 new_ip_pkt_len = ADJ_LEN + ipv6_pkt_len;
   int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
 
   /* Ensure the resulting packet is always a multiple of 4 so it works with the
@@ -265,29 +279,24 @@ tail_adjust(int ipv6_pkt_len) {
  * from the given src_addr.
  */
 static __always_inline bool
-exceed2go_exceeded(struct pkt_info *pkt) {
-  struct icmp6hdr *icmp6     = next_header(pkt->ipv6);
-  struct ipv6hdr  *orig_ipv6 = (void *)pkt->ipv6 + (int)ADJ_LEN;
-  assert_boundary(orig_ipv6, pkt->end, false);
+exceed2go_exceeded(struct pkt_info *pkt, const enum base_layer base_layer) {
+  struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
+  assert_boundary(icmp6, pkt->end, false);
 
-  if (pkt->eth != NULL) {
+  if (base_layer == BASE_LAYER_L2) {
     eth_hdr_reverse(pkt->eth, (void *)pkt->eth + (int)ADJ_LEN);
   }
 
-  ipv6_init(pkt->ipv6);
-  pkt->ipv6->payload_len = bpf_htons(pkt->end - (void *)icmp6);
-  pkt->ipv6->saddr       = *pkt->exceed_addr;
-  pkt->ipv6->daddr       = orig_ipv6->saddr;
+  __be16 payload_len = bpf_htons(pkt->end - (void *)icmp6);
+  ipv6_init(pkt->ipv6, payload_len);
+  in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
+  in6_addr_copy(&pkt->ipv6->daddr, &pkt->reply_daddr);
 
-  const struct icmp6hdr icmp6_new = {
-      .icmp6_type                = ICMP6_TIME_EXCEEDED,
-      .icmp6_code                = 0,
-      .icmp6_cksum               = 0,
-      /* Time exceeded has 4 bytes unused space before payload starts. */
-      .icmp6_dataun.un_data32[0] = 0,
-  };
-
-  bpf_memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
+  struct icmp6hdr icmp6_new = {0};
+  icmp6_new.icmp6_type      = ICMP6_TIME_EXCEEDED;
+  icmp6_new.icmp6_code      = 0;
+  icmp6_new.icmp6_cksum     = 0;
+  *icmp6                    = icmp6_new;
 
   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
 
@@ -296,8 +305,8 @@ exceed2go_exceeded(struct pkt_info *pkt) {
 
 /* Create ICMPv6 echo reply message for the given packet. */
 static __always_inline void
-exceed2go_echo(struct pkt_info *pkt) {
-  if (pkt->eth != NULL) {
+exceed2go_echo(struct pkt_info *pkt, const enum base_layer base_layer) {
+  if (base_layer == BASE_LAYER_L2) {
     eth_hdr_reverse(pkt->eth, pkt->eth);
   }
 
@@ -305,13 +314,9 @@ exceed2go_echo(struct pkt_info *pkt) {
    * payload_length field is kept as is.
    * */
   __be16 payload_len = pkt->ipv6->payload_len;
-  ipv6_init(pkt->ipv6);
-  pkt->ipv6->payload_len = payload_len;
-
-  /* Swap IPv6 addresses. */
-  struct in6_addr tmpipv6addr = pkt->ipv6->saddr;
-  pkt->ipv6->saddr            = pkt->ipv6->daddr;
-  pkt->ipv6->daddr            = tmpipv6addr;
+  ipv6_init(pkt->ipv6, payload_len);
+  in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
+  in6_addr_copy(&pkt->ipv6->daddr, &pkt->reply_daddr);
 
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
 
@@ -334,11 +339,11 @@ exceed2go_echo(struct pkt_info *pkt) {
  *     ICMP echo request.
  */
 static __always_inline enum pkt_status
-parse_packet(struct pkt_info *pkt) {
+parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   assert_boundary(pkt->ipv6, pkt->end, false);
 
-  if (pkt->eth != NULL) {
-    assert_equal(pkt->eth->h_proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
+  if (base_layer == BASE_LAYER_L2) {
+    assert_equal(pkt->eth->proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
   }
 
   assert_equal(pkt->ipv6->version, 6, false);
@@ -365,10 +370,13 @@ parse_packet(struct pkt_info *pkt) {
    */
   __u32 hop_key = pkt->ipv6->hop_limit;
   if (target.key > hop_key) {
-    pkt->exceed_addr = bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-    if (pkt->exceed_addr != NULL) {
+    struct in6_addr *exceed_addr =
+        bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
+    if (exceed_addr != NULL) {
       count(HOP_FOUND);
       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
+      in6_addr_copy(&pkt->reply_saddr, exceed_addr);
+      in6_addr_copy(&pkt->reply_daddr, &pkt->ipv6->saddr);
       return PKT_HOP_FOUND;
     }
   }
@@ -392,6 +400,9 @@ parse_packet(struct pkt_info *pkt) {
                PKT_UNRELATED);
   count(ICMP_CORRECT_CHECKSUM);
 
+  in6_addr_copy(&pkt->reply_saddr, &pkt->ipv6->daddr);
+  in6_addr_copy(&pkt->reply_daddr, &pkt->ipv6->saddr);
+
   return PKT_ECHO_REQUEST;
 }
 
@@ -401,7 +412,7 @@ exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
 
   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
 
-  switch (parse_packet(&pkt)) {
+  switch (parse_packet(&pkt, base_layer)) {
   case PKT_UNRELATED:
     return XDP_PASS;
   case PKT_HOP_FOUND:
@@ -414,12 +425,12 @@ exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
     /* Reinitialize after length change. */
     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
 
-    if (!exceed2go_exceeded(&pkt)) {
+    if (!exceed2go_exceeded(&pkt, base_layer)) {
       return XDP_ABORTED;
     }
     break;
   case PKT_ECHO_REQUEST:
-    exceed2go_echo(&pkt);
+    exceed2go_echo(&pkt, base_layer);
     break;
   }
 
@@ -432,7 +443,7 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
 
   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
 
-  switch (parse_packet(&pkt)) {
+  switch (parse_packet(&pkt, base_layer)) {
   case PKT_UNRELATED:
     return TC_ACT_UNSPEC;
   case PKT_HOP_FOUND:
@@ -445,12 +456,12 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
     /* Reinitialize after length change. */
     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
 
-    if (!exceed2go_exceeded(&pkt)) {
+    if (!exceed2go_exceeded(&pkt, base_layer)) {
       return TC_ACT_SHOT;
     }
     break;
   case PKT_ECHO_REQUEST:
-    exceed2go_echo(&pkt);
+    exceed2go_echo(&pkt, base_layer);
     break;
   }
 

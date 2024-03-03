@@ -36,10 +36,14 @@ typedef __u64 __be64;
 typedef __u16 __sum16;
 typedef __u32 __wsum;
 
+struct mac_addr {
+  __u16 mac_addr16[3];
+};
+
 struct ethhdr {
-  unsigned char h_dest[6];
-  unsigned char h_source[6];
-  __be16        h_proto;
+  struct mac_addr daddr;
+  struct mac_addr saddr;
+  __be16          proto;
 };
 
 struct in6_addr {
