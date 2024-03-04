@@ -11,7 +11,7 @@ require (
 	github.com/cilium/ebpf v0.13.2
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.8.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/tools v0.18.0
 )
 
