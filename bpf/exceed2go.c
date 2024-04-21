@@ -75,12 +75,6 @@ enum counter_key {
 };
 
 struct {
-  __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  __type(key, int);
-  __type(value, int);
-} perf SEC(".maps");
-
-struct {
   __uint(type, BPF_MAP_TYPE_ARRAY);
   __type(key, enum counter_key);
   __type(value, __u32);

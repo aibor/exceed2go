@@ -81,7 +81,6 @@ type Exceed2GoProgramSpecs struct {
 type Exceed2GoMapSpecs struct {
 	Exceed2goAddrs    *ebpf.MapSpec `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.MapSpec `ebpf:"exceed2go_counters"`
-	Perf              *ebpf.MapSpec `ebpf:"perf"`
 }
 
 // Exceed2GoObjects contains all objects after they have been loaded into the kernel.
@@ -105,14 +104,12 @@ func (o *Exceed2GoObjects) Close() error {
 type Exceed2GoMaps struct {
 	Exceed2goAddrs    *ebpf.Map `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.Map `ebpf:"exceed2go_counters"`
-	Perf              *ebpf.Map `ebpf:"perf"`
 }
 
 func (m *Exceed2GoMaps) Close() error {
 	return _Exceed2GoClose(
 		m.Exceed2goAddrs,
 		m.Exceed2goCounters,
-		m.Perf,
 	)
 }
 
