@@ -15,13 +15,16 @@ import (
 type Exceed2GoCounterKey uint32
 
 const (
-	Exceed2GoCounterKeyIPV6PACKET            Exceed2GoCounterKey = 0
-	Exceed2GoCounterKeyTO_TARGET             Exceed2GoCounterKey = 1
-	Exceed2GoCounterKeyHOP_FOUND             Exceed2GoCounterKey = 2
-	Exceed2GoCounterKeyICMP_PACKET           Exceed2GoCounterKey = 3
-	Exceed2GoCounterKeyICMP_ECHO_REQUEST     Exceed2GoCounterKey = 4
-	Exceed2GoCounterKeyICMP_CORRECT_CHECKSUM Exceed2GoCounterKey = 5
-	Exceed2GoCounterKeyCOUNTER_MAX_ENTRIES   Exceed2GoCounterKey = 6
+	Exceed2GoCounterKeyCOUNTER_IPV6PACKET            Exceed2GoCounterKey = 0
+	Exceed2GoCounterKeyCOUNTER_TO_TARGET             Exceed2GoCounterKey = 1
+	Exceed2GoCounterKeyCOUNTER_ICMP_PACKET           Exceed2GoCounterKey = 2
+	Exceed2GoCounterKeyCOUNTER_ICMP_ECHO_REQUEST     Exceed2GoCounterKey = 3
+	Exceed2GoCounterKeyCOUNTER_ICMP_CORRECT_CHECKSUM Exceed2GoCounterKey = 4
+	Exceed2GoCounterKeyCOUNTER_PKT_UNRELATED         Exceed2GoCounterKey = 5
+	Exceed2GoCounterKeyCOUNTER_PKT_HOP_FOUND         Exceed2GoCounterKey = 6
+	Exceed2GoCounterKeyCOUNTER_PKT_ECHO_REQUEST      Exceed2GoCounterKey = 7
+	Exceed2GoCounterKeyCOUNTER_DO_REDIRECT           Exceed2GoCounterKey = 8
+	Exceed2GoCounterKeyCOUNTER_MAX_ENTRIES           Exceed2GoCounterKey = 9
 )
 
 type Exceed2GoIn6Addr struct{ In6U struct{ U6Addr8 [16]uint8 } }
@@ -78,6 +81,7 @@ type Exceed2GoProgramSpecs struct {
 type Exceed2GoMapSpecs struct {
 	Exceed2goAddrs    *ebpf.MapSpec `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.MapSpec `ebpf:"exceed2go_counters"`
+	Perf              *ebpf.MapSpec `ebpf:"perf"`
 }
 
 // Exceed2GoObjects contains all objects after they have been loaded into the kernel.
@@ -101,12 +105,14 @@ func (o *Exceed2GoObjects) Close() error {
 type Exceed2GoMaps struct {
 	Exceed2goAddrs    *ebpf.Map `ebpf:"exceed2go_addrs"`
 	Exceed2goCounters *ebpf.Map `ebpf:"exceed2go_counters"`
+	Perf              *ebpf.Map `ebpf:"perf"`
 }
 
 func (m *Exceed2GoMaps) Close() error {
 	return _Exceed2GoClose(
 		m.Exceed2goAddrs,
 		m.Exceed2goCounters,
+		m.Perf,
 	)
 }
 

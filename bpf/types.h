@@ -148,6 +148,23 @@ enum tc_action {
   TC_ACT_REDIRECT = 7,
 };
 
+enum bpf_adj_room_mode {
+  BPF_ADJ_ROOM_NET,
+  BPF_ADJ_ROOM_MAC,
+};
+
+enum {
+  BPF_F_ADJ_ROOM_FIXED_GSO     = (1ULL << 0),
+  BPF_F_ADJ_ROOM_ENCAP_L3_IPV4 = (1ULL << 1),
+  BPF_F_ADJ_ROOM_ENCAP_L3_IPV6 = (1ULL << 2),
+  BPF_F_ADJ_ROOM_ENCAP_L4_GRE  = (1ULL << 3),
+  BPF_F_ADJ_ROOM_ENCAP_L4_UDP  = (1ULL << 4),
+  BPF_F_ADJ_ROOM_NO_CSUM_RESET = (1ULL << 5),
+  BPF_F_ADJ_ROOM_ENCAP_L2_ETH  = (1ULL << 6),
+  BPF_F_ADJ_ROOM_DECAP_L3_IPV4 = (1ULL << 7),
+  BPF_F_ADJ_ROOM_DECAP_L3_IPV6 = (1ULL << 8),
+};
+
 enum bpf_map_type {
   BPF_MAP_TYPE_UNSPEC                = 0,
   BPF_MAP_TYPE_HASH                  = 1,

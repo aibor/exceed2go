@@ -37,1811 +37,1981 @@ Disassembly of section .text:
 Disassembly of section xdp:
 
 0000000000000000 <exceed2go_xdp_l2>:
-; exceed2go_xdp_l2(struct xdp_md *ctx) {
-       0:	r3 = 0x2
 ;   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-       1:	r2 = *(u32 *)(r1 + 0x0)
-       2:	*(u64 *)(r10 - 0x38) = r1
-;   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-       3:	r9 = *(u32 *)(r1 + 0x4)
+       0:	r2 = *(u32 *)(r1 + 0x0)
+       1:	r9 = *(u32 *)(r1 + 0x4)
 ;   assert_boundary(pkt->ipv6, pkt->end, false);
-       4:	r6 = r2
-       5:	r6 += 0x36
-       6:	if r6 > r9 goto +0x19e <LBB0_73>
+       2:	r8 = r2
+       3:	r8 += 0x36
+       4:	if r8 > r9 goto +0x24 <LBB0_6>
 ;     assert_equal(pkt->eth->proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
-       7:	r1 = *(u16 *)(r2 + 0xc)
-       8:	if r1 != 0xdd86 goto +0x19c <LBB0_73>
-       9:	r7 = r2
-      10:	r7 += 0xe
+       5:	r3 = *(u16 *)(r2 + 0xc)
+       6:	if r3 != 0xdd86 goto +0x22 <LBB0_6>
+       7:	r6 = r2
+       8:	r6 += 0xe
 ;   assert_equal(pkt->ipv6->version, 6, false);
-      11:	r1 = *(u8 *)(r7 + 0x0)
-      12:	r1 &= 0xf0
-      13:	if r1 != 0x60 goto +0x197 <LBB0_73>
-      14:	*(u64 *)(r10 - 0x30) = r2
-      15:	r8 = 0x0
-      16:	*(u32 *)(r10 - 0x20) = r8
-      17:	r2 = r10
-      18:	r2 += -0x20
+       9:	r3 = *(u8 *)(r6 + 0x0)
+      10:	r3 &= 0xf0
+      11:	if r3 != 0x60 goto +0x1d <LBB0_6>
+      12:	*(u64 *)(r10 - 0x38) = r1
+      13:	*(u64 *)(r10 - 0x30) = r2
+      14:	r7 = 0x0
+      15:	*(u32 *)(r10 - 0x20) = r7
+      16:	r2 = r10
+      17:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-      19:	r1 = 0x0 ll
-      21:	call 0x1
+      18:	r1 = 0x0 ll
+      20:	call 0x1
 ;   if (likely(value)) {
-      22:	if r0 == 0x0 goto +0x2 <LBB0_5>
-      23:	r1 = 0x1
+      21:	if r0 == 0x0 goto +0x2 <LBB0_5>
+      22:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-      24:	lock *(u32 *)(r0 + 0x0) += r1
+      23:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000000c8 <LBB0_5>:
-      25:	r2 = *(u64 *)(r10 - 0x30)
+00000000000000c0 <LBB0_5>:
+      24:	r2 = *(u64 *)(r10 - 0x30)
 ;       .needle = pkt->ipv6->daddr,
-      26:	r1 = *(u64 *)(r2 + 0x2e)
-      27:	*(u64 *)(r10 - 0x18) = r1
-      28:	r1 = *(u64 *)(r2 + 0x26)
-      29:	*(u64 *)(r10 - 0x20) = r1
+      25:	r1 = *(u64 *)(r2 + 0x2e)
+      26:	*(u64 *)(r10 - 0x18) = r1
+      27:	r1 = *(u64 *)(r2 + 0x26)
+      28:	*(u64 *)(r10 - 0x20) = r1
 ;   struct target_search_cb_ctx target = {
-      30:	*(u8 *)(r10 - 0xc) = r8
-      31:	*(u32 *)(r10 - 0x10) = r8
-      32:	r3 = r10
+      29:	*(u8 *)(r10 - 0xc) = r7
+      30:	*(u32 *)(r10 - 0x10) = r7
+      31:	r3 = r10
 ;       .needle = pkt->ipv6->daddr,
-      33:	r3 += -0x20
+      32:	r3 += -0x20
 ;   bpf_for_each_map_elem(&exceed2go_addrs, target_search_cb, &target, 0);
-      34:	r1 = 0x0 ll
-      36:	r2 = 0x0 ll
-      38:	r4 = 0x0
-      39:	call 0xa4
+      33:	r1 = 0x0 ll
+      35:	r2 = 0x0 ll
+      37:	r4 = 0x0
+      38:	call 0xa4
 ;   assert_equal(target.found, true, PKT_UNRELATED);
-      40:	r1 = *(u8 *)(r10 - 0xc)
-      41:	if r1 != 0x0 goto +0x2 <LBB0_7>
+      39:	r1 = *(u8 *)(r10 - 0xc)
+      40:	if r1 != 0x0 goto +0xc <LBB0_7>
 
-0000000000000150 <LBB0_6>:
-      42:	r3 = 0x2
-      43:	goto +0x179 <LBB0_73>
-
-0000000000000160 <LBB0_7>:
-      44:	*(u64 *)(r10 - 0x40) = r7
-      45:	r7 = 0x1
-      46:	*(u32 *)(r10 - 0x4) = r7
-      47:	r2 = r10
-      48:	r2 += -0x4
+0000000000000148 <LBB0_6>:
+      41:	r1 = 0x5
+      42:	*(u32 *)(r10 - 0x20) = r1
+      43:	r2 = r10
+      44:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-      49:	r1 = 0x0 ll
-      51:	call 0x1
+      45:	r1 = 0x0 ll
+      47:	call 0x1
 ;   if (likely(value)) {
-      52:	if r0 == 0x0 goto +0x1 <LBB0_9>
+      48:	if r0 == 0x0 goto +0x2 <LBB0_49>
+      49:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-      53:	lock *(u32 *)(r0 + 0x0) += r7
+      50:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000001b0 <LBB0_9>:
-      54:	r8 = *(u64 *)(r10 - 0x30)
-;   __u32 hop_key = pkt->ipv6->hop_limit;
-      55:	r1 = *(u8 *)(r8 + 0x15)
-      56:	*(u32 *)(r10 - 0x24) = r1
-;   if (target.key > hop_key) {
-      57:	r2 = *(u32 *)(r10 - 0x10)
-      58:	if r1 >= r2 goto +0x98 <LBB0_33>
-      59:	r2 = r10
-;         bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-      60:	r2 += -0x24
-      61:	r1 = 0x0 ll
-      63:	call 0x1
-;     if (exceed_addr != NULL) {
-      64:	if r0 == 0x0 goto +0x92 <LBB0_33>
-      65:	r6 = r0
-      66:	r1 = 0x2
-      67:	*(u32 *)(r10 - 0x4) = r1
-      68:	r2 = r10
-      69:	r2 += -0x4
+0000000000000198 <LBB0_49>:
+      51:	r8 = 0x2
+      52:	goto +0x192 <LBB0_77>
+
+00000000000001a8 <LBB0_7>:
+      53:	*(u64 *)(r10 - 0x40) = r6
+      54:	r6 = 0x1
+      55:	*(u32 *)(r10 - 0x4) = r6
+      56:	r2 = r10
+      57:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+      58:	r1 = 0x0 ll
+      60:	call 0x1
+;   if (likely(value)) {
+      61:	if r0 == 0x0 goto +0x1 <LBB0_9>
+;     __sync_fetch_and_add(value, 1);
+      62:	lock *(u32 *)(r0 + 0x0) += r6
+
+00000000000001f8 <LBB0_9>:
+      63:	r7 = *(u64 *)(r10 - 0x30)
+;   __u32 hop_key = pkt->ipv6->hop_limit;
+      64:	r1 = *(u8 *)(r7 + 0x15)
+      65:	*(u32 *)(r10 - 0x24) = r1
+;   if (target.key > hop_key) {
+      66:	r2 = *(u32 *)(r10 - 0x10)
+      67:	if r1 >= r2 goto +0x9b <LBB0_15>
+      68:	r2 = r10
+;         bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
+      69:	r2 += -0x24
       70:	r1 = 0x0 ll
       72:	call 0x1
-;   if (likely(value)) {
-      73:	if r0 == 0x0 goto +0x2 <LBB0_13>
-      74:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-      75:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000260 <LBB0_13>:
+;     if (exceed_addr != NULL) {
+      73:	if r0 == 0x0 goto +0x95 <LBB0_15>
 ;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
-      76:	r1 = *(u64 *)(r10 - 0x40)
-      77:	r9 -= r1
-      78:	r7 = 0x4d0
+      74:	r1 = *(u64 *)(r10 - 0x40)
+      75:	r9 -= r1
+      76:	r6 = 0x4d0
 ;   int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
-      79:	r7 -= r9
-      80:	r7 <<= 0x20
-      81:	r7 s>>= 0x20
-      82:	r1 = 0x1
+      77:	r6 -= r9
+      78:	r6 <<= 0x20
+      79:	r6 s>>= 0x20
+      80:	r1 = 0x1
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-      83:	if r1 s> r7 goto +0x4 <LBB0_16>
-      84:	r9 &= 0x3
-      85:	if r9 == 0x0 goto +0x2 <LBB0_16>
+      81:	if r1 s> r6 goto +0x4 <LBB0_14>
+      82:	r9 &= 0x3
+      83:	if r9 == 0x0 goto +0x2 <LBB0_14>
 ;     tail_adj = -(new_ip_pkt_len % 4);
-      86:	r9 = -r9
-      87:	r7 = r9
+      84:	r9 = -r9
+      85:	r6 = r9
 
-00000000000002c0 <LBB0_16>:
+00000000000002b0 <LBB0_14>:
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-      88:	r1 = *(u64 *)(r8 + 0x1e)
+      86:	r1 = *(u64 *)(r7 + 0x1e)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-      89:	*(u64 *)(r10 - 0x40) = r1
-      90:	r1 = *(u64 *)(r8 + 0x16)
-      91:	*(u64 *)(r10 - 0x30) = r1
+      87:	*(u64 *)(r10 - 0x40) = r1
+      88:	r1 = *(u64 *)(r7 + 0x16)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-      92:	r8 = *(u64 *)(r6 + 0x8)
+      89:	*(u64 *)(r10 - 0x50) = r1
+      90:	r1 = *(u64 *)(r0 + 0x8)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-      93:	r6 = *(u64 *)(r6 + 0x0)
-;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
-      94:	r1 = *(u64 *)(r10 - 0x38)
-      95:	r2 = 0xffffffd0 ll
-      97:	call 0x2c
-      98:	r3 = 0x0
-;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
-      99:	if r0 != 0x0 goto +0x141 <LBB0_73>
-     100:	r1 = 0x0
+      91:	*(u64 *)(r10 - 0x48) = r1
+      92:	r1 = *(u64 *)(r0 + 0x0)
+      93:	*(u64 *)(r10 - 0x30) = r1
+      94:	r1 = 0x6
+      95:	*(u32 *)(r10 - 0x20) = r1
+      96:	r1 = 0x0
 ;   return tail_adj < 0 ? tail_adj : 0;
-     101:	if r1 s> r7 goto +0x1 <LBB0_19>
-     102:	r7 = 0x0
+      97:	if r1 s> r6 goto +0x1 <LBB0_51>
+      98:	r6 = 0x0
 
-0000000000000338 <LBB0_19>:
+0000000000000318 <LBB0_51>:
+      99:	r2 = r10
+     100:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     101:	r1 = 0x0 ll
+     103:	call 0x1
+     104:	r7 = *(u64 *)(r10 - 0x38)
+;   if (likely(value)) {
+     105:	if r0 == 0x0 goto +0x2 <LBB0_53>
+     106:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     107:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000360 <LBB0_53>:
+;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
+     108:	r1 = r7
+     109:	r2 = 0xffffffd0 ll
+     111:	call 0x2c
+     112:	r8 = 0x0
+;     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
+     113:	if r0 != 0x0 goto +0x155 <LBB0_77>
 ;     assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
-     103:	r1 = *(u64 *)(r10 - 0x38)
-     104:	r2 = r7
-     105:	call 0x41
-     106:	r3 = 0x0
-;     assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
-     107:	if r0 != 0x0 goto +0x139 <LBB0_73>
-     108:	r1 = *(u64 *)(r10 - 0x38)
+     114:	r1 = r7
+     115:	r2 = r6
+     116:	call 0x41
+     117:	if r0 != 0x0 goto +0x151 <LBB0_77>
 ;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     109:	r9 = *(u32 *)(r1 + 0x4)
-     110:	r2 = *(u32 *)(r1 + 0x0)
-;   assert_boundary(icmp6, pkt->end, false);
-     111:	r1 = r2
-     112:	r1 += 0x3e
-     113:	if r1 > r9 goto +0x133 <LBB0_73>
-     114:	r1 = 0x60
+     118:	r9 = *(u32 *)(r7 + 0x4)
+     119:	r4 = *(u32 *)(r7 + 0x0)
+;       assert_boundary(old_eth, pkt.end, XDP_ABORTED);
+     120:	r1 = r4
+     121:	r1 += 0x3e
+     122:	if r1 > r9 goto +0x14c <LBB0_77>
+     123:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     115:	*(u32 *)(r2 + 0xe) = r1
+     124:	*(u32 *)(r4 + 0xe) = r1
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     116:	*(u64 *)(r2 + 0x16) = r6
+     125:	r1 = *(u64 *)(r10 - 0x50)
+     126:	*(u64 *)(r4 + 0x26) = r1
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     117:	*(u64 *)(r2 + 0x1e) = r8
+     127:	r1 = *(u64 *)(r10 - 0x48)
+     128:	*(u64 *)(r4 + 0x1e) = r1
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     118:	r1 = *(u64 *)(r10 - 0x30)
-     119:	*(u64 *)(r2 + 0x26) = r1
-     120:	r1 = 0x403a
+     129:	r1 = *(u64 *)(r10 - 0x30)
+     130:	*(u64 *)(r4 + 0x16) = r1
+     131:	r1 = 0x403a
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     121:	*(u16 *)(r2 + 0x14) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     122:	r1 = *(u16 *)(r2 + 0x36)
-     123:	*(u16 *)(r2 + 0x0) = r1
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     124:	r1 = *(u16 *)(r2 + 0x38)
-     125:	*(u16 *)(r2 + 0x2) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     126:	r1 = *(u16 *)(r2 + 0x34)
-     127:	*(u16 *)(r2 + 0xa) = r1
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     128:	r1 = *(u16 *)(r2 + 0x32)
-     129:	*(u16 *)(r2 + 0x8) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     130:	r1 = *(u16 *)(r2 + 0x30)
-     131:	*(u16 *)(r2 + 0x6) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     132:	r1 = *(u16 *)(r2 + 0x3a)
-     133:	*(u16 *)(r2 + 0x4) = r1
-;   new->proto = old->proto;
-     134:	r1 = *(u16 *)(r2 + 0x3c)
-     135:	*(u16 *)(r2 + 0xc) = r1
-     136:	r1 = 0x3
+     132:	*(u16 *)(r4 + 0x14) = r1
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     133:	r1 = *(u16 *)(r4 + 0x36)
+     134:	r2 = *(u16 *)(r4 + 0x38)
+     135:	r3 = 0x3
 ;   *icmp6                    = icmp6_new;
-     137:	*(u32 *)(r2 + 0x36) = r1
+     136:	*(u32 *)(r4 + 0x36) = r3
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     137:	r3 = *(u16 *)(r4 + 0x3a)
+     138:	*(u16 *)(r4 + 0x4) = r3
+     139:	*(u16 *)(r4 + 0x2) = r2
+     140:	*(u16 *)(r4 + 0x0) = r1
+     141:	r1 = *(u16 *)(r4 + 0x3c)
+;   new->proto                  = old->proto;
+     142:	*(u16 *)(r4 + 0xc) = r1
+;   __u32 daddr_first           = *(__u32 *)old;
+     143:	r1 = *(u32 *)(r4 + 0x30)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     138:	r1 = *(u64 *)(r10 - 0x40)
-     139:	*(u64 *)(r2 + 0x2e) = r1
-     140:	r6 = r2
-;   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-     141:	r7 = r6
-     142:	r7 += 0x36
+     144:	r2 = *(u64 *)(r10 - 0x40)
+     145:	*(u64 *)(r4 + 0x2e) = r2
+;   *(__u32 *)&new->saddr       = daddr_first;
+     146:	r2 = r1
+     147:	r2 >>= 0x10
+     148:	*(u16 *)(r4 + 0x8) = r2
+     149:	*(u16 *)(r4 + 0x6) = r1
+;   __u16 daddr_last            = *(__u16 *)old + 2;
+     150:	r1 += 0x2
+;   *((__u16 *)&new->saddr + 2) = daddr_last;
+     151:	*(u16 *)(r4 + 0xa) = r1
+     152:	r6 = r4
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     153:	r7 = r6
+     154:	r7 += 0x36
 ;   __be16 payload_len = bpf_htons(pkt->end - (void *)icmp6);
-     143:	r1 = r9
-     144:	r1 -= r7
-     145:	r1 = be16 r1
+     155:	r1 = r9
+     156:	r1 -= r7
+     157:	r1 = be16 r1
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     146:	*(u16 *)(r6 + 0x12) = r1
-     147:	r1 = 0x0
+     158:	*(u16 *)(r6 + 0x12) = r1
+     159:	r1 = 0x0
 ;   *icmp6                    = icmp6_new;
-     148:	*(u32 *)(r6 + 0x3a) = r1
+     160:	*(u32 *)(r6 + 0x3a) = r1
 ;   in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
-     149:	r3 = r6
-     150:	r3 += 0x16
+     161:	r3 = r6
+     162:	r3 += 0x16
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     151:	r2 = 0x0
-     152:	r4 = 0x20
-     153:	r5 = 0x0
-     154:	call 0x1c
-     155:	r1 = r0
-     156:	r1 <<= 0x20
-     157:	r1 >>= 0x20
-     158:	*(u64 *)(r10 - 0x30) = r6
+     163:	r2 = 0x0
+     164:	r4 = 0x20
+     165:	r5 = 0x0
+     166:	call 0x1c
+     167:	r1 = r0
+     168:	r1 <<= 0x20
+     169:	r1 >>= 0x20
+     170:	*(u64 *)(r10 - 0x30) = r6
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     159:	r0 = *(u16 *)(r6 + 0x12)
-     160:	r0 <<= 0x10
-     161:	r0 <<= 0x20
-     162:	r0 >>= 0x20
+     171:	r0 = *(u16 *)(r6 + 0x12)
+     172:	r0 <<= 0x10
+     173:	r0 <<= 0x20
+     174:	r0 >>= 0x20
 ;   csum += addend;
-     163:	r0 += r1
-     164:	r3 = r0
-     165:	r3 <<= 0x20
-     166:	r3 >>= 0x20
-     167:	r1 = 0x1
-     168:	r2 = 0x1
-     169:	if r3 != r0 goto +0x1 <LBB0_23>
-     170:	r2 = 0x0
+     175:	r0 += r1
+     176:	r3 = r0
+     177:	r3 <<= 0x20
+     178:	r3 >>= 0x20
+     179:	r1 = 0x1
+     180:	r2 = 0x1
+     181:	if r3 != r0 goto +0x1 <LBB0_58>
+     182:	r2 = 0x0
 
-0000000000000558 <LBB0_23>:
+00000000000005b8 <LBB0_58>:
 ;   return csum + (csum < addend);
-     171:	r0 += r2
-     172:	r2 = r0
-     173:	r2 <<= 0x20
-     174:	r2 >>= 0x20
-     175:	r3 = 0xc5ffffff ll
-     177:	if r2 > r3 goto +0x1 <LBB0_25>
-     178:	r1 = 0x0
+     183:	r0 += r2
+     184:	r2 = r0
+     185:	r2 <<= 0x20
+     186:	r2 >>= 0x20
+     187:	r3 = 0xc5ffffff ll
+     189:	if r2 > r3 goto +0x1 <LBB0_60>
+     190:	r1 = 0x0
 
-0000000000000598 <LBB0_25>:
+00000000000005f8 <LBB0_60>:
 ;   csum += addend;
-     179:	r0 += r1
-     180:	r8 = 0x400
+     191:	r0 += r1
+     192:	r8 = 0x400
 ;   return csum + (csum < addend);
-     181:	r0 += 0x3a000000
-     182:	goto +0x4 <LBB0_27>
+     193:	r0 += 0x3a000000
+     194:	goto +0x4 <LBB0_61>
 
-00000000000005b8 <LBB0_26>:
+0000000000000618 <LBB0_67>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     183:	r1 &= 0xffff
-     184:	r8 = r1
-     185:	if r1 > 0x4 goto +0x1 <LBB0_27>
-     186:	goto +0xcd <LBB0_67>
+     195:	r1 &= 0xffff
+     196:	r8 = r1
+     197:	if r1 > 0x4 goto +0x1 <LBB0_61>
+     198:	goto +0xd9 <LBB0_79>
 
-00000000000005d8 <LBB0_27>:
+0000000000000638 <LBB0_61>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     187:	r4 = r8
-     188:	r4 <<= 0x20
-     189:	r4 >>= 0x20
-     190:	r1 = 0x200
-     191:	if r1 > r4 goto +0x1 <LBB0_29>
-     192:	r4 = 0x200
+     199:	r4 = r8
+     200:	r4 <<= 0x20
+     201:	r4 >>= 0x20
+     202:	r1 = 0x200
+     203:	if r1 > r4 goto +0x1 <LBB0_63>
+     204:	r4 = 0x200
 
-0000000000000608 <LBB0_29>:
+0000000000000668 <LBB0_63>:
 ;     if (likely(buf + j <= data_end)) {
-     193:	r6 = r7
-     194:	r6 += r4
-     195:	if r6 > r9 goto +0x6 <LBB0_31>
+     205:	r6 = r7
+     206:	r6 += r4
+     207:	if r6 > r9 goto +0x6 <LBB0_65>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     196:	r1 = 0x0
-     197:	r2 = 0x0
-     198:	r3 = r7
-     199:	r5 = r0
-     200:	call 0x1c
-     201:	r7 = r6
+     208:	r1 = 0x0
+     209:	r2 = 0x0
+     210:	r3 = r7
+     211:	r5 = r0
+     212:	call 0x1c
+     213:	r7 = r6
 
-0000000000000650 <LBB0_31>:
+00000000000006b0 <LBB0_65>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     202:	r1 = r8
-     203:	r1 += 0xfe00
-     204:	r2 = r8
-     205:	r2 <<= 0x20
-     206:	r2 >>= 0x20
-     207:	if r2 > 0x200 goto -0x19 <LBB0_26>
-     208:	r8 >>= 0x1
-     209:	r1 = r8
-     210:	goto -0x1c <LBB0_26>
+     214:	r1 = r8
+     215:	r1 += 0xfe00
+     216:	r2 = r8
+     217:	r2 <<= 0x20
+     218:	r2 >>= 0x20
+     219:	if r2 > 0x200 goto -0x19 <LBB0_67>
+     220:	r8 >>= 0x1
+     221:	r1 = r8
+     222:	goto -0x1c <LBB0_67>
 
-0000000000000698 <LBB0_33>:
+00000000000006f8 <LBB0_15>:
 ;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
-     211:	r1 = *(u8 *)(r8 + 0x14)
-     212:	if r1 != 0x3a goto -0xab <LBB0_6>
-     213:	r1 = 0x3
-     214:	*(u32 *)(r10 - 0x4) = r1
-     215:	r2 = r10
-     216:	r2 += -0x4
+     223:	r1 = *(u8 *)(r7 + 0x14)
+     224:	if r1 != 0x3a goto -0xb8 <LBB0_6>
+     225:	r1 = 0x2
+     226:	*(u32 *)(r10 - 0x4) = r1
+     227:	r2 = r10
+     228:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     217:	r1 = 0x0 ll
-     219:	call 0x1
+     229:	r1 = 0x0 ll
+     231:	call 0x1
 ;   if (likely(value)) {
-     220:	if r0 == 0x0 goto +0x2 <LBB0_36>
-     221:	r1 = 0x1
+     232:	if r0 == 0x0 goto +0x2 <LBB0_18>
+     233:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     222:	lock *(u32 *)(r0 + 0x0) += r1
+     234:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000006f8 <LBB0_36>:
+0000000000000758 <LBB0_18>:
 ;   assert_boundary(icmp6, pkt->end, false);
-     223:	r1 = r8
-     224:	r1 += 0x3e
-     225:	if r1 > r9 goto -0xb8 <LBB0_6>
+     235:	r1 = r7
+     236:	r1 += 0x3e
+     237:	if r1 > r9 goto -0xc5 <LBB0_6>
 ;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-     226:	r1 = *(u8 *)(r6 + 0x0)
-     227:	if r1 != 0x80 goto -0xba <LBB0_6>
+     238:	r1 = *(u8 *)(r8 + 0x0)
+     239:	if r1 != 0x80 goto -0xc7 <LBB0_6>
 ;   assert_equal(icmp6->icmp6_code, 0, false);
-     228:	r1 = *(u8 *)(r8 + 0x37)
-     229:	if r1 != 0x0 goto -0xbc <LBB0_6>
-     230:	r1 = 0x4
-     231:	*(u32 *)(r10 - 0x4) = r1
-     232:	r2 = r10
-     233:	r2 += -0x4
+     240:	r1 = *(u8 *)(r7 + 0x37)
+     241:	if r1 != 0x0 goto -0xc9 <LBB0_6>
+     242:	r1 = 0x3
+     243:	*(u32 *)(r10 - 0x4) = r1
+     244:	r2 = r10
+     245:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     234:	r1 = 0x0 ll
-     236:	call 0x1
+     246:	r1 = 0x0 ll
+     248:	call 0x1
 ;   if (likely(value)) {
-     237:	if r0 == 0x0 goto +0x2 <LBB0_41>
-     238:	r1 = 0x1
+     249:	if r0 == 0x0 goto +0x2 <LBB0_23>
+     250:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     239:	lock *(u32 *)(r0 + 0x0) += r1
+     251:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000780 <LBB0_41>:
+00000000000007e0 <LBB0_23>:
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     240:	r3 = r8
-     241:	r3 += 0x16
-     242:	r1 = 0x0
-     243:	r2 = 0x0
-     244:	r4 = 0x20
-     245:	r5 = 0x0
-     246:	call 0x1c
-     247:	r1 = r0
-     248:	r1 <<= 0x20
-     249:	r1 >>= 0x20
+     252:	r3 = r7
+     253:	r3 += 0x16
+     254:	r1 = 0x0
+     255:	r2 = 0x0
+     256:	r4 = 0x20
+     257:	r5 = 0x0
+     258:	call 0x1c
+     259:	r1 = r0
+     260:	r1 <<= 0x20
+     261:	r1 >>= 0x20
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     250:	r0 = *(u16 *)(r8 + 0x12)
-     251:	r0 <<= 0x10
-     252:	r0 <<= 0x20
-     253:	r0 >>= 0x20
+     262:	r0 = *(u16 *)(r7 + 0x12)
+     263:	r0 <<= 0x10
+     264:	r0 <<= 0x20
+     265:	r0 >>= 0x20
 ;   csum += addend;
-     254:	r0 += r1
-     255:	r3 = r0
-     256:	r3 <<= 0x20
-     257:	r3 >>= 0x20
-     258:	r1 = 0x1
-     259:	r2 = 0x1
-     260:	if r3 != r0 goto +0x1 <LBB0_43>
-     261:	r2 = 0x0
+     266:	r0 += r1
+     267:	r3 = r0
+     268:	r3 <<= 0x20
+     269:	r3 >>= 0x20
+     270:	r1 = 0x1
+     271:	r2 = 0x1
+     272:	if r3 != r0 goto +0x1 <LBB0_25>
+     273:	r2 = 0x0
 
-0000000000000830 <LBB0_43>:
+0000000000000890 <LBB0_25>:
 ;   return csum + (csum < addend);
-     262:	r0 += r2
-     263:	r2 = r0
-     264:	r2 <<= 0x20
-     265:	r2 >>= 0x20
-     266:	r3 = 0xc5ffffff ll
-     268:	if r2 > r3 goto +0x1 <LBB0_45>
-     269:	r1 = 0x0
+     274:	r0 += r2
+     275:	r2 = r0
+     276:	r2 <<= 0x20
+     277:	r2 >>= 0x20
+     278:	r3 = 0xc5ffffff ll
+     280:	if r2 > r3 goto +0x1 <LBB0_27>
+     281:	r1 = 0x0
 
-0000000000000870 <LBB0_45>:
+00000000000008d0 <LBB0_27>:
 ;   csum += addend;
-     270:	r0 += r1
-     271:	r8 = 0x400
+     282:	r0 += r1
+     283:	r7 = 0x400
 ;   return csum + (csum < addend);
-     272:	r0 += 0x3a000000
-     273:	goto +0x12 <LBB0_47>
+     284:	r0 += 0x3a000000
+     285:	goto +0x4 <LBB0_28>
 
-0000000000000890 <LBB0_46>:
+00000000000008f0 <LBB0_34>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     274:	r1 &= 0xffff
-     275:	r8 = r1
-     276:	if r1 > 0x4 goto +0xf <LBB0_47>
-;   if (likely(buf + 4 <= data_end)) {
-     277:	r1 = r6
-     278:	r1 += 0x4
-     279:	r7 = *(u64 *)(r10 - 0x30)
-     280:	if r1 > r9 goto +0x26 <LBB0_57>
-;   csum += addend;
-     281:	r0 <<= 0x20
-     282:	r0 >>= 0x20
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     283:	r1 = *(u32 *)(r6 + 0x0)
-;   csum += addend;
-     284:	r1 += r0
-     285:	r3 = r1
-     286:	r3 <<= 0x20
-     287:	r3 >>= 0x20
-     288:	r2 = 0x1
-     289:	if r3 != r1 goto +0x1a <LBB0_56>
-     290:	r2 = 0x0
-     291:	goto +0x18 <LBB0_56>
+     286:	r1 &= 0xffff
+     287:	r7 = r1
+     288:	if r1 > 0x4 goto +0x1 <LBB0_28>
+     289:	goto +0x18 <LBB0_78>
 
-0000000000000920 <LBB0_47>:
+0000000000000910 <LBB0_28>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     292:	r4 = r8
-     293:	r4 <<= 0x20
-     294:	r4 >>= 0x20
-     295:	r1 = 0x200
-     296:	if r1 > r4 goto +0x1 <LBB0_49>
-     297:	r4 = 0x200
+     290:	r4 = r7
+     291:	r4 <<= 0x20
+     292:	r4 >>= 0x20
+     293:	r1 = 0x200
+     294:	if r1 > r4 goto +0x1 <LBB0_30>
+     295:	r4 = 0x200
 
-0000000000000950 <LBB0_49>:
+0000000000000940 <LBB0_30>:
 ;     if (likely(buf + j <= data_end)) {
-     298:	r7 = r6
-     299:	r7 += r4
-     300:	if r7 > r9 goto +0x6 <LBB0_51>
+     296:	r6 = r8
+     297:	r6 += r4
+     298:	if r6 > r9 goto +0x6 <LBB0_32>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     301:	r1 = 0x0
-     302:	r2 = 0x0
-     303:	r3 = r6
-     304:	r5 = r0
-     305:	call 0x1c
-     306:	r6 = r7
+     299:	r1 = 0x0
+     300:	r2 = 0x0
+     301:	r3 = r8
+     302:	r5 = r0
+     303:	call 0x1c
+     304:	r8 = r6
 
-0000000000000998 <LBB0_51>:
+0000000000000988 <LBB0_32>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     307:	r1 = r8
-     308:	r1 += 0xfe00
-     309:	r2 = r8
-     310:	r2 <<= 0x20
-     311:	r2 >>= 0x20
-     312:	if r2 > 0x200 goto -0x27 <LBB0_46>
-     313:	r8 >>= 0x1
-     314:	r1 = r8
-     315:	goto -0x2a <LBB0_46>
+     305:	r1 = r7
+     306:	r1 += 0xfe00
+     307:	r2 = r7
+     308:	r2 <<= 0x20
+     309:	r2 >>= 0x20
+     310:	if r2 > 0x200 goto -0x19 <LBB0_34>
+     311:	r7 >>= 0x1
+     312:	r1 = r7
+     313:	goto -0x1c <LBB0_34>
 
-00000000000009e0 <LBB0_56>:
-;   return csum + (csum < addend);
-     316:	r1 += r2
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     317:	r6 += 0x1
-     318:	r0 = r1
-
-00000000000009f8 <LBB0_57>:
-     319:	r1 = 0x0
-;   if (likely(buf + 2 <= data_end)) {
-     320:	r2 = r6
-     321:	r2 += 0x2
-     322:	if r2 > r9 goto +0x2 <LBB0_59>
-;     addend = *(__be16 *)buf++;
-     323:	r1 = *(u16 *)(r6 + 0x0)
-     324:	r6 += 0x1
-
-0000000000000a28 <LBB0_59>:
-;   if (likely(buf + 1 <= data_end)) {
-     325:	r2 = r6
-     326:	r2 += 0x1
-     327:	if r2 > r9 goto +0x2 <LBB0_61>
-;     addend += *(__u8 *)buf++;
-     328:	r2 = *(u8 *)(r6 + 0x0)
-     329:	r1 += r2
-
-0000000000000a50 <LBB0_61>:
-;   csum += addend;
-     330:	r0 <<= 0x20
-     331:	r0 >>= 0x20
-     332:	r1 += r0
-     333:	r3 = r1
-     334:	r3 <<= 0x20
-     335:	r3 >>= 0x20
-     336:	r2 = 0x1
-     337:	if r3 != r1 goto +0x1 <LBB0_63>
-     338:	r2 = 0x0
-
-0000000000000a98 <LBB0_63>:
-;   return csum + (csum < addend);
-     339:	r1 += r2
-     340:	r2 = 0xffff0000 ll
-;   return csum + (csum < addend);
-     342:	r3 = r1
-     343:	r3 &= r2
-;   sum = (sum & 0xffff) + (sum >> 16);
-     344:	r1 &= 0xffff
-     345:	r3 >>= 0x10
-     346:	r1 += r3
-;   sum = (sum & 0xffff) + (sum >> 16);
-     347:	r2 = r1
-     348:	r2 >>= 0x10
-     349:	r2 += r1
-;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
-     350:	r2 &= 0xffff
-     351:	if r2 != 0xffff goto -0x136 <LBB0_6>
-     352:	r1 = 0x5
-     353:	*(u32 *)(r10 - 0x4) = r1
-     354:	r2 = r10
-     355:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     356:	r1 = 0x0 ll
-     358:	call 0x1
-;   if (likely(value)) {
-     359:	if r0 == 0x0 goto +0x2 <LBB0_66>
-     360:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     361:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000b50 <LBB0_66>:
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     362:	r1 = *(u64 *)(r7 + 0x26)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     363:	r2 = *(u64 *)(r7 + 0x2e)
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     364:	r3 = *(u64 *)(r7 + 0x16)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     365:	r4 = *(u64 *)(r7 + 0x1e)
-     366:	r5 = 0x60
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     367:	*(u32 *)(r7 + 0xe) = r5
-     368:	r5 = 0x81
-;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
-     369:	*(u16 *)(r7 + 0x36) = r5
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     370:	*(u64 *)(r7 + 0x2e) = r4
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     371:	*(u64 *)(r7 + 0x26) = r3
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     372:	*(u64 *)(r7 + 0x1e) = r2
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     373:	*(u64 *)(r7 + 0x16) = r1
-     374:	r1 = 0x403a
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     375:	*(u16 *)(r7 + 0x14) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     376:	r1 = *(u16 *)(r7 + 0x0)
-     377:	r2 = *(u16 *)(r7 + 0x6)
-     378:	*(u16 *)(r7 + 0x0) = r2
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     379:	r2 = *(u16 *)(r7 + 0x8)
-     380:	r3 = *(u16 *)(r7 + 0x2)
-     381:	*(u16 *)(r7 + 0x8) = r3
-     382:	*(u16 *)(r7 + 0x2) = r2
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     383:	r2 = *(u16 *)(r7 + 0xa)
-     384:	r3 = *(u16 *)(r7 + 0x4)
-     385:	*(u16 *)(r7 + 0xa) = r3
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     386:	*(u16 *)(r7 + 0x6) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     387:	*(u16 *)(r7 + 0x4) = r2
-;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
-     388:	r1 = *(u16 *)(r7 + 0x38)
-     389:	r1 += -0x1
-     390:	*(u16 *)(r7 + 0x38) = r1
-     391:	goto +0x1c <LBB0_72>
-
-0000000000000c40 <LBB0_67>:
+00000000000009d0 <LBB0_78>:
 ;   if (likely(buf + 4 <= data_end)) {
-     392:	r1 = r7
-     393:	r1 += 0x4
-     394:	if r1 > r9 goto +0xc <LBB0_71>
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     395:	r1 = *(u32 *)(r7 + 0x0)
+     314:	r1 = r8
+     315:	r1 += 0x4
+     316:	r6 = *(u64 *)(r10 - 0x30)
+     317:	if r1 > r9 goto +0xd <LBB0_38>
 ;   csum += addend;
-     396:	r0 <<= 0x20
-     397:	r0 >>= 0x20
-     398:	r1 += r0
-     399:	r3 = r1
-     400:	r3 <<= 0x20
-     401:	r3 >>= 0x20
-     402:	r2 = 0x1
-     403:	if r3 != r1 goto +0x1 <LBB0_70>
-     404:	r2 = 0x0
+     318:	r0 <<= 0x20
+     319:	r0 >>= 0x20
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     320:	r1 = *(u32 *)(r8 + 0x0)
+;   csum += addend;
+     321:	r1 += r0
+     322:	r3 = r1
+     323:	r3 <<= 0x20
+     324:	r3 >>= 0x20
+     325:	r2 = 0x1
+     326:	if r3 != r1 goto +0x1 <LBB0_37>
+     327:	r2 = 0x0
 
-0000000000000ca8 <LBB0_70>:
+0000000000000a40 <LBB0_37>:
 ;   return csum + (csum < addend);
-     405:	r1 += r2
-     406:	r0 = r1
+     328:	r1 += r2
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     329:	r8 += 0x1
+     330:	r0 = r1
 
-0000000000000cb8 <LBB0_71>:
-     407:	r1 = 0xffff0000 ll
+0000000000000a58 <LBB0_38>:
+     331:	r1 = 0x0
+;   if (likely(buf + 2 <= data_end)) {
+     332:	r2 = r8
+     333:	r2 += 0x2
+     334:	if r2 > r9 goto +0x2 <LBB0_40>
+;     addend = *(__be16 *)buf++;
+     335:	r1 = *(u16 *)(r8 + 0x0)
+     336:	r8 += 0x1
+
+0000000000000a88 <LBB0_40>:
+;   if (likely(buf + 1 <= data_end)) {
+     337:	r2 = r8
+     338:	r2 += 0x1
+     339:	if r2 > r9 goto +0x2 <LBB0_42>
+;     addend += *(__u8 *)buf++;
+     340:	r2 = *(u8 *)(r8 + 0x0)
+     341:	r1 += r2
+
+0000000000000ab0 <LBB0_42>:
+;   csum += addend;
+     342:	r0 <<= 0x20
+     343:	r0 >>= 0x20
+     344:	r1 += r0
+     345:	r3 = r1
+     346:	r3 <<= 0x20
+     347:	r3 >>= 0x20
+     348:	r2 = 0x1
+     349:	if r3 != r1 goto +0x1 <LBB0_44>
+     350:	r2 = 0x0
+
+0000000000000af8 <LBB0_44>:
+;   return csum + (csum < addend);
+     351:	r1 += r2
+     352:	r2 = 0xffff0000 ll
+;   return csum + (csum < addend);
+     354:	r3 = r1
+     355:	r3 &= r2
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     409:	r2 = r0
-     410:	r2 &= r1
-     411:	r2 >>= 0x10
-     412:	r0 &= 0xffff
-     413:	r0 += r2
+     356:	r1 &= 0xffff
+     357:	r3 >>= 0x10
+     358:	r1 += r3
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     414:	r1 = r0
-     415:	r1 >>= 0x10
-     416:	r1 += r0
+     359:	r2 = r1
+     360:	r2 >>= 0x10
+     361:	r2 += r1
+;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
+     362:	r2 &= 0xffff
+     363:	if r2 != 0xffff goto -0x143 <LBB0_6>
+     364:	r1 = 0x4
+     365:	*(u32 *)(r10 - 0x4) = r1
+     366:	r2 = r10
+     367:	r2 += -0x4
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     368:	r1 = 0x0 ll
+     370:	call 0x1
+;   if (likely(value)) {
+     371:	if r0 == 0x0 goto +0x2 <LBB0_47>
+     372:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     373:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000bb0 <LBB0_47>:
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     374:	r8 = *(u64 *)(r6 + 0x1e)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     375:	r9 = *(u64 *)(r6 + 0x16)
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     376:	r7 = *(u64 *)(r6 + 0x2e)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     377:	r6 = *(u64 *)(r6 + 0x26)
+     378:	r1 = 0x7
+     379:	*(u32 *)(r10 - 0x20) = r1
+     380:	r2 = r10
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     381:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     382:	r1 = 0x0 ll
+     384:	call 0x1
+;   if (likely(value)) {
+     385:	if r0 == 0x0 goto +0x2 <LBB0_73>
+     386:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     387:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000c20 <LBB0_73>:
+     388:	r1 = 0x60
+     389:	r3 = *(u64 *)(r10 - 0x30)
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     390:	*(u32 *)(r3 + 0xe) = r1
+     391:	r1 = 0x81
+;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
+     392:	*(u16 *)(r3 + 0x36) = r1
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     393:	*(u64 *)(r3 + 0x2e) = r8
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     394:	*(u64 *)(r3 + 0x26) = r9
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     395:	*(u64 *)(r3 + 0x1e) = r7
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     396:	*(u64 *)(r3 + 0x16) = r6
+     397:	r1 = 0x403a
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     398:	*(u16 *)(r3 + 0x14) = r1
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     399:	r1 = *(u16 *)(r3 + 0xa)
+     400:	*(u16 *)(r3 + 0x4) = r1
+;   __u32 daddr_first           = *(__u32 *)old;
+     401:	r1 = *(u32 *)(r3 + 0x0)
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     402:	r2 = *(u16 *)(r3 + 0x6)
+     403:	*(u16 *)(r3 + 0x0) = r2
+     404:	r2 = *(u16 *)(r3 + 0x8)
+     405:	*(u16 *)(r3 + 0x2) = r2
+;   __u16 daddr_last            = *(__u16 *)old + 2;
+     406:	r2 = r1
+     407:	r2 += 0x2
+;   *((__u16 *)&new->saddr + 2) = daddr_last;
+     408:	*(u16 *)(r3 + 0xa) = r2
+;   *(__u32 *)&new->saddr       = daddr_first;
+     409:	*(u16 *)(r3 + 0x6) = r1
+     410:	r1 >>= 0x10
+     411:	*(u16 *)(r3 + 0x8) = r1
+;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
+     412:	r1 = *(u16 *)(r3 + 0x38)
+     413:	r1 += -0x1
+     414:	*(u16 *)(r3 + 0x38) = r1
+     415:	goto +0x1c <LBB0_74>
+
+0000000000000d00 <LBB0_79>:
+;   if (likely(buf + 4 <= data_end)) {
+     416:	r1 = r7
+     417:	r1 += 0x4
+     418:	if r1 > r9 goto +0xc <LBB0_71>
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     419:	r1 = *(u32 *)(r7 + 0x0)
+;   csum += addend;
+     420:	r0 <<= 0x20
+     421:	r0 >>= 0x20
+     422:	r1 += r0
+     423:	r3 = r1
+     424:	r3 <<= 0x20
+     425:	r3 >>= 0x20
+     426:	r2 = 0x1
+     427:	if r3 != r1 goto +0x1 <LBB0_70>
+     428:	r2 = 0x0
+
+0000000000000d68 <LBB0_70>:
+;   return csum + (csum < addend);
+     429:	r1 += r2
+     430:	r0 = r1
+
+0000000000000d78 <LBB0_71>:
+     431:	r1 = 0xffff0000 ll
+;   sum = (sum & 0xffff) + (sum >> 16);
+     433:	r2 = r0
+     434:	r2 &= r1
+     435:	r2 >>= 0x10
+     436:	r0 &= 0xffff
+     437:	r0 += r2
+;   sum = (sum & 0xffff) + (sum >> 16);
+     438:	r1 = r0
+     439:	r1 >>= 0x10
+     440:	r1 += r0
 ;   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
-     417:	r1 ^= -0x1
-     418:	r2 = *(u64 *)(r10 - 0x30)
-     419:	*(u16 *)(r2 + 0x38) = r1
+     441:	r1 ^= -0x1
+     442:	r2 = *(u64 *)(r10 - 0x30)
+     443:	*(u16 *)(r2 + 0x38) = r1
 
-0000000000000d20 <LBB0_72>:
-     420:	r3 = 0x3
+0000000000000de0 <LBB0_74>:
+     444:	r1 = 0x8
+     445:	*(u32 *)(r10 - 0x20) = r1
+     446:	r2 = r10
+     447:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     448:	r1 = 0x0 ll
+     450:	call 0x1
+;   if (likely(value)) {
+     451:	if r0 == 0x0 goto +0x2 <LBB0_76>
+     452:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     453:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000d28 <LBB0_73>:
+0000000000000e30 <LBB0_76>:
+     454:	r8 = 0x3
+
+0000000000000e38 <LBB0_77>:
 ;   return exceed2go_xdp(ctx, BASE_LAYER_L2);
-     421:	r0 = r3
-     422:	exit
+     455:	r0 = r8
+     456:	exit
 
 Disassembly of section tc:
 
 0000000000000000 <exceed2go_tc_l2>:
-; exceed2go_tc_l2(struct __sk_buff *ctx) {
-       0:	r3 = 0xffffffff ll
 ;   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-       2:	r7 = *(u32 *)(r1 + 0x50)
-       3:	*(u64 *)(r10 - 0x38) = r1
-       4:	r2 = *(u32 *)(r1 + 0x4c)
+       0:	r9 = *(u32 *)(r1 + 0x50)
+       1:	*(u64 *)(r10 - 0x38) = r1
+       2:	r2 = *(u32 *)(r1 + 0x4c)
 ;   assert_boundary(pkt->ipv6, pkt->end, false);
-       5:	r6 = r2
-       6:	r6 += 0x36
-       7:	if r6 > r7 goto +0x1a5 <LBB1_73>
+       3:	r8 = r2
+       4:	r8 += 0x36
+       5:	if r8 > r9 goto +0x23 <LBB1_6>
 ;     assert_equal(pkt->eth->proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
-       8:	r1 = *(u16 *)(r2 + 0xc)
-       9:	if r1 != 0xdd86 goto +0x1a3 <LBB1_73>
-      10:	r8 = r2
-      11:	r8 += 0xe
+       6:	r1 = *(u16 *)(r2 + 0xc)
+       7:	if r1 != 0xdd86 goto +0x21 <LBB1_6>
+       8:	r7 = r2
+       9:	r7 += 0xe
 ;   assert_equal(pkt->ipv6->version, 6, false);
-      12:	r1 = *(u8 *)(r8 + 0x0)
-      13:	r1 &= 0xf0
-      14:	if r1 != 0x60 goto +0x19e <LBB1_73>
-      15:	*(u64 *)(r10 - 0x30) = r2
-      16:	r9 = 0x0
-      17:	*(u32 *)(r10 - 0x20) = r9
-      18:	r2 = r10
-      19:	r2 += -0x20
+      10:	r1 = *(u8 *)(r7 + 0x0)
+      11:	r1 &= 0xf0
+      12:	if r1 != 0x60 goto +0x1c <LBB1_6>
+      13:	*(u64 *)(r10 - 0x30) = r2
+      14:	r6 = 0x0
+      15:	*(u32 *)(r10 - 0x20) = r6
+      16:	r2 = r10
+      17:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-      20:	r1 = 0x0 ll
-      22:	call 0x1
+      18:	r1 = 0x0 ll
+      20:	call 0x1
 ;   if (likely(value)) {
-      23:	if r0 == 0x0 goto +0x2 <LBB1_5>
-      24:	r1 = 0x1
+      21:	if r0 == 0x0 goto +0x2 <LBB1_5>
+      22:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-      25:	lock *(u32 *)(r0 + 0x0) += r1
+      23:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000000d0 <LBB1_5>:
-      26:	r2 = *(u64 *)(r10 - 0x30)
+00000000000000c0 <LBB1_5>:
+      24:	r2 = *(u64 *)(r10 - 0x30)
 ;       .needle = pkt->ipv6->daddr,
-      27:	r1 = *(u64 *)(r2 + 0x2e)
-      28:	*(u64 *)(r10 - 0x18) = r1
-      29:	r1 = *(u64 *)(r2 + 0x26)
-      30:	*(u64 *)(r10 - 0x20) = r1
+      25:	r1 = *(u64 *)(r2 + 0x2e)
+      26:	*(u64 *)(r10 - 0x18) = r1
+      27:	r1 = *(u64 *)(r2 + 0x26)
+      28:	*(u64 *)(r10 - 0x20) = r1
 ;   struct target_search_cb_ctx target = {
-      31:	*(u8 *)(r10 - 0xc) = r9
-      32:	*(u32 *)(r10 - 0x10) = r9
-      33:	r3 = r10
+      29:	*(u8 *)(r10 - 0xc) = r6
+      30:	*(u32 *)(r10 - 0x10) = r6
+      31:	r3 = r10
 ;       .needle = pkt->ipv6->daddr,
-      34:	r3 += -0x20
+      32:	r3 += -0x20
 ;   bpf_for_each_map_elem(&exceed2go_addrs, target_search_cb, &target, 0);
-      35:	r1 = 0x0 ll
-      37:	r2 = 0x0 ll
-      39:	r4 = 0x0
-      40:	call 0xa4
+      33:	r1 = 0x0 ll
+      35:	r2 = 0x0 ll
+      37:	r4 = 0x0
+      38:	call 0xa4
 ;   assert_equal(target.found, true, PKT_UNRELATED);
-      41:	r1 = *(u8 *)(r10 - 0xc)
-      42:	if r1 != 0x0 goto +0x3 <LBB1_7>
+      39:	r1 = *(u8 *)(r10 - 0xc)
+      40:	if r1 != 0x0 goto +0xd <LBB1_7>
 
-0000000000000158 <LBB1_6>:
-      43:	r3 = 0xffffffff ll
-      45:	goto +0x17f <LBB1_73>
-
-0000000000000170 <LBB1_7>:
-      46:	*(u64 *)(r10 - 0x40) = r8
-      47:	r8 = 0x1
-      48:	*(u32 *)(r10 - 0x4) = r8
-      49:	r2 = r10
-      50:	r2 += -0x4
+0000000000000148 <LBB1_6>:
+      41:	r1 = 0x5
+      42:	*(u32 *)(r10 - 0x20) = r1
+      43:	r2 = r10
+      44:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-      51:	r1 = 0x0 ll
-      53:	call 0x1
+      45:	r1 = 0x0 ll
+      47:	call 0x1
 ;   if (likely(value)) {
-      54:	if r0 == 0x0 goto +0x1 <LBB1_9>
+      48:	if r0 == 0x0 goto +0x2 <LBB1_49>
+      49:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-      55:	lock *(u32 *)(r0 + 0x0) += r8
+      50:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000001c0 <LBB1_9>:
-      56:	r9 = *(u64 *)(r10 - 0x30)
+0000000000000198 <LBB1_49>:
+      51:	r3 = 0xffffffff ll
+      53:	goto +0x1b3 <LBB1_78>
+
+00000000000001b0 <LBB1_7>:
+      54:	r6 = 0x1
+      55:	*(u32 *)(r10 - 0x4) = r6
+      56:	r2 = r10
+      57:	r2 += -0x4
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+      58:	r1 = 0x0 ll
+      60:	call 0x1
+;   if (likely(value)) {
+      61:	if r0 == 0x0 goto +0x1 <LBB1_9>
+;     __sync_fetch_and_add(value, 1);
+      62:	lock *(u32 *)(r0 + 0x0) += r6
+
+00000000000001f8 <LBB1_9>:
+      63:	r6 = *(u64 *)(r10 - 0x30)
 ;   __u32 hop_key = pkt->ipv6->hop_limit;
-      57:	r1 = *(u8 *)(r9 + 0x15)
-      58:	*(u32 *)(r10 - 0x24) = r1
+      64:	r1 = *(u8 *)(r6 + 0x15)
+      65:	*(u32 *)(r10 - 0x24) = r1
 ;   if (target.key > hop_key) {
-      59:	r2 = *(u32 *)(r10 - 0x10)
-      60:	if r1 >= r2 goto +0x9a <LBB1_33>
-      61:	r2 = r10
+      66:	r2 = *(u32 *)(r10 - 0x10)
+      67:	if r1 >= r2 goto +0xb9 <LBB1_15>
+      68:	r2 = r10
 ;         bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-      62:	r2 += -0x24
-      63:	r1 = 0x0 ll
-      65:	call 0x1
+      69:	r2 += -0x24
+      70:	r1 = 0x0 ll
+      72:	call 0x1
 ;     if (exceed_addr != NULL) {
-      66:	if r0 == 0x0 goto +0x94 <LBB1_33>
-      67:	r6 = r0
-      68:	r1 = 0x2
-      69:	*(u32 *)(r10 - 0x4) = r1
-      70:	r2 = r10
-      71:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-      72:	r1 = 0x0 ll
-      74:	call 0x1
-;   if (likely(value)) {
-      75:	if r0 == 0x0 goto +0x2 <LBB1_13>
-      76:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-      77:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000270 <LBB1_13>:
+      73:	if r0 == 0x0 goto +0xb3 <LBB1_15>
 ;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
-      78:	r1 = *(u64 *)(r10 - 0x40)
-      79:	r7 -= r1
-      80:	r8 = 0x4d0
+      74:	r9 -= r7
+      75:	r6 = 0x4d0
 ;   int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
-      81:	r8 -= r7
-      82:	r8 <<= 0x20
-      83:	r8 s>>= 0x20
-      84:	r1 = 0x1
+      76:	r6 -= r9
+      77:	r6 <<= 0x20
+      78:	r6 s>>= 0x20
+      79:	r1 = 0x1
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-      85:	if r1 s> r8 goto +0x4 <LBB1_16>
-      86:	r7 &= 0x3
-      87:	if r7 == 0x0 goto +0x2 <LBB1_16>
+      80:	if r1 s> r6 goto +0x4 <LBB1_14>
+      81:	r9 &= 0x3
+      82:	if r9 == 0x0 goto +0x2 <LBB1_14>
 ;     tail_adj = -(new_ip_pkt_len % 4);
-      88:	r7 = -r7
-      89:	r8 = r7
+      83:	r9 = -r9
+      84:	r6 = r9
 
-00000000000002d0 <LBB1_16>:
+00000000000002a8 <LBB1_14>:
+      85:	r1 = *(u64 *)(r10 - 0x30)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-      90:	r1 = *(u64 *)(r9 + 0x1e)
+      86:	r2 = *(u64 *)(r1 + 0x1e)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-      91:	*(u64 *)(r10 - 0x40) = r1
-      92:	r1 = *(u64 *)(r9 + 0x16)
-      93:	*(u64 *)(r10 - 0x30) = r1
+      87:	*(u64 *)(r10 - 0x78) = r2
+      88:	r1 = *(u64 *)(r1 + 0x16)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-      94:	r7 = *(u64 *)(r6 + 0x8)
+      89:	*(u64 *)(r10 - 0x70) = r1
+      90:	r1 = *(u64 *)(r0 + 0x8)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-      95:	r9 = *(u64 *)(r6 + 0x0)
-      96:	r6 = 0x0
-;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-      97:	r1 = *(u64 *)(r10 - 0x38)
-      98:	r2 = 0x30
-      99:	r3 = 0x0
-     100:	call 0x2b
-     101:	r3 = 0x2
-;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-     102:	if r0 != 0x0 goto +0x146 <LBB1_73>
+      91:	*(u64 *)(r10 - 0x68) = r1
+      92:	r1 = *(u64 *)(r0 + 0x0)
+      93:	*(u64 *)(r10 - 0x60) = r1
+      94:	r1 = 0x6
+      95:	*(u32 *)(r10 - 0x20) = r1
+      96:	r1 = 0x0
 ;   return tail_adj < 0 ? tail_adj : 0;
-     103:	if r6 s> r8 goto +0x1 <LBB1_19>
-     104:	r8 = 0x0
+      97:	if r1 s> r6 goto +0x1 <LBB1_51>
+      98:	r6 = 0x0
 
-0000000000000348 <LBB1_19>:
-     105:	r1 = *(u64 *)(r10 - 0x38)
+0000000000000318 <LBB1_51>:
+      99:	r2 = r10
+     100:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     101:	r1 = 0x0 ll
+     103:	call 0x1
+;   if (likely(value)) {
+     104:	if r0 == 0x0 goto +0x2 <LBB1_53>
+     105:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     106:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000358 <LBB1_53>:
+     107:	r1 = *(u64 *)(r10 - 0x30)
+;       bpf_memcpy(&eth, pkt.eth, sizeof(struct ethhdr));
+     108:	r2 = *(u16 *)(r1 + 0x8)
+     109:	*(u64 *)(r10 - 0x40) = r2
+     110:	r2 = *(u16 *)(r1 + 0x6)
+     111:	*(u64 *)(r10 - 0x58) = r2
+     112:	r2 = *(u16 *)(r1 + 0xa)
+     113:	*(u64 *)(r10 - 0x50) = r2
+     114:	r7 = *(u16 *)(r1 + 0xc)
+     115:	r2 = *(u16 *)(r1 + 0x0)
+     116:	*(u64 *)(r10 - 0x48) = r2
+     117:	r8 = *(u16 *)(r1 + 0x2)
+;     long rc_head_adj = bpf_skb_adjust_room(ctx,
+     118:	r1 = *(u64 *)(r10 - 0x38)
+     119:	r2 = 0x30
+     120:	r3 = 0x1
+     121:	r4 = 0x1
+     122:	call 0x32
+     123:	r3 = 0x2
+;     assert_equal(rc_head_adj, 0, TC_ACT_SHOT);
+     124:	if r0 != 0x0 goto +0x16c <LBB1_78>
+     125:	r1 = *(u64 *)(r10 - 0x38)
 ;     int new_len = ctx->len + pkt.tail_adjust;
-     106:	r2 = *(u32 *)(r1 + 0x0)
-     107:	r2 += r8
+     126:	r2 = *(u32 *)(r1 + 0x0)
+     127:	r2 += r6
 ;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     108:	r3 = 0x0
-     109:	call 0x26
-     110:	r3 = 0x2
+     128:	r3 = 0x0
+     129:	call 0x26
+     130:	r3 = 0x2
 ;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     111:	if r0 != 0x0 goto +0x13d <LBB1_73>
-     112:	r1 = *(u64 *)(r10 - 0x38)
+     131:	if r0 != 0x0 goto +0x165 <LBB1_78>
+     132:	r1 = *(u64 *)(r10 - 0x38)
 ;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     113:	r8 = *(u32 *)(r1 + 0x50)
-     114:	r2 = *(u32 *)(r1 + 0x4c)
+     133:	r9 = *(u32 *)(r1 + 0x50)
+     134:	r2 = *(u32 *)(r1 + 0x4c)
+;       assert_boundary(pkt.eth, pkt.end, TC_ACT_SHOT);
+     135:	r1 = r2
+     136:	r1 += 0xe
+     137:	if r1 > r9 goto +0x15f <LBB1_78>
+     138:	r1 = *(u64 *)(r10 - 0x40)
+     139:	r1 <<= 0x10
+     140:	r4 = *(u64 *)(r10 - 0x58)
+     141:	r1 |= r4
+     142:	r4 = *(u64 *)(r10 - 0x50)
+     143:	r4 <<= 0x20
+     144:	r7 <<= 0x30
+     145:	r7 |= r4
+     146:	r7 |= r1
+     147:	r8 <<= 0x10
+     148:	r1 = *(u64 *)(r10 - 0x48)
+     149:	r8 |= r1
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     150:	r1 = r7
+     151:	r1 >>= 0x20
+     152:	*(u16 *)(r2 + 0x4) = r1
+     153:	r1 = r7
+     154:	r1 >>= 0x10
+     155:	*(u16 *)(r2 + 0x2) = r1
+;   *(__u32 *)&new->saddr       = daddr_first;
+     156:	r1 = r8
+     157:	r1 >>= 0x10
+     158:	*(u16 *)(r2 + 0x8) = r1
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     159:	*(u16 *)(r2 + 0x0) = r7
+     160:	r7 >>= 0x30
+;   new->proto                  = old->proto;
+     161:	*(u16 *)(r2 + 0xc) = r7
+;   *(__u32 *)&new->saddr       = daddr_first;
+     162:	*(u16 *)(r2 + 0x6) = r8
+;   __u16 daddr_last            = *(__u16 *)old + 2;
+     163:	r8 += 0x2
+;   *((__u16 *)&new->saddr + 2) = daddr_last;
+     164:	*(u16 *)(r2 + 0xa) = r8
 ;   assert_boundary(icmp6, pkt->end, false);
-     115:	r1 = r2
-     116:	r1 += 0x3e
-     117:	if r1 > r8 goto +0x137 <LBB1_73>
-     118:	r1 = 0x60
+     165:	r1 = r2
+     166:	r1 += 0x3e
+     167:	if r1 > r9 goto +0x141 <LBB1_78>
+     168:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     119:	*(u32 *)(r2 + 0xe) = r1
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     120:	*(u64 *)(r2 + 0x16) = r9
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     121:	*(u64 *)(r2 + 0x1e) = r7
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     122:	r1 = *(u64 *)(r10 - 0x30)
-     123:	*(u64 *)(r2 + 0x26) = r1
-     124:	r1 = 0x403a
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     125:	*(u16 *)(r2 + 0x14) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     126:	r1 = *(u16 *)(r2 + 0x36)
-     127:	*(u16 *)(r2 + 0x0) = r1
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     128:	r1 = *(u16 *)(r2 + 0x38)
-     129:	*(u16 *)(r2 + 0x2) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     130:	r1 = *(u16 *)(r2 + 0x34)
-     131:	*(u16 *)(r2 + 0xa) = r1
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     132:	r1 = *(u16 *)(r2 + 0x32)
-     133:	*(u16 *)(r2 + 0x8) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     134:	r1 = *(u16 *)(r2 + 0x30)
-     135:	*(u16 *)(r2 + 0x6) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     136:	r1 = *(u16 *)(r2 + 0x3a)
-     137:	*(u16 *)(r2 + 0x4) = r1
-;   new->proto = old->proto;
-     138:	r1 = *(u16 *)(r2 + 0x3c)
-     139:	*(u16 *)(r2 + 0xc) = r1
-     140:	r1 = 0x3
+     169:	*(u32 *)(r2 + 0xe) = r1
+     170:	r1 = 0x3
 ;   *icmp6                    = icmp6_new;
-     141:	*(u32 *)(r2 + 0x36) = r1
+     171:	*(u32 *)(r2 + 0x36) = r1
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     142:	r1 = *(u64 *)(r10 - 0x40)
-     143:	*(u64 *)(r2 + 0x2e) = r1
-     144:	r7 = r2
+     172:	r1 = *(u64 *)(r10 - 0x78)
+     173:	*(u64 *)(r2 + 0x2e) = r1
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     174:	r1 = *(u64 *)(r10 - 0x70)
+     175:	*(u64 *)(r2 + 0x26) = r1
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     176:	r1 = *(u64 *)(r10 - 0x68)
+     177:	*(u64 *)(r2 + 0x1e) = r1
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     178:	r1 = *(u64 *)(r10 - 0x60)
+     179:	*(u64 *)(r2 + 0x16) = r1
+     180:	r1 = 0x403a
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     181:	*(u16 *)(r2 + 0x14) = r1
+     182:	r7 = r2
 ;   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-     145:	r6 = r7
-     146:	r6 += 0x36
+     183:	r6 = r7
+     184:	r6 += 0x36
 ;   __be16 payload_len = bpf_htons(pkt->end - (void *)icmp6);
-     147:	r1 = r8
-     148:	r1 -= r6
-     149:	r1 = be16 r1
+     185:	r1 = r9
+     186:	r1 -= r6
+     187:	r1 = be16 r1
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     150:	*(u16 *)(r7 + 0x12) = r1
-     151:	r1 = 0x0
+     188:	*(u16 *)(r7 + 0x12) = r1
+     189:	r1 = 0x0
 ;   *icmp6                    = icmp6_new;
-     152:	*(u32 *)(r7 + 0x3a) = r1
+     190:	*(u32 *)(r7 + 0x3a) = r1
 ;   in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
-     153:	r3 = r7
-     154:	r3 += 0x16
+     191:	r3 = r7
+     192:	r3 += 0x16
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     155:	r2 = 0x0
-     156:	r4 = 0x20
-     157:	r5 = 0x0
-     158:	call 0x1c
-     159:	r1 = r0
-     160:	r1 <<= 0x20
-     161:	r1 >>= 0x20
-     162:	*(u64 *)(r10 - 0x30) = r7
+     193:	r2 = 0x0
+     194:	r4 = 0x20
+     195:	r5 = 0x0
+     196:	call 0x1c
+     197:	r1 = r0
+     198:	r1 <<= 0x20
+     199:	r1 >>= 0x20
+     200:	*(u64 *)(r10 - 0x30) = r7
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     163:	r0 = *(u16 *)(r7 + 0x12)
-     164:	r0 <<= 0x10
-     165:	r0 <<= 0x20
-     166:	r0 >>= 0x20
+     201:	r0 = *(u16 *)(r7 + 0x12)
+     202:	r0 <<= 0x10
+     203:	r0 <<= 0x20
+     204:	r0 >>= 0x20
 ;   csum += addend;
-     167:	r0 += r1
-     168:	r3 = r0
-     169:	r3 <<= 0x20
-     170:	r3 >>= 0x20
-     171:	r1 = 0x1
-     172:	r2 = 0x1
-     173:	if r3 != r0 goto +0x1 <LBB1_23>
-     174:	r2 = 0x0
+     205:	r0 += r1
+     206:	r3 = r0
+     207:	r3 <<= 0x20
+     208:	r3 >>= 0x20
+     209:	r1 = 0x1
+     210:	r2 = 0x1
+     211:	if r3 != r0 goto +0x1 <LBB1_59>
+     212:	r2 = 0x0
 
-0000000000000578 <LBB1_23>:
+00000000000006a8 <LBB1_59>:
 ;   return csum + (csum < addend);
-     175:	r0 += r2
-     176:	r2 = r0
-     177:	r2 <<= 0x20
-     178:	r2 >>= 0x20
-     179:	r3 = 0xc5ffffff ll
-     181:	if r2 > r3 goto +0x1 <LBB1_25>
-     182:	r1 = 0x0
+     213:	r0 += r2
+     214:	r2 = r0
+     215:	r2 <<= 0x20
+     216:	r2 >>= 0x20
+     217:	r3 = 0xc5ffffff ll
+     219:	if r2 > r3 goto +0x1 <LBB1_61>
+     220:	r1 = 0x0
 
-00000000000005b8 <LBB1_25>:
+00000000000006e8 <LBB1_61>:
 ;   csum += addend;
-     183:	r0 += r1
-     184:	r9 = 0x400
+     221:	r0 += r1
+     222:	r8 = 0x400
 ;   return csum + (csum < addend);
-     185:	r0 += 0x3a000000
-     186:	goto +0x4 <LBB1_27>
+     223:	r0 += 0x3a000000
+     224:	goto +0x4 <LBB1_62>
 
-00000000000005d8 <LBB1_26>:
+0000000000000708 <LBB1_68>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     187:	r1 &= 0xffff
-     188:	r9 = r1
-     189:	if r1 > 0x4 goto +0x1 <LBB1_27>
-     190:	goto +0xcd <LBB1_67>
+     225:	r1 &= 0xffff
+     226:	r8 = r1
+     227:	if r1 > 0x4 goto +0x1 <LBB1_62>
+     228:	goto +0xd9 <LBB1_80>
 
-00000000000005f8 <LBB1_27>:
+0000000000000728 <LBB1_62>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     191:	r4 = r9
-     192:	r4 <<= 0x20
-     193:	r4 >>= 0x20
-     194:	r1 = 0x200
-     195:	if r1 > r4 goto +0x1 <LBB1_29>
-     196:	r4 = 0x200
+     229:	r4 = r8
+     230:	r4 <<= 0x20
+     231:	r4 >>= 0x20
+     232:	r1 = 0x200
+     233:	if r1 > r4 goto +0x1 <LBB1_64>
+     234:	r4 = 0x200
 
-0000000000000628 <LBB1_29>:
+0000000000000758 <LBB1_64>:
 ;     if (likely(buf + j <= data_end)) {
-     197:	r7 = r6
-     198:	r7 += r4
-     199:	if r7 > r8 goto +0x6 <LBB1_31>
+     235:	r7 = r6
+     236:	r7 += r4
+     237:	if r7 > r9 goto +0x6 <LBB1_66>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     200:	r1 = 0x0
-     201:	r2 = 0x0
-     202:	r3 = r6
-     203:	r5 = r0
-     204:	call 0x1c
-     205:	r6 = r7
+     238:	r1 = 0x0
+     239:	r2 = 0x0
+     240:	r3 = r6
+     241:	r5 = r0
+     242:	call 0x1c
+     243:	r6 = r7
 
-0000000000000670 <LBB1_31>:
+00000000000007a0 <LBB1_66>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     206:	r1 = r9
-     207:	r1 += 0xfe00
-     208:	r2 = r9
-     209:	r2 <<= 0x20
-     210:	r2 >>= 0x20
-     211:	if r2 > 0x200 goto -0x19 <LBB1_26>
-     212:	r9 >>= 0x1
-     213:	r1 = r9
-     214:	goto -0x1c <LBB1_26>
+     244:	r1 = r8
+     245:	r1 += 0xfe00
+     246:	r2 = r8
+     247:	r2 <<= 0x20
+     248:	r2 >>= 0x20
+     249:	if r2 > 0x200 goto -0x19 <LBB1_68>
+     250:	r8 >>= 0x1
+     251:	r1 = r8
+     252:	goto -0x1c <LBB1_68>
 
-00000000000006b8 <LBB1_33>:
+00000000000007e8 <LBB1_15>:
 ;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
-     215:	r1 = *(u8 *)(r9 + 0x14)
-     216:	if r1 != 0x3a goto -0xae <LBB1_6>
-     217:	r1 = 0x3
-     218:	*(u32 *)(r10 - 0x4) = r1
-     219:	r2 = r10
-     220:	r2 += -0x4
+     253:	r1 = *(u8 *)(r6 + 0x14)
+     254:	if r1 != 0x3a goto -0xd6 <LBB1_6>
+     255:	r1 = 0x2
+     256:	*(u32 *)(r10 - 0x4) = r1
+     257:	r2 = r10
+     258:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     221:	r1 = 0x0 ll
-     223:	call 0x1
+     259:	r1 = 0x0 ll
+     261:	call 0x1
 ;   if (likely(value)) {
-     224:	if r0 == 0x0 goto +0x2 <LBB1_36>
-     225:	r1 = 0x1
+     262:	if r0 == 0x0 goto +0x2 <LBB1_18>
+     263:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     226:	lock *(u32 *)(r0 + 0x0) += r1
+     264:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000718 <LBB1_36>:
+0000000000000848 <LBB1_18>:
 ;   assert_boundary(icmp6, pkt->end, false);
-     227:	r1 = r9
-     228:	r1 += 0x3e
-     229:	if r1 > r7 goto -0xbb <LBB1_6>
+     265:	r1 = r6
+     266:	r1 += 0x3e
+     267:	if r1 > r9 goto -0xe3 <LBB1_6>
 ;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-     230:	r1 = *(u8 *)(r6 + 0x0)
-     231:	if r1 != 0x80 goto -0xbd <LBB1_6>
+     268:	r1 = *(u8 *)(r8 + 0x0)
+     269:	if r1 != 0x80 goto -0xe5 <LBB1_6>
 ;   assert_equal(icmp6->icmp6_code, 0, false);
-     232:	r1 = *(u8 *)(r9 + 0x37)
-     233:	if r1 != 0x0 goto -0xbf <LBB1_6>
-     234:	r1 = 0x4
-     235:	*(u32 *)(r10 - 0x4) = r1
-     236:	r2 = r10
-     237:	r2 += -0x4
+     270:	r1 = *(u8 *)(r6 + 0x37)
+     271:	if r1 != 0x0 goto -0xe7 <LBB1_6>
+     272:	r1 = 0x3
+     273:	*(u32 *)(r10 - 0x4) = r1
+     274:	r2 = r10
+     275:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     238:	r1 = 0x0 ll
-     240:	call 0x1
+     276:	r1 = 0x0 ll
+     278:	call 0x1
 ;   if (likely(value)) {
-     241:	if r0 == 0x0 goto +0x2 <LBB1_41>
-     242:	r1 = 0x1
+     279:	if r0 == 0x0 goto +0x2 <LBB1_23>
+     280:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     243:	lock *(u32 *)(r0 + 0x0) += r1
+     281:	lock *(u32 *)(r0 + 0x0) += r1
 
-00000000000007a0 <LBB1_41>:
+00000000000008d0 <LBB1_23>:
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     244:	r3 = r9
-     245:	r3 += 0x16
-     246:	r1 = 0x0
-     247:	r2 = 0x0
-     248:	r4 = 0x20
-     249:	r5 = 0x0
-     250:	call 0x1c
-     251:	r1 = r0
-     252:	r1 <<= 0x20
-     253:	r1 >>= 0x20
+     282:	r3 = r6
+     283:	r3 += 0x16
+     284:	r1 = 0x0
+     285:	r2 = 0x0
+     286:	r4 = 0x20
+     287:	r5 = 0x0
+     288:	call 0x1c
+     289:	r1 = r0
+     290:	r1 <<= 0x20
+     291:	r1 >>= 0x20
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     254:	r0 = *(u16 *)(r9 + 0x12)
-     255:	r0 <<= 0x10
-     256:	r0 <<= 0x20
-     257:	r0 >>= 0x20
+     292:	r0 = *(u16 *)(r6 + 0x12)
+     293:	r0 <<= 0x10
+     294:	r0 <<= 0x20
+     295:	r0 >>= 0x20
 ;   csum += addend;
-     258:	r0 += r1
-     259:	r3 = r0
-     260:	r3 <<= 0x20
-     261:	r3 >>= 0x20
-     262:	r1 = 0x1
-     263:	r2 = 0x1
-     264:	if r3 != r0 goto +0x1 <LBB1_43>
-     265:	r2 = 0x0
+     296:	r0 += r1
+     297:	r3 = r0
+     298:	r3 <<= 0x20
+     299:	r3 >>= 0x20
+     300:	r1 = 0x1
+     301:	r2 = 0x1
+     302:	if r3 != r0 goto +0x1 <LBB1_25>
+     303:	r2 = 0x0
 
-0000000000000850 <LBB1_43>:
+0000000000000980 <LBB1_25>:
 ;   return csum + (csum < addend);
-     266:	r0 += r2
-     267:	r2 = r0
-     268:	r2 <<= 0x20
-     269:	r2 >>= 0x20
-     270:	r3 = 0xc5ffffff ll
-     272:	if r2 > r3 goto +0x1 <LBB1_45>
-     273:	r1 = 0x0
+     304:	r0 += r2
+     305:	r2 = r0
+     306:	r2 <<= 0x20
+     307:	r2 >>= 0x20
+     308:	r3 = 0xc5ffffff ll
+     310:	if r2 > r3 goto +0x1 <LBB1_27>
+     311:	r1 = 0x0
 
-0000000000000890 <LBB1_45>:
+00000000000009c0 <LBB1_27>:
 ;   csum += addend;
-     274:	r0 += r1
-     275:	r9 = 0x400
+     312:	r0 += r1
+     313:	r6 = 0x400
 ;   return csum + (csum < addend);
-     276:	r0 += 0x3a000000
-     277:	goto +0x12 <LBB1_47>
+     314:	r0 += 0x3a000000
+     315:	goto +0x4 <LBB1_28>
 
-00000000000008b0 <LBB1_46>:
+00000000000009e0 <LBB1_34>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     278:	r1 &= 0xffff
-     279:	r9 = r1
-     280:	if r1 > 0x4 goto +0xf <LBB1_47>
-;   if (likely(buf + 4 <= data_end)) {
-     281:	r1 = r6
-     282:	r1 += 0x4
-     283:	r8 = *(u64 *)(r10 - 0x30)
-     284:	if r1 > r7 goto +0x26 <LBB1_57>
-;   csum += addend;
-     285:	r0 <<= 0x20
-     286:	r0 >>= 0x20
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     287:	r1 = *(u32 *)(r6 + 0x0)
-;   csum += addend;
-     288:	r1 += r0
-     289:	r3 = r1
-     290:	r3 <<= 0x20
-     291:	r3 >>= 0x20
-     292:	r2 = 0x1
-     293:	if r3 != r1 goto +0x1a <LBB1_56>
-     294:	r2 = 0x0
-     295:	goto +0x18 <LBB1_56>
+     316:	r1 &= 0xffff
+     317:	r6 = r1
+     318:	if r1 > 0x4 goto +0x1 <LBB1_28>
+     319:	goto +0x18 <LBB1_79>
 
-0000000000000940 <LBB1_47>:
+0000000000000a00 <LBB1_28>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     296:	r4 = r9
-     297:	r4 <<= 0x20
-     298:	r4 >>= 0x20
-     299:	r1 = 0x200
-     300:	if r1 > r4 goto +0x1 <LBB1_49>
-     301:	r4 = 0x200
+     320:	r4 = r6
+     321:	r4 <<= 0x20
+     322:	r4 >>= 0x20
+     323:	r1 = 0x200
+     324:	if r1 > r4 goto +0x1 <LBB1_30>
+     325:	r4 = 0x200
 
-0000000000000970 <LBB1_49>:
+0000000000000a30 <LBB1_30>:
 ;     if (likely(buf + j <= data_end)) {
-     302:	r8 = r6
-     303:	r8 += r4
-     304:	if r8 > r7 goto +0x6 <LBB1_51>
+     326:	r7 = r8
+     327:	r7 += r4
+     328:	if r7 > r9 goto +0x6 <LBB1_32>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     305:	r1 = 0x0
-     306:	r2 = 0x0
-     307:	r3 = r6
-     308:	r5 = r0
-     309:	call 0x1c
-     310:	r6 = r8
+     329:	r1 = 0x0
+     330:	r2 = 0x0
+     331:	r3 = r8
+     332:	r5 = r0
+     333:	call 0x1c
+     334:	r8 = r7
 
-00000000000009b8 <LBB1_51>:
+0000000000000a78 <LBB1_32>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     311:	r1 = r9
-     312:	r1 += 0xfe00
-     313:	r2 = r9
-     314:	r2 <<= 0x20
-     315:	r2 >>= 0x20
-     316:	if r2 > 0x200 goto -0x27 <LBB1_46>
-     317:	r9 >>= 0x1
-     318:	r1 = r9
-     319:	goto -0x2a <LBB1_46>
+     335:	r1 = r6
+     336:	r1 += 0xfe00
+     337:	r2 = r6
+     338:	r2 <<= 0x20
+     339:	r2 >>= 0x20
+     340:	if r2 > 0x200 goto -0x19 <LBB1_34>
+     341:	r6 >>= 0x1
+     342:	r1 = r6
+     343:	goto -0x1c <LBB1_34>
 
-0000000000000a00 <LBB1_56>:
-;   return csum + (csum < addend);
-     320:	r1 += r2
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     321:	r6 += 0x1
-     322:	r0 = r1
-
-0000000000000a18 <LBB1_57>:
-     323:	r1 = 0x0
-;   if (likely(buf + 2 <= data_end)) {
-     324:	r2 = r6
-     325:	r2 += 0x2
-     326:	if r2 > r7 goto +0x2 <LBB1_59>
-;     addend = *(__be16 *)buf++;
-     327:	r1 = *(u16 *)(r6 + 0x0)
-     328:	r6 += 0x1
-
-0000000000000a48 <LBB1_59>:
-;   if (likely(buf + 1 <= data_end)) {
-     329:	r2 = r6
-     330:	r2 += 0x1
-     331:	if r2 > r7 goto +0x2 <LBB1_61>
-;     addend += *(__u8 *)buf++;
-     332:	r2 = *(u8 *)(r6 + 0x0)
-     333:	r1 += r2
-
-0000000000000a70 <LBB1_61>:
-;   csum += addend;
-     334:	r0 <<= 0x20
-     335:	r0 >>= 0x20
-     336:	r1 += r0
-     337:	r3 = r1
-     338:	r3 <<= 0x20
-     339:	r3 >>= 0x20
-     340:	r2 = 0x1
-     341:	if r3 != r1 goto +0x1 <LBB1_63>
-     342:	r2 = 0x0
-
-0000000000000ab8 <LBB1_63>:
-;   return csum + (csum < addend);
-     343:	r1 += r2
-     344:	r2 = 0xffff0000 ll
-;   return csum + (csum < addend);
-     346:	r3 = r1
-     347:	r3 &= r2
-;   sum = (sum & 0xffff) + (sum >> 16);
-     348:	r1 &= 0xffff
-     349:	r3 >>= 0x10
-     350:	r1 += r3
-;   sum = (sum & 0xffff) + (sum >> 16);
-     351:	r2 = r1
-     352:	r2 >>= 0x10
-     353:	r2 += r1
-;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
-     354:	r2 &= 0xffff
-     355:	if r2 != 0xffff goto -0x139 <LBB1_6>
-     356:	r1 = 0x5
-     357:	*(u32 *)(r10 - 0x4) = r1
-     358:	r2 = r10
-     359:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     360:	r1 = 0x0 ll
-     362:	call 0x1
-;   if (likely(value)) {
-     363:	if r0 == 0x0 goto +0x2 <LBB1_66>
-     364:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     365:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000b70 <LBB1_66>:
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     366:	r1 = *(u64 *)(r8 + 0x26)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     367:	r2 = *(u64 *)(r8 + 0x2e)
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     368:	r3 = *(u64 *)(r8 + 0x16)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     369:	r4 = *(u64 *)(r8 + 0x1e)
-     370:	r5 = 0x60
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     371:	*(u32 *)(r8 + 0xe) = r5
-     372:	r5 = 0x81
-;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
-     373:	*(u16 *)(r8 + 0x36) = r5
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     374:	*(u64 *)(r8 + 0x2e) = r4
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     375:	*(u64 *)(r8 + 0x26) = r3
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     376:	*(u64 *)(r8 + 0x1e) = r2
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     377:	*(u64 *)(r8 + 0x16) = r1
-     378:	r1 = 0x403a
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     379:	*(u16 *)(r8 + 0x14) = r1
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     380:	r1 = *(u16 *)(r8 + 0x0)
-     381:	r2 = *(u16 *)(r8 + 0x6)
-     382:	*(u16 *)(r8 + 0x0) = r2
-;   (dest->mac_addr16[1] = src->mac_addr16[1]);
-     383:	r2 = *(u16 *)(r8 + 0x8)
-     384:	r3 = *(u16 *)(r8 + 0x2)
-     385:	*(u16 *)(r8 + 0x8) = r3
-     386:	*(u16 *)(r8 + 0x2) = r2
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     387:	r2 = *(u16 *)(r8 + 0xa)
-     388:	r3 = *(u16 *)(r8 + 0x4)
-     389:	*(u16 *)(r8 + 0xa) = r3
-;   (dest->mac_addr16[0] = src->mac_addr16[0]);
-     390:	*(u16 *)(r8 + 0x6) = r1
-;   (dest->mac_addr16[2] = src->mac_addr16[2]);
-     391:	*(u16 *)(r8 + 0x4) = r2
-;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
-     392:	r1 = *(u16 *)(r8 + 0x38)
-     393:	r1 += -0x1
-     394:	*(u16 *)(r8 + 0x38) = r1
-     395:	goto +0x1c <LBB1_72>
-
-0000000000000c60 <LBB1_67>:
+0000000000000ac0 <LBB1_79>:
 ;   if (likely(buf + 4 <= data_end)) {
-     396:	r1 = r6
-     397:	r1 += 0x4
-     398:	if r1 > r8 goto +0xc <LBB1_71>
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     399:	r1 = *(u32 *)(r6 + 0x0)
+     344:	r1 = r8
+     345:	r1 += 0x4
+     346:	r6 = *(u64 *)(r10 - 0x30)
+     347:	if r1 > r9 goto +0xd <LBB1_38>
 ;   csum += addend;
-     400:	r0 <<= 0x20
-     401:	r0 >>= 0x20
-     402:	r1 += r0
-     403:	r3 = r1
-     404:	r3 <<= 0x20
-     405:	r3 >>= 0x20
-     406:	r2 = 0x1
-     407:	if r3 != r1 goto +0x1 <LBB1_70>
-     408:	r2 = 0x0
+     348:	r0 <<= 0x20
+     349:	r0 >>= 0x20
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     350:	r1 = *(u32 *)(r8 + 0x0)
+;   csum += addend;
+     351:	r1 += r0
+     352:	r3 = r1
+     353:	r3 <<= 0x20
+     354:	r3 >>= 0x20
+     355:	r2 = 0x1
+     356:	if r3 != r1 goto +0x1 <LBB1_37>
+     357:	r2 = 0x0
 
-0000000000000cc8 <LBB1_70>:
+0000000000000b30 <LBB1_37>:
 ;   return csum + (csum < addend);
-     409:	r1 += r2
-     410:	r0 = r1
+     358:	r1 += r2
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     359:	r8 += 0x1
+     360:	r0 = r1
 
-0000000000000cd8 <LBB1_71>:
-     411:	r1 = 0xffff0000 ll
+0000000000000b48 <LBB1_38>:
+     361:	r1 = 0x0
+;   if (likely(buf + 2 <= data_end)) {
+     362:	r2 = r8
+     363:	r2 += 0x2
+     364:	if r2 > r9 goto +0x2 <LBB1_40>
+;     addend = *(__be16 *)buf++;
+     365:	r1 = *(u16 *)(r8 + 0x0)
+     366:	r8 += 0x1
+
+0000000000000b78 <LBB1_40>:
+;   if (likely(buf + 1 <= data_end)) {
+     367:	r2 = r8
+     368:	r2 += 0x1
+     369:	if r2 > r9 goto +0x2 <LBB1_42>
+;     addend += *(__u8 *)buf++;
+     370:	r2 = *(u8 *)(r8 + 0x0)
+     371:	r1 += r2
+
+0000000000000ba0 <LBB1_42>:
+;   csum += addend;
+     372:	r0 <<= 0x20
+     373:	r0 >>= 0x20
+     374:	r1 += r0
+     375:	r3 = r1
+     376:	r3 <<= 0x20
+     377:	r3 >>= 0x20
+     378:	r2 = 0x1
+     379:	if r3 != r1 goto +0x1 <LBB1_44>
+     380:	r2 = 0x0
+
+0000000000000be8 <LBB1_44>:
+;   return csum + (csum < addend);
+     381:	r1 += r2
+     382:	r2 = 0xffff0000 ll
+;   return csum + (csum < addend);
+     384:	r3 = r1
+     385:	r3 &= r2
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     413:	r2 = r0
-     414:	r2 &= r1
-     415:	r2 >>= 0x10
-     416:	r0 &= 0xffff
-     417:	r0 += r2
+     386:	r1 &= 0xffff
+     387:	r3 >>= 0x10
+     388:	r1 += r3
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     418:	r1 = r0
-     419:	r1 >>= 0x10
-     420:	r1 += r0
+     389:	r2 = r1
+     390:	r2 >>= 0x10
+     391:	r2 += r1
+;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
+     392:	r2 &= 0xffff
+     393:	if r2 != 0xffff goto -0x161 <LBB1_6>
+     394:	r1 = 0x4
+     395:	*(u32 *)(r10 - 0x4) = r1
+     396:	r2 = r10
+     397:	r2 += -0x4
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     398:	r1 = 0x0 ll
+     400:	call 0x1
+;   if (likely(value)) {
+     401:	if r0 == 0x0 goto +0x2 <LBB1_47>
+     402:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     403:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000ca0 <LBB1_47>:
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     404:	r8 = *(u64 *)(r6 + 0x1e)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     405:	r9 = *(u64 *)(r6 + 0x16)
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     406:	r7 = *(u64 *)(r6 + 0x2e)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     407:	r6 = *(u64 *)(r6 + 0x26)
+     408:	r1 = 0x7
+     409:	*(u32 *)(r10 - 0x20) = r1
+     410:	r2 = r10
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     411:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     412:	r1 = 0x0 ll
+     414:	call 0x1
+;   if (likely(value)) {
+     415:	if r0 == 0x0 goto +0x2 <LBB1_74>
+     416:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     417:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000000d10 <LBB1_74>:
+     418:	r1 = 0x60
+     419:	r3 = *(u64 *)(r10 - 0x30)
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     420:	*(u32 *)(r3 + 0xe) = r1
+     421:	r1 = 0x81
+;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
+     422:	*(u16 *)(r3 + 0x36) = r1
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     423:	*(u64 *)(r3 + 0x2e) = r8
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     424:	*(u64 *)(r3 + 0x26) = r9
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     425:	*(u64 *)(r3 + 0x1e) = r7
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     426:	*(u64 *)(r3 + 0x16) = r6
+     427:	r1 = 0x403a
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     428:	*(u16 *)(r3 + 0x14) = r1
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     429:	r1 = *(u16 *)(r3 + 0xa)
+     430:	*(u16 *)(r3 + 0x4) = r1
+;   __u32 daddr_first           = *(__u32 *)old;
+     431:	r1 = *(u32 *)(r3 + 0x0)
+;   *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
+     432:	r2 = *(u16 *)(r3 + 0x6)
+     433:	*(u16 *)(r3 + 0x0) = r2
+     434:	r2 = *(u16 *)(r3 + 0x8)
+     435:	*(u16 *)(r3 + 0x2) = r2
+;   __u16 daddr_last            = *(__u16 *)old + 2;
+     436:	r2 = r1
+     437:	r2 += 0x2
+;   *((__u16 *)&new->saddr + 2) = daddr_last;
+     438:	*(u16 *)(r3 + 0xa) = r2
+;   *(__u32 *)&new->saddr       = daddr_first;
+     439:	*(u16 *)(r3 + 0x6) = r1
+     440:	r1 >>= 0x10
+     441:	*(u16 *)(r3 + 0x8) = r1
+;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
+     442:	r1 = *(u16 *)(r3 + 0x38)
+     443:	r1 += -0x1
+     444:	*(u16 *)(r3 + 0x38) = r1
+     445:	goto +0x1c <LBB1_75>
+
+0000000000000df0 <LBB1_80>:
+;   if (likely(buf + 4 <= data_end)) {
+     446:	r1 = r6
+     447:	r1 += 0x4
+     448:	if r1 > r9 goto +0xc <LBB1_72>
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     449:	r1 = *(u32 *)(r6 + 0x0)
+;   csum += addend;
+     450:	r0 <<= 0x20
+     451:	r0 >>= 0x20
+     452:	r1 += r0
+     453:	r3 = r1
+     454:	r3 <<= 0x20
+     455:	r3 >>= 0x20
+     456:	r2 = 0x1
+     457:	if r3 != r1 goto +0x1 <LBB1_71>
+     458:	r2 = 0x0
+
+0000000000000e58 <LBB1_71>:
+;   return csum + (csum < addend);
+     459:	r1 += r2
+     460:	r0 = r1
+
+0000000000000e68 <LBB1_72>:
+     461:	r1 = 0xffff0000 ll
+;   sum = (sum & 0xffff) + (sum >> 16);
+     463:	r2 = r0
+     464:	r2 &= r1
+     465:	r2 >>= 0x10
+     466:	r0 &= 0xffff
+     467:	r0 += r2
+;   sum = (sum & 0xffff) + (sum >> 16);
+     468:	r1 = r0
+     469:	r1 >>= 0x10
+     470:	r1 += r0
 ;   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
-     421:	r1 ^= -0x1
-     422:	r2 = *(u64 *)(r10 - 0x30)
-     423:	*(u16 *)(r2 + 0x38) = r1
+     471:	r1 ^= -0x1
+     472:	r2 = *(u64 *)(r10 - 0x30)
+     473:	*(u16 *)(r2 + 0x38) = r1
 
-0000000000000d40 <LBB1_72>:
-;   return bpf_redirect(ctx->ingress_ifindex, 0);
-     424:	r1 = *(u64 *)(r10 - 0x38)
-     425:	r1 = *(u32 *)(r1 + 0x24)
-     426:	r2 = 0x0
-     427:	call 0x17
-     428:	r3 = r0
+0000000000000ed0 <LBB1_75>:
+     474:	r1 = 0x8
+     475:	*(u32 *)(r10 - 0x20) = r1
+     476:	r2 = r10
+     477:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     478:	r1 = 0x0 ll
+     480:	call 0x1
+;   if (likely(value)) {
+     481:	if r0 == 0x0 goto +0x2 <LBB1_77>
+     482:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     483:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000d68 <LBB1_73>:
+0000000000000f20 <LBB1_77>:
+;   return bpf_redirect(ctx->ifindex, 0);
+     484:	r1 = *(u64 *)(r10 - 0x38)
+     485:	r1 = *(u32 *)(r1 + 0x28)
+     486:	r2 = 0x0
+     487:	call 0x17
+     488:	r3 = r0
+
+0000000000000f48 <LBB1_78>:
 ;   return exceed2go_tc(ctx, BASE_LAYER_L2);
-     429:	r0 = r3
-     430:	exit
+     489:	r0 = r3
+     490:	exit
 
-0000000000000d78 <exceed2go_tc_l3>:
-; exceed2go_tc_l3(struct __sk_buff *ctx) {
-     431:	r3 = 0xffffffff ll
+0000000000000f58 <exceed2go_tc_l3>:
 ;   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     433:	r6 = *(u32 *)(r1 + 0x50)
-     434:	*(u64 *)(r10 - 0x38) = r1
-     435:	r2 = *(u32 *)(r1 + 0x4c)
+     491:	r9 = *(u32 *)(r1 + 0x50)
+     492:	*(u64 *)(r10 - 0x38) = r1
+     493:	r2 = *(u32 *)(r1 + 0x4c)
 ;   assert_boundary(pkt->ipv6, pkt->end, false);
-     436:	r7 = r2
-     437:	r7 += 0x28
-     438:	if r7 > r6 goto +0x189 <LBB2_72>
+     494:	r8 = r2
+     495:	r8 += 0x28
+     496:	if r8 > r9 goto +0x1f <LBB2_5>
 ;   assert_equal(pkt->ipv6->version, 6, false);
-     439:	r1 = *(u8 *)(r2 + 0x0)
-     440:	r1 &= 0xf0
-     441:	if r1 != 0x60 goto +0x186 <LBB2_72>
-     442:	*(u64 *)(r10 - 0x30) = r2
-     443:	r9 = 0x0
-     444:	*(u32 *)(r10 - 0x20) = r9
-     445:	r2 = r10
-     446:	r2 += -0x20
+     497:	r1 = *(u8 *)(r2 + 0x0)
+     498:	r1 &= 0xf0
+     499:	if r1 != 0x60 goto +0x1c <LBB2_5>
+     500:	*(u64 *)(r10 - 0x30) = r2
+     501:	r6 = 0x0
+     502:	*(u32 *)(r10 - 0x20) = r6
+     503:	r2 = r10
+     504:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     447:	r1 = 0x0 ll
-     449:	call 0x1
+     505:	r1 = 0x0 ll
+     507:	call 0x1
 ;   if (likely(value)) {
-     450:	if r0 == 0x0 goto +0x2 <LBB2_4>
-     451:	r1 = 0x1
+     508:	if r0 == 0x0 goto +0x2 <LBB2_4>
+     509:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     452:	lock *(u32 *)(r0 + 0x0) += r1
+     510:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000e28 <LBB2_4>:
-     453:	r2 = *(u64 *)(r10 - 0x30)
+0000000000000ff8 <LBB2_4>:
+     511:	r2 = *(u64 *)(r10 - 0x30)
 ;       .needle = pkt->ipv6->daddr,
-     454:	r1 = *(u64 *)(r2 + 0x20)
-     455:	*(u64 *)(r10 - 0x18) = r1
-     456:	r1 = *(u64 *)(r2 + 0x18)
-     457:	*(u64 *)(r10 - 0x20) = r1
+     512:	r1 = *(u64 *)(r2 + 0x20)
+     513:	*(u64 *)(r10 - 0x18) = r1
+     514:	r1 = *(u64 *)(r2 + 0x18)
+     515:	*(u64 *)(r10 - 0x20) = r1
 ;   struct target_search_cb_ctx target = {
-     458:	*(u8 *)(r10 - 0xc) = r9
-     459:	*(u32 *)(r10 - 0x10) = r9
-     460:	r3 = r10
+     516:	*(u8 *)(r10 - 0xc) = r6
+     517:	*(u32 *)(r10 - 0x10) = r6
+     518:	r3 = r10
 ;       .needle = pkt->ipv6->daddr,
-     461:	r3 += -0x20
+     519:	r3 += -0x20
 ;   bpf_for_each_map_elem(&exceed2go_addrs, target_search_cb, &target, 0);
-     462:	r1 = 0x0 ll
-     464:	r2 = 0x0 ll
-     466:	r4 = 0x0
-     467:	call 0xa4
+     520:	r1 = 0x0 ll
+     522:	r2 = 0x0 ll
+     524:	r4 = 0x0
+     525:	call 0xa4
 ;   assert_equal(target.found, true, PKT_UNRELATED);
-     468:	r1 = *(u8 *)(r10 - 0xc)
-     469:	if r1 != 0x0 goto +0x3 <LBB2_6>
+     526:	r1 = *(u8 *)(r10 - 0xc)
+     527:	if r1 != 0x0 goto +0xd <LBB2_6>
 
-0000000000000eb0 <LBB2_5>:
-     470:	r3 = 0xffffffff ll
-     472:	goto +0x167 <LBB2_72>
-
-0000000000000ec8 <LBB2_6>:
-     473:	r8 = 0x1
-     474:	*(u32 *)(r10 - 0x4) = r8
-     475:	r2 = r10
-     476:	r2 += -0x4
+0000000000001080 <LBB2_5>:
+     528:	r1 = 0x5
+     529:	*(u32 *)(r10 - 0x20) = r1
+     530:	r2 = r10
+     531:	r2 += -0x20
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     477:	r1 = 0x0 ll
-     479:	call 0x1
+     532:	r1 = 0x0 ll
+     534:	call 0x1
 ;   if (likely(value)) {
-     480:	if r0 == 0x0 goto +0x1 <LBB2_8>
+     535:	if r0 == 0x0 goto +0x2 <LBB2_48>
+     536:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     481:	lock *(u32 *)(r0 + 0x0) += r8
+     537:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000000f10 <LBB2_8>:
+00000000000010d0 <LBB2_48>:
+     538:	r7 = 0xffffffff ll
+     540:	goto +0x17e <LBB2_76>
+
+00000000000010e8 <LBB2_6>:
+     541:	r6 = 0x1
+     542:	*(u32 *)(r10 - 0x4) = r6
+     543:	r2 = r10
+     544:	r2 += -0x4
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     545:	r1 = 0x0 ll
+     547:	call 0x1
+;   if (likely(value)) {
+     548:	if r0 == 0x0 goto +0x1 <LBB2_8>
+;     __sync_fetch_and_add(value, 1);
+     549:	lock *(u32 *)(r0 + 0x0) += r6
+
+0000000000001130 <LBB2_8>:
+     550:	r6 = *(u64 *)(r10 - 0x30)
 ;   __u32 hop_key = pkt->ipv6->hop_limit;
-     482:	r1 = *(u64 *)(r10 - 0x30)
-     483:	r1 = *(u8 *)(r1 + 0x7)
-     484:	*(u32 *)(r10 - 0x24) = r1
+     551:	r1 = *(u8 *)(r6 + 0x7)
+     552:	*(u32 *)(r10 - 0x24) = r1
 ;   if (target.key > hop_key) {
-     485:	r2 = *(u32 *)(r10 - 0x10)
-     486:	if r1 >= r2 goto +0x8e <LBB2_32>
-     487:	r2 = r10
+     553:	r2 = *(u32 *)(r10 - 0x10)
+     554:	if r1 >= r2 goto +0x8e <LBB2_14>
+     555:	r2 = r10
 ;         bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
-     488:	r2 += -0x24
-     489:	r1 = 0x0 ll
-     491:	call 0x1
-     492:	r9 = r0
+     556:	r2 += -0x24
+     557:	r1 = 0x0 ll
+     559:	call 0x1
 ;     if (exceed_addr != NULL) {
-     493:	if r9 == 0x0 goto +0x87 <LBB2_32>
-     494:	r1 = 0x2
-     495:	*(u32 *)(r10 - 0x4) = r1
-     496:	r2 = r10
-     497:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     498:	r1 = 0x0 ll
-     500:	call 0x1
-;   if (likely(value)) {
-     501:	if r0 == 0x0 goto +0x2 <LBB2_12>
-     502:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     503:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000000fc0 <LBB2_12>:
+     560:	if r0 == 0x0 goto +0x88 <LBB2_14>
 ;       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
-     504:	r1 = *(u64 *)(r10 - 0x30)
-     505:	r6 -= r1
-     506:	r8 = 0x4d0
+     561:	r9 -= r6
+     562:	r6 = 0x4d0
 ;   int   tail_adj       = IPV6_MTU_MIN - new_ip_pkt_len;
-     507:	r8 -= r6
-     508:	r8 <<= 0x20
-     509:	r8 s>>= 0x20
-     510:	r1 = 0x1
+     563:	r6 -= r9
+     564:	r6 <<= 0x20
+     565:	r6 s>>= 0x20
+     566:	r1 = 0x1
 ;   if (tail_adj > 0 && new_ip_pkt_len % 4) {
-     511:	if r1 s> r8 goto +0x4 <LBB2_15>
-     512:	r6 &= 0x3
-     513:	if r6 == 0x0 goto +0x2 <LBB2_15>
+     567:	if r1 s> r6 goto +0x4 <LBB2_13>
+     568:	r9 &= 0x3
+     569:	if r9 == 0x0 goto +0x2 <LBB2_13>
 ;     tail_adj = -(new_ip_pkt_len % 4);
-     514:	r6 = -r6
-     515:	r8 = r6
+     570:	r9 = -r9
+     571:	r6 = r9
 
-0000000000001020 <LBB2_15>:
-     516:	r1 = *(u64 *)(r10 - 0x30)
+00000000000011e0 <LBB2_13>:
+     572:	r1 = *(u64 *)(r10 - 0x30)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     517:	r2 = *(u64 *)(r1 + 0x10)
+     573:	r2 = *(u64 *)(r1 + 0x10)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     518:	*(u64 *)(r10 - 0x48) = r2
-     519:	r1 = *(u64 *)(r1 + 0x8)
+     574:	*(u64 *)(r10 - 0x50) = r2
+     575:	r1 = *(u64 *)(r1 + 0x8)
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     520:	*(u64 *)(r10 - 0x40) = r1
-     521:	r1 = *(u64 *)(r9 + 0x8)
+     576:	*(u64 *)(r10 - 0x48) = r1
+     577:	r1 = *(u64 *)(r0 + 0x8)
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     522:	*(u64 *)(r10 - 0x30) = r1
-     523:	r7 = *(u64 *)(r9 + 0x0)
-     524:	r6 = 0x0
-;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-     525:	r1 = *(u64 *)(r10 - 0x38)
-     526:	r2 = 0x30
-     527:	r3 = 0x0
-     528:	call 0x2b
-     529:	r3 = 0x2
-;     assert_equal(bpf_skb_change_head(ctx, (int)ADJ_LEN, 0), 0, TC_ACT_SHOT);
-     530:	if r0 != 0x0 goto +0x12d <LBB2_72>
+     578:	*(u64 *)(r10 - 0x40) = r1
+     579:	r1 = *(u64 *)(r0 + 0x0)
+     580:	*(u64 *)(r10 - 0x30) = r1
+     581:	r1 = 0x6
+     582:	*(u32 *)(r10 - 0x20) = r1
+     583:	r1 = 0x0
+     584:	r8 = *(u64 *)(r10 - 0x38)
 ;   return tail_adj < 0 ? tail_adj : 0;
-     531:	if r6 s> r8 goto +0x1 <LBB2_18>
-     532:	r8 = 0x0
+     585:	if r1 s> r6 goto +0x1 <LBB2_50>
+     586:	r6 = 0x0
 
-00000000000010a8 <LBB2_18>:
-     533:	r1 = *(u64 *)(r10 - 0x38)
+0000000000001258 <LBB2_50>:
+     587:	r2 = r10
+     588:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     589:	r1 = 0x0 ll
+     591:	call 0x1
+;   if (likely(value)) {
+     592:	if r0 == 0x0 goto +0x2 <LBB2_52>
+     593:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     594:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000001298 <LBB2_52>:
+;     long rc_head_adj = bpf_skb_adjust_room(ctx,
+     595:	r1 = r8
+     596:	r2 = 0x30
+     597:	r3 = 0x1
+     598:	r4 = 0x1
+     599:	call 0x32
+     600:	r7 = 0x2
+;     assert_equal(rc_head_adj, 0, TC_ACT_SHOT);
+     601:	if r0 != 0x0 goto +0x141 <LBB2_76>
 ;     int new_len = ctx->len + pkt.tail_adjust;
-     534:	r2 = *(u32 *)(r1 + 0x0)
-     535:	r2 += r8
+     602:	r2 = *(u32 *)(r8 + 0x0)
+     603:	r2 += r6
 ;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     536:	r3 = 0x0
-     537:	call 0x26
-     538:	r3 = 0x2
-;     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
-     539:	if r0 != 0x0 goto +0x124 <LBB2_72>
-     540:	r1 = *(u64 *)(r10 - 0x38)
+     604:	r1 = r8
+     605:	r3 = 0x0
+     606:	call 0x26
+     607:	if r0 != 0x0 goto +0x13b <LBB2_76>
 ;     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-     541:	r8 = *(u32 *)(r1 + 0x50)
-     542:	r9 = *(u32 *)(r1 + 0x4c)
+     608:	r9 = *(u32 *)(r8 + 0x50)
+     609:	r6 = *(u32 *)(r8 + 0x4c)
 ;   assert_boundary(icmp6, pkt->end, false);
-     543:	r1 = r9
-     544:	r1 += 0x30
-     545:	if r1 > r8 goto +0x11e <LBB2_72>
-     546:	r1 = 0x60
+     610:	r1 = r6
+     611:	r1 += 0x30
+     612:	if r1 > r9 goto +0x136 <LBB2_76>
+     613:	r1 = 0x60
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     547:	*(u32 *)(r9 + 0x0) = r1
-     548:	r1 = 0x3
+     614:	*(u32 *)(r6 + 0x0) = r1
+     615:	r1 = 0x3
 ;   *icmp6                    = icmp6_new;
-     549:	*(u32 *)(r9 + 0x28) = r1
+     616:	*(u32 *)(r6 + 0x28) = r1
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     550:	r1 = *(u64 *)(r10 - 0x48)
-     551:	*(u64 *)(r9 + 0x20) = r1
+     617:	r1 = *(u64 *)(r10 - 0x50)
+     618:	*(u64 *)(r6 + 0x20) = r1
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     552:	r1 = *(u64 *)(r10 - 0x40)
-     553:	*(u64 *)(r9 + 0x18) = r1
+     619:	r1 = *(u64 *)(r10 - 0x48)
+     620:	*(u64 *)(r6 + 0x18) = r1
 ;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     554:	r1 = *(u64 *)(r10 - 0x30)
-     555:	*(u64 *)(r9 + 0x10) = r1
+     621:	r1 = *(u64 *)(r10 - 0x40)
+     622:	*(u64 *)(r6 + 0x10) = r1
 ;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     556:	*(u64 *)(r9 + 0x8) = r7
-     557:	r1 = 0x403a
+     623:	r1 = *(u64 *)(r10 - 0x30)
+     624:	*(u64 *)(r6 + 0x8) = r1
+     625:	r1 = 0x403a
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     558:	*(u16 *)(r9 + 0x6) = r1
+     626:	*(u16 *)(r6 + 0x6) = r1
 ;   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-     559:	r6 = r9
-     560:	r6 += 0x28
+     627:	r8 = r6
+     628:	r8 += 0x28
 ;   __be16 payload_len = bpf_htons(pkt->end - (void *)icmp6);
-     561:	r1 = r8
-     562:	r1 -= r6
-     563:	r1 = be16 r1
+     629:	r1 = r9
+     630:	r1 -= r8
+     631:	r1 = be16 r1
 ;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     564:	*(u16 *)(r9 + 0x4) = r1
-     565:	r1 = 0x0
+     632:	*(u16 *)(r6 + 0x4) = r1
+     633:	r1 = 0x0
 ;   *icmp6                    = icmp6_new;
-     566:	*(u32 *)(r9 + 0x2c) = r1
+     634:	*(u32 *)(r6 + 0x2c) = r1
 ;   in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
-     567:	r3 = r9
-     568:	r3 += 0x8
+     635:	r3 = r6
+     636:	r3 += 0x8
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     569:	r2 = 0x0
-     570:	r4 = 0x20
-     571:	r5 = 0x0
-     572:	call 0x1c
-     573:	r1 = r0
-     574:	r1 <<= 0x20
-     575:	r1 >>= 0x20
+     637:	r2 = 0x0
+     638:	r4 = 0x20
+     639:	r5 = 0x0
+     640:	call 0x1c
+     641:	r1 = r0
+     642:	r1 <<= 0x20
+     643:	r1 >>= 0x20
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     576:	r0 = *(u16 *)(r9 + 0x4)
-     577:	r0 <<= 0x10
-     578:	r0 <<= 0x20
-     579:	r0 >>= 0x20
+     644:	r0 = *(u16 *)(r6 + 0x4)
+     645:	r0 <<= 0x10
+     646:	r0 <<= 0x20
+     647:	r0 >>= 0x20
 ;   csum += addend;
-     580:	r0 += r1
-     581:	r3 = r0
-     582:	r3 <<= 0x20
-     583:	r3 >>= 0x20
-     584:	r1 = 0x1
-     585:	r2 = 0x1
-     586:	if r3 != r0 goto +0x1 <LBB2_22>
-     587:	r2 = 0x0
+     648:	r0 += r1
+     649:	r3 = r0
+     650:	r3 <<= 0x20
+     651:	r3 >>= 0x20
+     652:	r1 = 0x1
+     653:	r2 = 0x1
+     654:	if r3 != r0 goto +0x1 <LBB2_57>
+     655:	r2 = 0x0
 
-0000000000001260 <LBB2_22>:
-     588:	*(u64 *)(r10 - 0x30) = r9
+0000000000001480 <LBB2_57>:
+     656:	*(u64 *)(r10 - 0x30) = r6
 ;   return csum + (csum < addend);
-     589:	r0 += r2
-     590:	r2 = r0
-     591:	r2 <<= 0x20
-     592:	r2 >>= 0x20
-     593:	r3 = 0xc5ffffff ll
-     595:	if r2 > r3 goto +0x1 <LBB2_24>
-     596:	r1 = 0x0
+     657:	r0 += r2
+     658:	r2 = r0
+     659:	r2 <<= 0x20
+     660:	r2 >>= 0x20
+     661:	r3 = 0xc5ffffff ll
+     663:	if r2 > r3 goto +0x1 <LBB2_59>
+     664:	r1 = 0x0
 
-00000000000012a8 <LBB2_24>:
+00000000000014c8 <LBB2_59>:
 ;   csum += addend;
-     597:	r0 += r1
-     598:	r9 = 0x400
+     665:	r0 += r1
+     666:	r6 = 0x400
 ;   return csum + (csum < addend);
-     599:	r0 += 0x3a000000
-     600:	goto +0x4 <LBB2_26>
+     667:	r0 += 0x3a000000
+     668:	goto +0x4 <LBB2_60>
 
-00000000000012c8 <LBB2_25>:
+00000000000014e8 <LBB2_66>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     601:	r1 &= 0xffff
-     602:	r9 = r1
-     603:	if r1 > 0x4 goto +0x1 <LBB2_26>
-     604:	goto +0xc2 <LBB2_66>
+     669:	r1 &= 0xffff
+     670:	r6 = r1
+     671:	if r1 > 0x4 goto +0x1 <LBB2_60>
+     672:	goto +0xcf <LBB2_78>
 
-00000000000012e8 <LBB2_26>:
+0000000000001508 <LBB2_60>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     605:	r4 = r9
-     606:	r4 <<= 0x20
-     607:	r4 >>= 0x20
-     608:	r1 = 0x200
-     609:	if r1 > r4 goto +0x1 <LBB2_28>
-     610:	r4 = 0x200
+     673:	r4 = r6
+     674:	r4 <<= 0x20
+     675:	r4 >>= 0x20
+     676:	r1 = 0x200
+     677:	if r1 > r4 goto +0x1 <LBB2_62>
+     678:	r4 = 0x200
 
-0000000000001318 <LBB2_28>:
+0000000000001538 <LBB2_62>:
 ;     if (likely(buf + j <= data_end)) {
-     611:	r7 = r6
-     612:	r7 += r4
-     613:	if r7 > r8 goto +0x6 <LBB2_30>
+     679:	r7 = r8
+     680:	r7 += r4
+     681:	if r7 > r9 goto +0x6 <LBB2_64>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     614:	r1 = 0x0
-     615:	r2 = 0x0
-     616:	r3 = r6
-     617:	r5 = r0
-     618:	call 0x1c
-     619:	r6 = r7
+     682:	r1 = 0x0
+     683:	r2 = 0x0
+     684:	r3 = r8
+     685:	r5 = r0
+     686:	call 0x1c
+     687:	r8 = r7
 
-0000000000001360 <LBB2_30>:
+0000000000001580 <LBB2_64>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     620:	r1 = r9
-     621:	r1 += 0xfe00
-     622:	r2 = r9
-     623:	r2 <<= 0x20
-     624:	r2 >>= 0x20
-     625:	if r2 > 0x200 goto -0x19 <LBB2_25>
-     626:	r9 >>= 0x1
-     627:	r1 = r9
-     628:	goto -0x1c <LBB2_25>
+     688:	r1 = r6
+     689:	r1 += 0xfe00
+     690:	r2 = r6
+     691:	r2 <<= 0x20
+     692:	r2 >>= 0x20
+     693:	if r2 > 0x200 goto -0x19 <LBB2_66>
+     694:	r6 >>= 0x1
+     695:	r1 = r6
+     696:	goto -0x1c <LBB2_66>
 
-00000000000013a8 <LBB2_32>:
-     629:	r8 = *(u64 *)(r10 - 0x30)
+00000000000015c8 <LBB2_14>:
 ;   assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
-     630:	r1 = *(u8 *)(r8 + 0x6)
-     631:	if r1 != 0x3a goto -0xa2 <LBB2_5>
-     632:	r1 = 0x3
-     633:	*(u32 *)(r10 - 0x4) = r1
-     634:	r2 = r10
-     635:	r2 += -0x4
+     697:	r1 = *(u8 *)(r6 + 0x6)
+     698:	if r1 != 0x3a goto -0xab <LBB2_5>
+     699:	r1 = 0x2
+     700:	*(u32 *)(r10 - 0x4) = r1
+     701:	r2 = r10
+     702:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     636:	r1 = 0x0 ll
-     638:	call 0x1
+     703:	r1 = 0x0 ll
+     705:	call 0x1
 ;   if (likely(value)) {
-     639:	if r0 == 0x0 goto +0x2 <LBB2_35>
-     640:	r1 = 0x1
+     706:	if r0 == 0x0 goto +0x2 <LBB2_17>
+     707:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     641:	lock *(u32 *)(r0 + 0x0) += r1
+     708:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000001410 <LBB2_35>:
+0000000000001628 <LBB2_17>:
 ;   assert_boundary(icmp6, pkt->end, false);
-     642:	r1 = r8
-     643:	r1 += 0x30
-     644:	if r1 > r6 goto -0xaf <LBB2_5>
+     709:	r1 = r6
+     710:	r1 += 0x30
+     711:	if r1 > r9 goto -0xb8 <LBB2_5>
 ;   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-     645:	r1 = *(u8 *)(r7 + 0x0)
-     646:	if r1 != 0x80 goto -0xb1 <LBB2_5>
+     712:	r1 = *(u8 *)(r8 + 0x0)
+     713:	if r1 != 0x80 goto -0xba <LBB2_5>
 ;   assert_equal(icmp6->icmp6_code, 0, false);
-     647:	r1 = *(u8 *)(r8 + 0x29)
-     648:	if r1 != 0x0 goto -0xb3 <LBB2_5>
-     649:	r1 = 0x4
-     650:	*(u32 *)(r10 - 0x4) = r1
-     651:	r2 = r10
-     652:	r2 += -0x4
+     714:	r1 = *(u8 *)(r6 + 0x29)
+     715:	if r1 != 0x0 goto -0xbc <LBB2_5>
+     716:	r1 = 0x3
+     717:	*(u32 *)(r10 - 0x4) = r1
+     718:	r2 = r10
+     719:	r2 += -0x4
 ;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     653:	r1 = 0x0 ll
-     655:	call 0x1
+     720:	r1 = 0x0 ll
+     722:	call 0x1
 ;   if (likely(value)) {
-     656:	if r0 == 0x0 goto +0x2 <LBB2_40>
-     657:	r1 = 0x1
+     723:	if r0 == 0x0 goto +0x2 <LBB2_22>
+     724:	r1 = 0x1
 ;     __sync_fetch_and_add(value, 1);
-     658:	lock *(u32 *)(r0 + 0x0) += r1
+     725:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000001498 <LBB2_40>:
+00000000000016b0 <LBB2_22>:
 ;   sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-     659:	r3 = r8
-     660:	r3 += 0x8
-     661:	r1 = 0x0
-     662:	r2 = 0x0
-     663:	r4 = 0x20
-     664:	r5 = 0x0
-     665:	call 0x1c
-     666:	r1 = r0
-     667:	r1 <<= 0x20
-     668:	r1 >>= 0x20
+     726:	r3 = r6
+     727:	r3 += 0x8
+     728:	r1 = 0x0
+     729:	r2 = 0x0
+     730:	r4 = 0x20
+     731:	r5 = 0x0
+     732:	call 0x1c
+     733:	r1 = r0
+     734:	r1 <<= 0x20
+     735:	r1 >>= 0x20
 ;   sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-     669:	r0 = *(u16 *)(r8 + 0x4)
-     670:	r0 <<= 0x10
-     671:	r0 <<= 0x20
-     672:	r0 >>= 0x20
+     736:	r0 = *(u16 *)(r6 + 0x4)
+     737:	r0 <<= 0x10
+     738:	r0 <<= 0x20
+     739:	r0 >>= 0x20
 ;   csum += addend;
-     673:	r0 += r1
-     674:	r3 = r0
-     675:	r3 <<= 0x20
-     676:	r3 >>= 0x20
-     677:	r1 = 0x1
-     678:	r2 = 0x1
-     679:	if r3 != r0 goto +0x1 <LBB2_42>
-     680:	r2 = 0x0
+     740:	r0 += r1
+     741:	r3 = r0
+     742:	r3 <<= 0x20
+     743:	r3 >>= 0x20
+     744:	r1 = 0x1
+     745:	r2 = 0x1
+     746:	if r3 != r0 goto +0x1 <LBB2_24>
+     747:	r2 = 0x0
 
-0000000000001548 <LBB2_42>:
+0000000000001760 <LBB2_24>:
 ;   return csum + (csum < addend);
-     681:	r0 += r2
-     682:	r2 = r0
-     683:	r2 <<= 0x20
-     684:	r2 >>= 0x20
-     685:	r3 = 0xc5ffffff ll
-     687:	if r2 > r3 goto +0x1 <LBB2_44>
-     688:	r1 = 0x0
+     748:	r0 += r2
+     749:	r2 = r0
+     750:	r2 <<= 0x20
+     751:	r2 >>= 0x20
+     752:	r3 = 0xc5ffffff ll
+     754:	if r2 > r3 goto +0x1 <LBB2_26>
+     755:	r1 = 0x0
 
-0000000000001588 <LBB2_44>:
+00000000000017a0 <LBB2_26>:
 ;   csum += addend;
-     689:	r0 += r1
-     690:	r9 = 0x400
+     756:	r0 += r1
+     757:	r6 = 0x400
 ;   return csum + (csum < addend);
-     691:	r0 += 0x3a000000
-     692:	goto +0x12 <LBB2_46>
+     758:	r0 += 0x3a000000
+     759:	goto +0x4 <LBB2_27>
 
-00000000000015a8 <LBB2_45>:
+00000000000017c0 <LBB2_33>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     693:	r1 &= 0xffff
-     694:	r9 = r1
-     695:	if r1 > 0x4 goto +0xf <LBB2_46>
-;   if (likely(buf + 4 <= data_end)) {
-     696:	r1 = r7
-     697:	r1 += 0x4
-     698:	r8 = *(u64 *)(r10 - 0x30)
-     699:	if r1 > r6 goto +0x26 <LBB2_56>
-;   csum += addend;
-     700:	r0 <<= 0x20
-     701:	r0 >>= 0x20
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     702:	r1 = *(u32 *)(r7 + 0x0)
-;   csum += addend;
-     703:	r1 += r0
-     704:	r3 = r1
-     705:	r3 <<= 0x20
-     706:	r3 >>= 0x20
-     707:	r2 = 0x1
-     708:	if r3 != r1 goto +0x1a <LBB2_55>
-     709:	r2 = 0x0
-     710:	goto +0x18 <LBB2_55>
+     760:	r1 &= 0xffff
+     761:	r6 = r1
+     762:	if r1 > 0x4 goto +0x1 <LBB2_27>
+     763:	goto +0x18 <LBB2_77>
 
-0000000000001638 <LBB2_46>:
+00000000000017e0 <LBB2_27>:
 ;     __u16 j = (i >= 512) ? 512 : i;
-     711:	r4 = r9
-     712:	r4 <<= 0x20
-     713:	r4 >>= 0x20
-     714:	r1 = 0x200
-     715:	if r1 > r4 goto +0x1 <LBB2_48>
-     716:	r4 = 0x200
+     764:	r4 = r6
+     765:	r4 <<= 0x20
+     766:	r4 >>= 0x20
+     767:	r1 = 0x200
+     768:	if r1 > r4 goto +0x1 <LBB2_29>
+     769:	r4 = 0x200
 
-0000000000001668 <LBB2_48>:
+0000000000001810 <LBB2_29>:
 ;     if (likely(buf + j <= data_end)) {
-     717:	r8 = r7
-     718:	r8 += r4
-     719:	if r8 > r6 goto +0x6 <LBB2_50>
+     770:	r7 = r8
+     771:	r7 += r4
+     772:	if r7 > r9 goto +0x6 <LBB2_31>
 ;       sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-     720:	r1 = 0x0
-     721:	r2 = 0x0
-     722:	r3 = r7
-     723:	r5 = r0
-     724:	call 0x1c
-     725:	r7 = r8
+     773:	r1 = 0x0
+     774:	r2 = 0x0
+     775:	r3 = r8
+     776:	r5 = r0
+     777:	call 0x1c
+     778:	r8 = r7
 
-00000000000016b0 <LBB2_50>:
+0000000000001858 <LBB2_31>:
 ;   for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-     726:	r1 = r9
-     727:	r1 += 0xfe00
-     728:	r2 = r9
-     729:	r2 <<= 0x20
-     730:	r2 >>= 0x20
-     731:	if r2 > 0x200 goto -0x27 <LBB2_45>
-     732:	r9 >>= 0x1
-     733:	r1 = r9
-     734:	goto -0x2a <LBB2_45>
+     779:	r1 = r6
+     780:	r1 += 0xfe00
+     781:	r2 = r6
+     782:	r2 <<= 0x20
+     783:	r2 >>= 0x20
+     784:	if r2 > 0x200 goto -0x19 <LBB2_33>
+     785:	r6 >>= 0x1
+     786:	r1 = r6
+     787:	goto -0x1c <LBB2_33>
 
-00000000000016f8 <LBB2_55>:
-;   return csum + (csum < addend);
-     735:	r1 += r2
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     736:	r7 += 0x1
-     737:	r0 = r1
-
-0000000000001710 <LBB2_56>:
-     738:	r1 = 0x0
-;   if (likely(buf + 2 <= data_end)) {
-     739:	r2 = r7
-     740:	r2 += 0x2
-     741:	if r2 > r6 goto +0x2 <LBB2_58>
-;     addend = *(__be16 *)buf++;
-     742:	r1 = *(u16 *)(r7 + 0x0)
-     743:	r7 += 0x1
-
-0000000000001740 <LBB2_58>:
-;   if (likely(buf + 1 <= data_end)) {
-     744:	r2 = r7
-     745:	r2 += 0x1
-     746:	if r2 > r6 goto +0x2 <LBB2_60>
-;     addend += *(__u8 *)buf++;
-     747:	r2 = *(u8 *)(r7 + 0x0)
-     748:	r1 += r2
-
-0000000000001768 <LBB2_60>:
-;   csum += addend;
-     749:	r0 <<= 0x20
-     750:	r0 >>= 0x20
-     751:	r1 += r0
-     752:	r3 = r1
-     753:	r3 <<= 0x20
-     754:	r3 >>= 0x20
-     755:	r2 = 0x1
-     756:	if r3 != r1 goto +0x1 <LBB2_62>
-     757:	r2 = 0x0
-
-00000000000017b0 <LBB2_62>:
-;   return csum + (csum < addend);
-     758:	r1 += r2
-     759:	r2 = 0xffff0000 ll
-;   return csum + (csum < addend);
-     761:	r3 = r1
-     762:	r3 &= r2
-;   sum = (sum & 0xffff) + (sum >> 16);
-     763:	r1 &= 0xffff
-     764:	r3 >>= 0x10
-     765:	r1 += r3
-;   sum = (sum & 0xffff) + (sum >> 16);
-     766:	r2 = r1
-     767:	r2 >>= 0x10
-     768:	r2 += r1
-;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
-     769:	r2 &= 0xffff
-     770:	if r2 != 0xffff goto -0x12d <LBB2_5>
-     771:	r1 = 0x5
-     772:	*(u32 *)(r10 - 0x4) = r1
-     773:	r2 = r10
-     774:	r2 += -0x4
-;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-     775:	r1 = 0x0 ll
-     777:	call 0x1
-;   if (likely(value)) {
-     778:	if r0 == 0x0 goto +0x2 <LBB2_65>
-     779:	r1 = 0x1
-;     __sync_fetch_and_add(value, 1);
-     780:	lock *(u32 *)(r0 + 0x0) += r1
-
-0000000000001868 <LBB2_65>:
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     781:	r1 = *(u64 *)(r8 + 0x18)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     782:	r2 = *(u64 *)(r8 + 0x20)
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     783:	r3 = *(u64 *)(r8 + 0x8)
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     784:	r4 = *(u64 *)(r8 + 0x10)
-     785:	r5 = 0x60
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     786:	*(u32 *)(r8 + 0x0) = r5
-     787:	r5 = 0x81
-;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
-     788:	*(u16 *)(r8 + 0x28) = r5
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     789:	*(u64 *)(r8 + 0x20) = r4
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     790:	*(u64 *)(r8 + 0x18) = r3
-;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-     791:	*(u64 *)(r8 + 0x10) = r2
-;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-     792:	*(u64 *)(r8 + 0x8) = r1
-     793:	r1 = 0x403a
-;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
-     794:	*(u16 *)(r8 + 0x6) = r1
-;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
-     795:	r1 = *(u16 *)(r8 + 0x2a)
-     796:	r1 += -0x1
-     797:	*(u16 *)(r8 + 0x2a) = r1
-     798:	goto +0x1c <LBB2_71>
-
-00000000000018f8 <LBB2_66>:
+00000000000018a0 <LBB2_77>:
 ;   if (likely(buf + 4 <= data_end)) {
-     799:	r1 = r6
-     800:	r1 += 0x4
-     801:	r4 = *(u64 *)(r10 - 0x30)
-     802:	if r1 > r8 goto +0xc <LBB2_70>
-;     sum = csum_add(sum, *(__be32 *)buf++);
-     803:	r1 = *(u32 *)(r6 + 0x0)
+     788:	r1 = r8
+     789:	r1 += 0x4
+     790:	r6 = *(u64 *)(r10 - 0x30)
+     791:	if r1 > r9 goto +0xd <LBB2_37>
 ;   csum += addend;
-     804:	r0 <<= 0x20
-     805:	r0 >>= 0x20
-     806:	r1 += r0
-     807:	r3 = r1
-     808:	r3 <<= 0x20
-     809:	r3 >>= 0x20
-     810:	r2 = 0x1
-     811:	if r3 != r1 goto +0x1 <LBB2_69>
-     812:	r2 = 0x0
+     792:	r0 <<= 0x20
+     793:	r0 >>= 0x20
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     794:	r1 = *(u32 *)(r8 + 0x0)
+;   csum += addend;
+     795:	r1 += r0
+     796:	r3 = r1
+     797:	r3 <<= 0x20
+     798:	r3 >>= 0x20
+     799:	r2 = 0x1
+     800:	if r3 != r1 goto +0x1 <LBB2_36>
+     801:	r2 = 0x0
 
-0000000000001968 <LBB2_69>:
+0000000000001910 <LBB2_36>:
 ;   return csum + (csum < addend);
-     813:	r1 += r2
-     814:	r0 = r1
+     802:	r1 += r2
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     803:	r8 += 0x1
+     804:	r0 = r1
 
-0000000000001978 <LBB2_70>:
-     815:	r1 = 0xffff0000 ll
+0000000000001928 <LBB2_37>:
+     805:	r1 = 0x0
+;   if (likely(buf + 2 <= data_end)) {
+     806:	r2 = r8
+     807:	r2 += 0x2
+     808:	if r2 > r9 goto +0x2 <LBB2_39>
+;     addend = *(__be16 *)buf++;
+     809:	r1 = *(u16 *)(r8 + 0x0)
+     810:	r8 += 0x1
+
+0000000000001958 <LBB2_39>:
+;   if (likely(buf + 1 <= data_end)) {
+     811:	r2 = r8
+     812:	r2 += 0x1
+     813:	if r2 > r9 goto +0x2 <LBB2_41>
+;     addend += *(__u8 *)buf++;
+     814:	r2 = *(u8 *)(r8 + 0x0)
+     815:	r1 += r2
+
+0000000000001980 <LBB2_41>:
+;   csum += addend;
+     816:	r0 <<= 0x20
+     817:	r0 >>= 0x20
+     818:	r1 += r0
+     819:	r3 = r1
+     820:	r3 <<= 0x20
+     821:	r3 >>= 0x20
+     822:	r2 = 0x1
+     823:	if r3 != r1 goto +0x1 <LBB2_43>
+     824:	r2 = 0x0
+
+00000000000019c8 <LBB2_43>:
+;   return csum + (csum < addend);
+     825:	r1 += r2
+     826:	r2 = 0xffff0000 ll
+;   return csum + (csum < addend);
+     828:	r3 = r1
+     829:	r3 &= r2
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     817:	r2 = r0
-     818:	r2 &= r1
-     819:	r2 >>= 0x10
-     820:	r0 &= 0xffff
-     821:	r0 += r2
+     830:	r1 &= 0xffff
+     831:	r3 >>= 0x10
+     832:	r1 += r3
 ;   sum = (sum & 0xffff) + (sum >> 16);
-     822:	r1 = r0
-     823:	r1 >>= 0x10
-     824:	r1 += r0
+     833:	r2 = r1
+     834:	r2 >>= 0x10
+     835:	r2 += r1
+;   assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
+     836:	r2 &= 0xffff
+     837:	if r2 != 0xffff goto -0x136 <LBB2_5>
+     838:	r1 = 0x4
+     839:	*(u32 *)(r10 - 0x4) = r1
+     840:	r2 = r10
+     841:	r2 += -0x4
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     842:	r1 = 0x0 ll
+     844:	call 0x1
+     845:	r8 = *(u64 *)(r10 - 0x38)
+;   if (likely(value)) {
+     846:	if r0 == 0x0 goto +0x2 <LBB2_46>
+     847:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     848:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000001a88 <LBB2_46>:
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     849:	r1 = *(u64 *)(r6 + 0x10)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     850:	*(u64 *)(r10 - 0x40) = r1
+     851:	r9 = *(u64 *)(r6 + 0x8)
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     852:	r7 = *(u64 *)(r6 + 0x20)
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     853:	r6 = *(u64 *)(r6 + 0x18)
+     854:	r1 = 0x7
+     855:	*(u32 *)(r10 - 0x20) = r1
+     856:	r2 = r10
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     857:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     858:	r1 = 0x0 ll
+     860:	call 0x1
+;   if (likely(value)) {
+     861:	if r0 == 0x0 goto +0x2 <LBB2_72>
+     862:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     863:	lock *(u32 *)(r0 + 0x0) += r1
+
+0000000000001b00 <LBB2_72>:
+     864:	r1 = 0x60
+     865:	r2 = *(u64 *)(r10 - 0x30)
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     866:	*(u32 *)(r2 + 0x0) = r1
+     867:	r1 = 0x81
+;   icmp6->icmp6_type = ICMP6_ECHO_REPLY;
+     868:	*(u16 *)(r2 + 0x28) = r1
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     869:	r1 = *(u64 *)(r10 - 0x40)
+     870:	*(u64 *)(r2 + 0x20) = r1
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     871:	*(u64 *)(r2 + 0x18) = r9
+;   (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
+     872:	*(u64 *)(r2 + 0x10) = r7
+;   (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
+     873:	*(u64 *)(r2 + 0x8) = r6
+     874:	r1 = 0x403a
+;   bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
+     875:	*(u16 *)(r2 + 0x6) = r1
+;   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
+     876:	r1 = *(u16 *)(r2 + 0x2a)
+     877:	r1 += -0x1
+     878:	*(u16 *)(r2 + 0x2a) = r1
+     879:	goto +0x1d <LBB2_73>
+
+0000000000001b80 <LBB2_78>:
+;   if (likely(buf + 4 <= data_end)) {
+     880:	r1 = r8
+     881:	r1 += 0x4
+     882:	r4 = *(u64 *)(r10 - 0x30)
+     883:	if r1 > r9 goto +0xc <LBB2_70>
+;     sum = csum_add(sum, *(__be32 *)buf++);
+     884:	r1 = *(u32 *)(r8 + 0x0)
+;   csum += addend;
+     885:	r0 <<= 0x20
+     886:	r0 >>= 0x20
+     887:	r1 += r0
+     888:	r3 = r1
+     889:	r3 <<= 0x20
+     890:	r3 >>= 0x20
+     891:	r2 = 0x1
+     892:	if r3 != r1 goto +0x1 <LBB2_69>
+     893:	r2 = 0x0
+
+0000000000001bf0 <LBB2_69>:
+;   return csum + (csum < addend);
+     894:	r1 += r2
+     895:	r0 = r1
+
+0000000000001c00 <LBB2_70>:
+     896:	r1 = 0xffff0000 ll
+;   sum = (sum & 0xffff) + (sum >> 16);
+     898:	r2 = r0
+     899:	r2 &= r1
+     900:	r2 >>= 0x10
+     901:	r0 &= 0xffff
+     902:	r0 += r2
+;   sum = (sum & 0xffff) + (sum >> 16);
+     903:	r1 = r0
+     904:	r1 >>= 0x10
+     905:	r1 += r0
 ;   icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
-     825:	r1 ^= -0x1
-     826:	*(u16 *)(r4 + 0x2a) = r1
+     906:	r1 ^= -0x1
+     907:	*(u16 *)(r4 + 0x2a) = r1
+     908:	r8 = *(u64 *)(r10 - 0x38)
 
-00000000000019d8 <LBB2_71>:
-;   return bpf_redirect(ctx->ingress_ifindex, 0);
-     827:	r1 = *(u64 *)(r10 - 0x38)
-     828:	r1 = *(u32 *)(r1 + 0x24)
-     829:	r2 = 0x0
-     830:	call 0x17
-     831:	r3 = r0
+0000000000001c68 <LBB2_73>:
+     909:	r1 = 0x8
+     910:	*(u32 *)(r10 - 0x20) = r1
+     911:	r2 = r10
+     912:	r2 += -0x20
+;   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
+     913:	r1 = 0x0 ll
+     915:	call 0x1
+;   if (likely(value)) {
+     916:	if r0 == 0x0 goto +0x2 <LBB2_75>
+     917:	r1 = 0x1
+;     __sync_fetch_and_add(value, 1);
+     918:	lock *(u32 *)(r0 + 0x0) += r1
 
-0000000000001a00 <LBB2_72>:
+0000000000001cb8 <LBB2_75>:
+;   return bpf_redirect(ctx->ifindex, 0);
+     919:	r1 = *(u32 *)(r8 + 0x28)
+     920:	r2 = 0x0
+     921:	call 0x17
+     922:	r7 = r0
+
+0000000000001cd8 <LBB2_76>:
 ;   return exceed2go_tc(ctx, BASE_LAYER_L3);
-     832:	r0 = r3
-     833:	exit
+     923:	r0 = r7
+     924:	exit

@@ -185,32 +185,88 @@ func statsPrint(tb testing.TB, stats *ebpf.Map) {
 	}
 }
 
-func testProg(tb testing.TB, prog *ebpf.Program, pkt []byte, rc uint32, noEth bool) gopacket.Packet {
-	tb.Helper()
+type SkBuff struct {
+	Len            uint32
+	PktType        uint32
+	Mark           uint32
+	QueueMapping   uint32
+	Protocol       uint32
+	VlanPresent    uint32
+	VlanTCI        uint32
+	VlanProto      uint32
+	Priority       uint32
+	IngressIfindex uint32
+	Ifindex        uint32
+	TcIndex        uint32
+	CB             [5]uint32
+	Hash           uint32
+	TcClassid      uint32
+	Data           uint32
+	DataEnd        uint32
+	NapiID         uint32
+	Family         uint32
+	RemoteIp4      [4]uint8
+	LocalIp4       [4]uint8
+	RemoteIp6      [16]uint8
+	LocalIp6       [16]uint8
+	RemotePort     uint32
+	LocalPort      uint32
+	DataMeta       uint32
+	FlowKeys       uint64
+	TStamp         uint64
+	WireLen        uint32
+	GsoSegs        uint32
+	Sk             uint64
+	GsoSize        uint32
+	TStampType     uint32
+	HwTStamp       uint64
+}
 
-	ret, out, err := prog.Test(pkt)
-	require.NoError(tb, err, "program must run without error")
-	assert.Equal(tb, rc, ret, "return code should be correct")
-
-	lt := layers.LayerTypeEthernet
-	if noEth {
-		lt = layers.LayerTypeIPv6
-	}
-	return gopacket.NewPacket(out, lt, gopacket.Default)
+type XdpMd struct {
+	Data           uint32
+	DataEnd        uint32
+	DataMeta       uint32
+	IngressIfindex uint32
+	RxQueueIndex   uint32
+	EgressIfindex  uint32
 }
 
 type progTest struct {
 	getProgFunc func(*bpf.Exceed2GoObjects) *ebpf.Program
+	getRunOpts  func(uint32) *ebpf.RunOptions
 	redirectRC  uint32
 	passRC      uint32
 	objs        *bpf.Exceed2GoObjects
 	noEth       bool
 }
 
+func (p *progTest) run(tb testing.TB, pkt []byte, rc uint32) gopacket.Packet {
+	tb.Helper()
+
+	opts := p.getRunOpts(uint32(len(pkt)))
+	opts.Data = pkt
+	opts.Repeat = 1
+	opts.DataOut = make([]byte, len(pkt)+258)
+
+	prog := p.getProgFunc(p.objs)
+	ret, err := prog.Run(opts)
+	require.NoError(tb, err, "program must run without error")
+	assert.Equal(tb, rc, ret, "return code should be correct")
+
+	lt := layers.LayerTypeEthernet
+	if p.noEth {
+		lt = layers.LayerTypeIPv6
+	}
+	return gopacket.NewPacket(opts.DataOut, lt, gopacket.Default)
+}
+
 var progTests = map[string]progTest{
 	"xdp_l2": {
 		getProgFunc: func(objs *bpf.Exceed2GoObjects) *ebpf.Program {
 			return objs.Exceed2goXdpL2
+		},
+		getRunOpts: func(len uint32) *ebpf.RunOptions {
+			return &ebpf.RunOptions{}
 		},
 		redirectRC: 3,
 		passRC:     2,
@@ -220,6 +276,17 @@ var progTests = map[string]progTest{
 		getProgFunc: func(objs *bpf.Exceed2GoObjects) *ebpf.Program {
 			return objs.Exceed2goTcL2
 		},
+		getRunOpts: func(len uint32) *ebpf.RunOptions {
+			return &ebpf.RunOptions{
+				Context: SkBuff{
+					// bpf_skb_adjust_room requires skb->protocol set. pbf prog
+					// run does not allow the field to be set and it always
+					// retrieves it from the interface. Because of this use an
+					// actual interface so the value is properly set.
+					Ifindex: 1,
+				},
+			}
+		},
 		redirectRC: 7,
 		passRC:     math.MaxUint32,
 		noEth:      false,
@@ -227,6 +294,13 @@ var progTests = map[string]progTest{
 	"tc_l3": {
 		getProgFunc: func(objs *bpf.Exceed2GoObjects) *ebpf.Program {
 			return objs.Exceed2goTcL3
+		},
+		getRunOpts: func(len uint32) *ebpf.RunOptions {
+			return &ebpf.RunOptions{
+				Context: SkBuff{
+					Ifindex: 1,
+				},
+			}
 		},
 		redirectRC: 7,
 		passRC:     math.MaxUint32,
@@ -250,6 +324,10 @@ func forProgType(t *testing.T, fn func(*testing.T, progTest, int)) {
 
 func TestTTL(t *testing.T) {
 	forProgType(t, func(t *testing.T, test progTest, layerIPv6 int) {
+		if test.noEth {
+			t.Skip("support for layer 3 type missing")
+		}
+
 		for idx, ip := range mapIPs() {
 			if idx == 4 {
 				continue
@@ -257,9 +335,12 @@ func TestTTL(t *testing.T) {
 
 			t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
 				pkt := packet(t, ip.hopLimit, mapIPs()[4].addr, []byte{}, test.noEth)
-				outPkt := testProg(t, test.getProgFunc(test.objs), pkt, test.redirectRC, test.noEth)
+				outPkt := test.run(t, pkt, test.redirectRC)
 				outLayers := outPkt.Layers()
-				require.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct")
+				if !assert.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct") {
+					t.Log(outPkt.String())
+					t.FailNow()
+				}
 
 				ip6, ok := outLayers[layerIPv6].(*layers.IPv6)
 				if assert.True(t, ok, "must be IPv6") {
@@ -288,6 +369,10 @@ func TestTTL(t *testing.T) {
 
 func TestTTLMaxSize(t *testing.T) {
 	forProgType(t, func(t *testing.T, test progTest, layerIPv6 int) {
+		if test.noEth {
+			t.Skip("support for layer 3 type missing")
+		}
+
 		payloads := []struct {
 			truncated bool
 			payload   []byte
@@ -312,10 +397,13 @@ func TestTTLMaxSize(t *testing.T) {
 				pktSize := payloadSize + 40 + 14*layerIPv6
 
 				pkt := packet(t, 1, mapIPs()[4].addr, payload.payload, test.noEth)
-				outPkt := testProg(t, test.getProgFunc(test.objs), pkt, test.redirectRC, test.noEth)
+				outPkt := test.run(t, pkt, test.redirectRC)
 				assert.Equal(t, pktSize, len(outPkt.Data()), "out package must have correct length")
 				outLayers := outPkt.Layers()
-				require.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct")
+				if !assert.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct") {
+					t.Log(outPkt.String())
+					t.FailNow()
+				}
 
 				ip6, ok := outLayers[layerIPv6].(*layers.IPv6)
 				if assert.True(t, ok, "must be IPv6") {
@@ -353,7 +441,7 @@ func TestNoMatch(t *testing.T) {
 		for _, ip := range ips {
 			t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
 				pkt := packet(t, ip.hopLimit, ip.addr, []byte{}, test.noEth)
-				outPkt := testProg(t, test.getProgFunc(test.objs), pkt, test.passRC, test.noEth)
+				outPkt := test.run(t, pkt, test.passRC)
 				assert.Equal(t, pkt, outPkt.Data(), "output package must be the same as input")
 			})
 		}
@@ -368,9 +456,12 @@ func TestEchoReply(t *testing.T) {
 		for _, ip := range mapIPs() {
 			t.Run(fmt.Sprintf("hop %d", ip.hopLimit), func(t *testing.T) {
 				pkt := packet(t, 64, ip.addr, []byte{}, test.noEth)
-				outPkt := testProg(t, test.getProgFunc(test.objs), pkt, test.redirectRC, test.noEth)
+				outPkt := test.run(t, pkt, test.redirectRC)
 				outLayers := outPkt.Layers()
-				require.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct")
+				if !assert.Equal(t, layerIPv6+3, len(outLayers), "number of layers must be correct") {
+					t.Log(outPkt.String())
+					t.FailNow()
+				}
 
 				ip6, ok := outLayers[layerIPv6].(*layers.IPv6)
 				if assert.True(t, ok, "must be IPv6") {

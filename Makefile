@@ -58,7 +58,7 @@ $(BPF2GO_FILE): $(BPF2GO) $(STRINGER) $(BPF_SRC_FILE) $(LIBBPF)/*.h Makefile
 		> $(patsubst %.go,%.dump,$(@F))
 	$(STRINGER) \
 		-type Exceed2GoCounterKey \
-		-trimprefix Exceed2GoCounterKey \
+		-trimprefix Exceed2GoCounterKeyCOUNTER_ \
 		-output exceed2go_counter_key_string.go \
 		exceed2go_bpfel.go
 
