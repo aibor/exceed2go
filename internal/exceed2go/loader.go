@@ -63,15 +63,15 @@ func LoadAndPin() error {
 		return fmt.Errorf("load maps: %w", err)
 	}
 
-	pinners := map[pinner]PinFileName{
-		objs.Exceed2goTcL2:     PinFileNameTCL2Prog,
-		objs.Exceed2goTcL3:     PinFileNameTCL3Prog,
-		objs.Exceed2goXdpL2:    PinFileNameXDPL2Prog,
-		objs.Exceed2goCounters: PinFileNameStatsMap,
-		objs.Exceed2goAddrs:    PinFileNameConfigMap,
+	pinners := map[PinFileName]pinner{
+		PinFileNameTCL2Prog:  objs.Exceed2goTcL2,
+		PinFileNameTCL3Prog:  objs.Exceed2goTcL3,
+		PinFileNameXDPL2Prog: objs.Exceed2goXdpL2,
+		PinFileNameStatsMap:  objs.Exceed2goCounters,
+		PinFileNameConfigMap: objs.Exceed2goAddrs,
 	}
 
-	for pinner, path := range pinners {
+	for path, pinner := range pinners {
 		if err := pinner.Pin(BPFFSPath(path)); err != nil {
 			Remove()
 			return fmt.Errorf("pin %s: %v", path, err)
