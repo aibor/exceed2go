@@ -57,11 +57,11 @@ func LoadAndPin() error {
 
 	objs := bpf.Exceed2GoObjects{}
 	err := bpf.LoadExceed2GoObjects(&objs, nil)
-	defer objs.Exceed2GoPrograms.Close()
 	if err != nil {
 		Remove()
 		return fmt.Errorf("load maps: %w", err)
 	}
+	defer objs.Close()
 
 	pinners := map[PinFileName]pinner{
 		PinFileNameTCL2Prog:  objs.Exceed2goTcL2,
