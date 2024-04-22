@@ -7,24 +7,50 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
-
 	"github.com/aibor/exceed2go/internal/exceed2go"
+	"github.com/spf13/cobra"
 )
 
 func statsCmd() *cobra.Command {
-	return &cobra.Command{
+	var ifaceName string
+
+	cmd := &cobra.Command{
 		Use:   "stats",
 		Short: "Print stats of the program.",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stats, err := exceed2go.GetStats()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			iface, err := ifaceByName(ifaceName)
 			if err != nil {
 				return err
 			}
-			for _, stat := range stats {
-				fmt.Printf("%-25s  %d\n", stat.Name, stat.Count)
+
+			if !exceed2go.KnownIface(iface.Index) {
+				return fmt.Errorf("exceed2go not attached to %s", ifaceName)
 			}
+
+			stats, err := exceed2go.ReadStats(iface.Index)
+			if err != nil {
+				return err
+			}
+
+			for _, stat := range stats {
+				cmd.Printf("%-25s  %d\n", stat.Name, stat.Count)
+			}
+
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(
+		&ifaceName,
+		"iface",
+		"i",
+		ifaceName,
+		"interface to read stats for.",
+	)
+
+	if err := cmd.MarkFlagRequired("iface"); err != nil {
+		panic("marking iface flag required must succeed")
+	}
+
+	return cmd
 }

@@ -5,14 +5,11 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net"
 
-	"github.com/spf13/cobra"
-
 	"github.com/aibor/exceed2go/internal/exceed2go"
-	"github.com/aibor/exceed2go/internal/ifinfo"
+	"github.com/spf13/cobra"
 )
 
 func loadCmd() *cobra.Command {
@@ -25,30 +22,16 @@ func loadCmd() *cobra.Command {
 		Use:   "load [flags...] HOP_ADDRESS ...",
 		Short: "Load and configure the program",
 		Long: `Attach the eBPF program to one or more network interfaces. The
-	hop addresses are used as hops in the order given. So ping the last address
-	the get a traceroute with all the given addresses in that order.`,
+hop addresses are used as hops in the order given. So ping the last
+address the get a traceroute with all the given addresses in that order.`,
 		Args: cobra.MinimumNArgs(2),
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, _ string) (
-			[]string, cobra.ShellCompDirective,
-		) {
-			comps := make([]string, 0)
-			flags := cobra.ShellCompDirectiveNoFileComp
-
-			if len(args) == 0 {
-				if ifaceList, err := net.Interfaces(); err == nil {
-					comps = ifinfo.IfUpNameList(ifaceList)
-				}
-			}
-
-			return comps, flags
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			// Resolve interface names to interface handles.
 			var ifaces []*net.Interface
 			for _, ifaceName := range ifaceNames {
-				iface, err := net.InterfaceByName(ifaceName)
+				iface, err := ifaceByName(ifaceName)
 				if err != nil {
-					return fmt.Errorf("interface by name: %s: %v", ifaceName, err)
+					return err
 				}
 				ifaces = append(ifaces, iface)
 			}
@@ -59,27 +42,26 @@ func loadCmd() *cobra.Command {
 				return err
 			}
 
-			// Load eBPF objects into the kernel and pin it to the bpffs.
-			if err := exceed2go.LoadAndPin(); err != nil {
-				return fmt.Errorf("load: %v", err)
+			mode := exceed2go.ModeXDP
+			if tc {
+				mode = exceed2go.ModeTC
 			}
 
-			// Configure the data plane.
-			if err := exceed2go.SetAddrs(hopList); err != nil {
-				exceed2go.Remove()
-				return fmt.Errorf("set address: %v", err)
-			}
-
-			// Attach the program to all interfaces. Removes all state in case
-			// of error for any interface.
+			// Attach the program to all interfaces.
 			for _, iface := range ifaces {
-				prog, err := program(tc, iface.HardwareAddr == nil)
-				if err != nil {
-					return fmt.Errorf("iface %s: %v", iface.Name, err)
+				layer := exceed2go.Layer2
+				if iface.HardwareAddr == nil {
+					layer = exceed2go.Layer3
 				}
-				if err := exceed2go.AttachProg(prog, iface); err != nil {
-					exceed2go.Remove()
-					return fmt.Errorf("iface %s: attach program: %v", iface.Name, err)
+
+				opts := exceed2go.AttachOptions{
+					IfaceIndex: iface.Index,
+					HopList:    hopList,
+					Mode:       mode,
+					Layer:      layer,
+				}
+				if err := exceed2go.Attach(opts); err != nil {
+					return fmt.Errorf("attach to %s: %v", iface.Name, err)
 				}
 			}
 
@@ -101,22 +83,14 @@ func loadCmd() *cobra.Command {
 		ifaceNames,
 		"interface to attach to. Can be given repeated or comma-separated.",
 	)
+
 	if err := cmd.MarkFlagRequired("iface"); err != nil {
 		panic("marking iface flag required must succeed")
 	}
 
-	return cmd
-}
+	if err := cmd.RegisterFlagCompletionFunc("iface", ifaceCompletion); err != nil {
+		panic("registering iface completion must succeed")
+	}
 
-func program(tc bool, l3 bool) (exceed2go.PinFileName, error) {
-	if tc {
-		if l3 {
-			return exceed2go.PinFileNameTCL3Prog, nil
-		}
-		return exceed2go.PinFileNameTCL2Prog, nil
-	}
-	if l3 {
-		return "", errors.New("L3 interfaces do not support XDP. Try TC.")
-	}
-	return exceed2go.PinFileNameXDPL2Prog, nil
+	return cmd
 }

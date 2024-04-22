@@ -8,9 +8,9 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/aibor/exceed2go/internal/exceed2go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseHopList(t *testing.T) {
@@ -58,14 +58,17 @@ func TestParseHopList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actual, err := exceed2go.ParseHopList(tt.input)
 			if tt.invalid {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+
+			require.NoError(t, err)
+
 			expected := make(exceed2go.HopList, len(tt.input))
 			for idx, addr := range tt.input {
 				expected[idx] = netip.MustParseAddr(addr)
 			}
+
 			assert.ElementsMatch(t, expected, actual)
 		})
 	}
@@ -97,10 +100,12 @@ func TestParseHop(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			actual, err := exceed2go.ParseHop(tt.input)
 			if tt.invalid {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+
+			require.NoError(t, err)
+
 			expected := netip.MustParseAddr(tt.input)
 			assert.Equal(t, expected, actual)
 		})

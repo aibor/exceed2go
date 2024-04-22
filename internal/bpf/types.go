@@ -22,12 +22,12 @@ type SkBuff struct {
 	TcClassid      uint32
 	Data           uint32
 	DataEnd        uint32
-	NapiId         uint32
+	NapiID         uint32
 	Family         uint32
-	RemoteIp4      [4]uint8
-	LocalIp4       [4]uint8
-	RemoteIp6      [16]uint8
-	LocalIp6       [16]uint8
+	RemoteIP4      [4]uint8
+	LocalIP4       [4]uint8
+	RemoteIP6      [16]uint8
+	LocalIP6       [16]uint8
 	RemotePort     uint32
 	LocalPort      uint32
 	DataMeta       uint32

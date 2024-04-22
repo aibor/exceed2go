@@ -6,8 +6,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/aibor/exceed2go/cmd"
 	"os"
+
+	"github.com/aibor/exceed2go/cmd"
 )
 
 func main() {

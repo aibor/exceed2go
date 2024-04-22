@@ -17,13 +17,16 @@ type HopList []netip.Addr
 // as IPv6 address.
 func ParseHopList(input []string) (HopList, error) {
 	hopList := make(HopList, len(input))
+
 	for idx, arg := range input {
 		addr, err := ParseHop(arg)
 		if err != nil {
 			return nil, err
 		}
+
 		hopList[idx] = addr
 	}
+
 	return hopList, nil
 }
 
@@ -34,8 +37,10 @@ func ParseHop(input string) (netip.Addr, error) {
 	if err != nil {
 		return addr, fmt.Errorf("parse address: %s", input)
 	}
+
 	if !addr.Is6() {
 		return addr, fmt.Errorf("not an IPv6 address: %s", input)
 	}
+
 	return addr, nil
 }
