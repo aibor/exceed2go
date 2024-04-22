@@ -28,7 +28,6 @@ const (
 	PinFileNameTCL2Prog  PinFileName = "tc_l2_prog"
 	PinFileNameTCL3Prog  PinFileName = "tc_l3_prog"
 	PinFileNameXDPL2Prog PinFileName = "xdp_l2_prog"
-	PinFileNameXDPL3Prog PinFileName = "xdp_l3_prog"
 	PinFileNameLink      PinFileName = "link"
 	PinFileNameStatsMap  PinFileName = "stats_map"
 	PinFileNameConfigMap PinFileName = "config_map"
