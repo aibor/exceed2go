@@ -74,8 +74,10 @@ pidonetest: $(BPF2GO_FILE) $(VIRTRUN)
 			-kernel $$(realpath $(PIDONETEST_KERNEL))" \
 		-v \
 		-race \
+		-coverpkg $$(go list ./... | tr '\n' ,) \
 		-cover \
 		-covermode atomic \
+		-coverprofile /tmp/cover.out \
 		$(PIDONETEST_FLAGS) \
 		./...
 
