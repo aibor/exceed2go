@@ -22,7 +22,11 @@ BPF_SRC_FILE := bpf/exceed2go.c
 BPF2GO_FILE := $(BPF_PACKAGE_DIR)/exceed2go_bpfel.go
 
 CC = clang
-CFLAGS := -O2 -g -v -Wall -Werror -Wshadow -nostdinc -I$(shell realpath $(LIBBPF)) $(CFLAGS)
+CFLAGS := -O2 -g -v \
+		  -Wall -Werror -Wshadow \
+		  -nostdinc -mcpu=v3 \
+		  -I$(shell realpath $(LIBBPF)) \
+		  $(CFLAGS)
 
 export CGO_ENABLED := 0
 export GOBIN
