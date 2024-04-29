@@ -8,7 +8,7 @@ go 1.21.0
 
 require (
 	github.com/aibor/virtrun v0.10.0
-	github.com/cilium/ebpf v0.14.0
+	github.com/cilium/ebpf v0.15.0
 	github.com/google/gopacket v1.1.19
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
