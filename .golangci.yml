@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+linters:
+  enable-all: true
+  disable:
+    - deadcode
+    - depguard
+    - exhaustivestruct
+    - exhaustruct
+    - funlen
+    - gochecknoglobals
+    - err113
+    - golint
+    - ifshort
+    - interfacer
+    - ireturn
+    - maligned
+    - nlreturn
+    - nosnakecase
+    - paralleltest
+    - scopelint
+    - structcheck
+    - varcheck
+    - varnamelen
+    - wrapcheck
+
+linters-settings:
+  errorlint:
+    errorf: false
+  mnd:
+    ignored-functions:
+      - '^cobra\..*NArgs$'
