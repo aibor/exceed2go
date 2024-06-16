@@ -40,7 +40,7 @@ jobs:
           version: latest
 
       - name: Build test container
-        run: docker build --rm --tag exceed2go-test --target test-image --file Containerfile .
+        run: docker build --rm --tag exceed2go-test --target test-image .
 
       - name: Run go test
         run: docker run --rm --volume $PWD:/data --device /dev/kvm exceed2go-test:latest
