@@ -4,11 +4,18 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gomod" 
+  - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "github-actions" 
+    commit-message:
+      prefix: "chore"
+      scope: "gomod"
+
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "ci"
