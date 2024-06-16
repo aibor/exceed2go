@@ -19,3 +19,11 @@ updates:
     commit-message:
       prefix: "chore"
       scope: "ci"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "docker"
