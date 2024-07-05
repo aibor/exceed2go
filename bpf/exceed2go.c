@@ -243,12 +243,11 @@ icmp6_csum(struct icmp6hdr *icmp6,
 /* Swap ethernet addresses. */
 static __always_inline void
 eth_hdr_reverse(struct ethhdr *new, struct ethhdr *old) {
-  __u32 daddr_first           = *(__u32 *)old;
-  __u16 daddr_last            = *(__u16 *)old + 2;
-  *(__u64 *)&new->daddr       = *(__u64 *)&old->saddr;
-  *(__u32 *)&new->saddr       = daddr_first;
-  *((__u16 *)&new->saddr + 2) = daddr_last;
-  new->proto                  = old->proto;
+  struct mac_addr tmp;
+  bpf_memcpy(&tmp, &old->daddr, sizeof(struct mac_addr));
+  bpf_memcpy(&new->daddr, &old->saddr, sizeof(struct mac_addr));
+  bpf_memcpy(&new->saddr, &tmp, sizeof(struct mac_addr));
+  new->proto = old->proto;
 }
 
 /* Calculate if the packet end needs to be adjusted. It must not be longer than
