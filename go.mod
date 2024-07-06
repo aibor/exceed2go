@@ -4,7 +4,7 @@
 
 module github.com/aibor/exceed2go
 
-go 1.21.0
+go 1.22
 
 require (
 	github.com/aibor/virtrun v0.10.0
