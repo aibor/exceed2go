@@ -34,6 +34,7 @@ func ifacePath(ifaceIndex int, name string) string {
 // KnownIface returns if exceed2go is attached to the interface.
 func KnownIface(ifaceIndex int) bool {
 	_, err := os.Stat(ifaceDir(ifaceIndex))
+
 	return !os.IsNotExist(err)
 }
 

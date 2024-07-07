@@ -21,6 +21,7 @@ func cleanupCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if len(ifaceNames) == 0 {
 				exceed2go.RemoveAll()
+
 				return nil
 			}
 

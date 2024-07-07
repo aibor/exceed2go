@@ -81,6 +81,7 @@ func TestAttach(t *testing.T) {
 
 			if tt.err != nil {
 				require.ErrorIs(t, err, tt.err)
+
 				return
 			}
 

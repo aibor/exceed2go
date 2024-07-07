@@ -59,6 +59,7 @@ func TestParseHopList(t *testing.T) {
 			actual, err := exceed2go.ParseHopList(tt.input)
 			if tt.invalid {
 				require.Error(t, err)
+
 				return
 			}
 
@@ -101,6 +102,7 @@ func TestParseHop(t *testing.T) {
 			actual, err := exceed2go.ParseHop(tt.input)
 			if tt.invalid {
 				require.Error(t, err)
+
 				return
 			}
 
