@@ -15,7 +15,7 @@ import (
 
 func TestLoad(t *testing.T) {
 	pinDir := filepath.Join(bpffsDir, "test")
-	require.NoError(t, os.MkdirAll(pinDir, 0o755))
+	require.NoError(t, os.MkdirAll(pinDir, 0o750))
 	t.Cleanup(RemoveAll)
 
 	objs, err := load(pinDir)
