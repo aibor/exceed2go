@@ -48,7 +48,7 @@ func Attach(opts AttachOptions) error {
 	if err != nil {
 		return err
 	}
-	defer objs.Close()
+	defer objs.Close() //nolint:errcheck
 
 	prog, err := program(objs, opts.Mode, opts.Layer)
 	if err != nil {
@@ -64,7 +64,7 @@ func Attach(opts AttachOptions) error {
 	if err != nil {
 		return err
 	}
-	defer lnk.Close()
+	defer lnk.Close() //nolint:errcheck
 
 	err = lnk.Pin(ifacePath(opts.IfaceIndex, "link"))
 	if err != nil {

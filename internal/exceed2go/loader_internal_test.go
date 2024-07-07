@@ -24,7 +24,7 @@ func TestLoad(t *testing.T) {
 
 	assert.FileExists(t, filepath.Join(pinDir, addrsMapName))
 	assert.FileExists(t, filepath.Join(pinDir, statsMapName))
-	objs.Close()
+	require.NoError(t, objs.Close())
 
 	objs, err = load(pinDir)
 	require.NoError(t, err, "reload")

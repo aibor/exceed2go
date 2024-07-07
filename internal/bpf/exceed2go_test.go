@@ -135,7 +135,7 @@ func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	}
 
 	tb.Cleanup(func() {
-		objs.Close()
+		_ = objs.Close()
 	})
 
 	return objs

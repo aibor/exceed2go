@@ -26,7 +26,7 @@ func ReadStats(ifaceIndex int) (Stats, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer statsMap.Close()
+	defer statsMap.Close() //nolint:errcheck
 
 	return readStats(statsMap)
 }

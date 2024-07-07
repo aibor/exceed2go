@@ -18,7 +18,7 @@ func ReadAddrs(ifaceIndex int) (HopList, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer addrsMap.Close()
+	defer addrsMap.Close() //nolint:errcheck
 
 	return readAddrs(addrsMap)
 }
