@@ -5,30 +5,43 @@
 linters:
   enable-all: true
   disable:
-    - deadcode
     - depguard
-    - exhaustivestruct
     - exhaustruct
     - funlen
-    - gochecknoglobals
     - err113
-    - golint
-    - ifshort
-    - interfacer
-    - ireturn
-    - maligned
-    - nlreturn
-    - nosnakecase
     - paralleltest
-    - scopelint
-    - structcheck
-    - varcheck
     - varnamelen
     - wrapcheck
 
 linters-settings:
   errorlint:
     errorf: false
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  gosec:
+    excludes:
+      - G204
+
   mnd:
     ignored-functions:
       - '^cobra\..*NArgs$'
+
+  revive:
+    rules:
+      - name: package-comments
+        disabled: true
+
+  stylecheck:
+    checks: 
+      - "all"
+      - "-ST1000"
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - gochecknoglobals
+        - ireturn
