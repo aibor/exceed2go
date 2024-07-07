@@ -9,12 +9,12 @@ import (
 )
 
 var (
-	// Returned if the interface index is invalid.
+	// ErrInvalidInterface is returned if the interface index is invalid.
 	ErrInvalidInterface = errors.New("invalid Interface")
-	// Returned if an empty [HopList] is passed.
+	// ErrEmptyHopList is returned if an empty [HopList] is passed.
 	ErrEmptyHopList = errors.New("hop list is empty")
-	// Returned if the given [Mode] is not defined.
+	// ErrUnknownMode is returned if the given [Mode] is not defined.
 	ErrUnknownMode = errors.New("unknown mode")
-	// Returned if the given [Layer] is not defined.
+	// ErrUnknownLayer is returned if the given [Layer] is not defined.
 	ErrUnknownLayer = errors.New("unknown layer")
 )

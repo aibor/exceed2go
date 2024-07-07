@@ -9,7 +9,7 @@ import (
 	"net/netip"
 )
 
-// List of IPv6 addresses in the order they are supposed to appear in traces.
+// HopList of IPv6 addresses in the order they are supposed to appear in traces.
 type HopList []netip.Addr
 
 // ParseHopList translates a slice of IPv6 address strings into a slice of

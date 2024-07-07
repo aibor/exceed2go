@@ -11,7 +11,7 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-// GetAddrs reads the currently configured addresses from the given addresses
+// ReadAddrs reads the currently configured addresses from the given addresses
 // map.
 func ReadAddrs(ifaceIndex int) (HopList, error) {
 	addrsMap, err := getPinnedMap(ifaceIndex, "exceed2go_addrs")
