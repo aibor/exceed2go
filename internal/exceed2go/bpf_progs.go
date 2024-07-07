@@ -30,6 +30,7 @@ type attacher interface {
 	attach(ifaceIndex int) (link.Link, error)
 }
 
+//nolint:ireturn
 func program(objs *bpf.Exceed2GoObjects, mode Mode, layer Layer) (attacher, error) {
 	switch mode {
 	case ModeXDP:
@@ -45,10 +46,10 @@ type xdp struct {
 	*ebpf.Program
 }
 
-func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (attacher, error) {
+func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (*xdp, error) {
 	switch layer {
 	case Layer2:
-		return xdp{objs.Exceed2goXdpL2}, nil
+		return &xdp{objs.Exceed2goXdpL2}, nil
 	case Layer3:
 		return nil, errors.New("layer 3 interfaces do not support XDP, try TC)")
 	default:
@@ -56,7 +57,8 @@ func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (attacher, error) {
 	}
 }
 
-func (p xdp) attach(ifaceIndex int) (link.Link, error) {
+//nolint:ireturn
+func (p *xdp) attach(ifaceIndex int) (link.Link, error) {
 	return link.AttachXDP(link.XDPOptions{
 		Program:   p.Program,
 		Interface: ifaceIndex,
@@ -67,18 +69,19 @@ type tc struct {
 	*ebpf.Program
 }
 
-func newTc(objs *bpf.Exceed2GoObjects, layer Layer) (attacher, error) {
+func newTc(objs *bpf.Exceed2GoObjects, layer Layer) (*tc, error) {
 	switch layer {
 	case Layer2:
-		return tc{objs.Exceed2goTcL2}, nil
+		return &tc{objs.Exceed2goTcL2}, nil
 	case Layer3:
-		return tc{objs.Exceed2goTcL3}, nil
+		return &tc{objs.Exceed2goTcL3}, nil
 	default:
 		return nil, ErrUnknownLayer
 	}
 }
 
-func (p tc) attach(ifaceIndex int) (link.Link, error) {
+//nolint:ireturn
+func (p *tc) attach(ifaceIndex int) (link.Link, error) {
 	return link.AttachTCX(link.TCXOptions{
 		Program:   p.Program,
 		Attach:    ebpf.AttachTCXIngress,
