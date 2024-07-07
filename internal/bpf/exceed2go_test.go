@@ -186,10 +186,6 @@ func (p *progTest) statsPrint(tb testing.TB) {
 func (p *progTest) setup(tb testing.TB) {
 	tb.Helper()
 
-	if p.noEth {
-		tb.Skip("support for layer 3 type missing")
-	}
-
 	p.objs = load(tb)
 
 	for _, ip := range mapIPs {

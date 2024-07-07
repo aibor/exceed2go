@@ -459,16 +459,25 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
       bpf_memcpy(&eth, pkt.eth, sizeof(struct ethhdr));
     }
 
-    /* Make room for additional headers. bpf_skb_adjust_room requires
-     * skb->protocol to be set to ETH_P_IP or ETH_P_IPV6, otherwise it returns
-     * -ENOTSUPP. Since this can't be set in test run input, test must use an
-     * actual interface.
+    /* Make room for additional headers.
+     * bpf_skb_adjust_room requires skb->protocol to be set to ETH_P_IP or
+     * ETH_P_IPV6, otherwise it returns ENOTSUPP. Since this can't be set in
+     * test run input, test must use an actual interface.
      */
-    long rc_head_adj = bpf_skb_adjust_room(ctx,
-                                           (s32)ADJ_LEN,
-                                           (u32)BPF_ADJ_ROOM_MAC,
-                                           (u64)BPF_F_ADJ_ROOM_FIXED_GSO);
+    long rc_head_adj;
+    if (ctx->protocol == bpf_htons(ETH_P_IPV6)) {
+      rc_head_adj = bpf_skb_adjust_room(ctx,
+                                        (s32)ADJ_LEN,
+                                        (u32)BPF_ADJ_ROOM_MAC,
+                                        (u64)BPF_F_ADJ_ROOM_FIXED_GSO);
+    } else {
+      /* fallback in case the protocol is not set, like when testing layer 3
+       * interfaces.
+       */
+      rc_head_adj = bpf_skb_change_head(ctx, (u32)ADJ_LEN, 0);
+    }
     assert_equal(rc_head_adj, 0, TC_ACT_SHOT);
+
     /* Adjust packet length to match length requirements. */
     int new_len = ctx->len + pkt.tail_adjust;
     assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
