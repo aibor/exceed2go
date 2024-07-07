@@ -60,6 +60,16 @@ type MapIP struct {
 	addr     string
 }
 
+func addEth(
+	tb testing.TB,
+	layer []gopacket.SerializableLayer,
+	eth layers.Ethernet,
+) []gopacket.SerializableLayer {
+	tb.Helper()
+
+	return slices.Insert(layer, 0, gopacket.SerializableLayer(&eth))
+}
+
 func serialize(tb testing.TB, layer ...gopacket.SerializableLayer) []byte {
 	tb.Helper()
 
@@ -90,14 +100,20 @@ func serialize(tb testing.TB, layer ...gopacket.SerializableLayer) []byte {
 	return buf.Bytes()
 }
 
-func addEth(
-	tb testing.TB,
-	layer []gopacket.SerializableLayer,
-	eth layers.Ethernet,
-) []gopacket.SerializableLayer {
+func deserialize(tb testing.TB, data []byte, noEth bool) gopacket.Packet {
 	tb.Helper()
 
-	return slices.Insert(layer, 0, gopacket.SerializableLayer(&eth))
+	lt := layers.LayerTypeEthernet
+	if noEth {
+		lt = layers.LayerTypeIPv6
+	}
+
+	pkt := gopacket.NewPacket(data, lt, gopacket.Default)
+	if pkt.ErrorLayer() != nil {
+		tb.Fatalf("error decoding packet: %v", pkt.ErrorLayer())
+	}
+
+	return pkt
 }
 
 func load(tb testing.TB) *bpf.Exceed2GoObjects {
@@ -165,22 +181,6 @@ func (p *progTest) statsPrint(tb testing.TB) {
 	for idx, key := range lookupKeys {
 		tb.Logf("%-25s  %d", bpf.Exceed2GoCounterKey(key), lookupValues[idx])
 	}
-}
-
-func deserialize(tb testing.TB, data []byte, noEth bool) gopacket.Packet {
-	tb.Helper()
-
-	lt := layers.LayerTypeEthernet
-	if noEth {
-		lt = layers.LayerTypeIPv6
-	}
-
-	pkt := gopacket.NewPacket(data, lt, gopacket.Default)
-	if pkt.ErrorLayer() != nil {
-		tb.Fatalf("error decoding packet: %v", pkt.ErrorLayer())
-	}
-
-	return pkt
 }
 
 func (p *progTest) setup(tb testing.TB) {
