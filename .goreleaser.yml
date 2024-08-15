@@ -2,11 +2,20 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+project_name: exceed2go
+
+version: 2
+
+gomod:
+  proxy: true
+
 builds:
   - binary: exceed2go
+    mod_timestamp: "{{.CommitTimestamp}}"
     ldflags:
-      - >
-        -s -w
+      - -s -w
+    flags:
+      - -trimpath
     goos:
       - linux
     goarch:
@@ -24,7 +33,7 @@ release:
     {{ .TagBody }}
 
 snapshot:
-  name_template: "{{ .Tag }}"
+  version_template: "{{ .Tag }}"
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
