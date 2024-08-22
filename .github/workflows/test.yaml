@@ -8,6 +8,10 @@ on:
   push:
     branches: [ "**" ]
 
+env:
+  GOPATH: "${{ github.workspace }}/.go"
+  GOVERSION: "1.22.x"
+
 jobs:
   c-lint:
     name: Clang Format
@@ -23,16 +27,45 @@ jobs:
           extensions: c
           clangFormatVersion: 16
 
+  generate:
+    name: Generate
+    runs-on: ubuntu-latest
+    container:
+      image: silkeh/clang:18-bookworm
+    needs:
+      - c-lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "${{ env.GOVERSION }}"
+
+      - run: make -B bpf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bpf
+          path: |
+            internal/bpf/*_bpfel.*
+            internal/bpf/*_string.go
+
   go-lint-and-test:
     name: Go Lint and Test
     runs-on: ubuntu-latest
+    needs: 
+      - generate
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22.x'
-          cache: false
+          go-version: "${{ env.GOVERSION }}"
 
       - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bpf
+          path: internal/bpf
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
