@@ -25,7 +25,7 @@ jobs:
           source: bpf
           exclude: libbpf
           extensions: c
-          clangFormatVersion: 16
+          clangFormatVersion: 18
 
   generate:
     name: Generate
