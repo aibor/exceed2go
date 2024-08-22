@@ -56,7 +56,7 @@ var (
 )
 
 type MapIP struct {
-	hopLimit int
+	hopLimit uint32
 	addr     string
 }
 
@@ -189,7 +189,7 @@ func (p *progTest) setup(tb testing.TB) {
 	p.objs = load(tb)
 
 	for _, ip := range mapIPs {
-		err := p.objs.Exceed2goAddrs.Put(uint32(ip.hopLimit), net.ParseIP(ip.addr))
+		err := p.objs.Exceed2goAddrs.Put(ip.hopLimit, net.ParseIP(ip.addr))
 		if err != nil {
 			tb.Fatalf("map load error: %v", err)
 		}

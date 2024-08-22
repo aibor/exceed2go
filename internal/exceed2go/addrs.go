@@ -64,7 +64,7 @@ func writeAddrs(addrsMap *ebpf.Map, hops HopList) error {
 
 	for idx, addr := range hops {
 		// 0 is an invalid hop number, so it is left out.
-		keys[idx] = uint32(idx + 1)
+		keys[idx] = uint32(idx + 1) //nolint:gosec
 		values[idx] = addr.As16()
 	}
 
