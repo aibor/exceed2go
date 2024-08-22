@@ -6,9 +6,12 @@ linters:
   enable-all: true
   disable:
     - depguard
-    - exhaustruct
-    - funlen
     - err113
+    - execinquery
+    - exhaustruct
+    - exportloopref
+    - funlen
+    - gomnd
     - paralleltest
     - varnamelen
     - wrapcheck
@@ -23,6 +26,9 @@ linters-settings:
   gosec:
     excludes:
       - G204
+
+  nlreturn:
+    block-size: 2
 
   mnd:
     ignored-functions:
