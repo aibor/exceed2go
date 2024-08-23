@@ -70,7 +70,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: "v1.60"
 
       - name: Build test container
         run: docker build --rm --tag exceed2go-test --target test-image .
