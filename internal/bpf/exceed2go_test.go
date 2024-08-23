@@ -56,7 +56,7 @@ var (
 )
 
 type MapIP struct {
-	hopLimit uint32
+	hopLimit uint8
 	addr     string
 }
 
@@ -189,7 +189,7 @@ func (p *progTest) setup(tb testing.TB) {
 	p.objs = load(tb)
 
 	for _, ip := range mapIPs {
-		err := p.objs.Exceed2goAddrs.Put(ip.hopLimit, net.ParseIP(ip.addr))
+		err := p.objs.Exceed2goAddrs.Put(uint32(ip.hopLimit), net.ParseIP(ip.addr))
 		if err != nil {
 			tb.Fatalf("map load error: %v", err)
 		}
@@ -257,7 +257,7 @@ func TestTTL(t *testing.T) {
 							SrcIP:      net.ParseIP(senderAddr),
 							DstIP:      net.ParseIP(targetAddr),
 							NextHeader: layers.IPProtocolICMPv6,
-							HopLimit:   uint8(ip.hopLimit),
+							HopLimit:   ip.hopLimit,
 						},
 						&layers.ICMPv6{
 							TypeCode: layers.CreateICMPv6TypeCode(
@@ -335,7 +335,7 @@ func TestTTLMaxSize(t *testing.T) {
 							SrcIP:      net.ParseIP(senderAddr),
 							DstIP:      net.ParseIP(targetAddr),
 							NextHeader: layers.IPProtocolICMPv6,
-							HopLimit:   uint8(entry.hopLimit),
+							HopLimit:   entry.hopLimit,
 						},
 						&layers.ICMPv6{
 							TypeCode: layers.CreateICMPv6TypeCode(
@@ -420,7 +420,7 @@ func TestNoMatch(t *testing.T) {
 							SrcIP:      net.ParseIP(senderAddr),
 							DstIP:      net.ParseIP(ip.addr),
 							NextHeader: layers.IPProtocolICMPv6,
-							HopLimit:   uint8(ip.hopLimit),
+							HopLimit:   ip.hopLimit,
 						},
 						&layers.ICMPv6{
 							TypeCode: layers.CreateICMPv6TypeCode(
