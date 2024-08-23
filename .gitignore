@@ -4,4 +4,6 @@
 
 /bin/
 /gobin/
+/internal/bpf/*_bpfel.*
+/internal/bpf/*_string.go
 
