@@ -68,7 +68,7 @@ func Attach(opts AttachOptions) error {
 
 	err = lnk.Pin(ifacePath(opts.IfaceIndex, "link"))
 	if err != nil {
-		return err
+		return fmt.Errorf("pin link: %w", err)
 	}
 
 	return nil

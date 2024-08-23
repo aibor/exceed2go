@@ -39,7 +39,7 @@ address the get a traceroute with all the given addresses in that order.`,
 			// Parse hop list into the internal format.
 			hopList, err := exceed2go.ParseHopList(args)
 			if err != nil {
-				return err
+				return fmt.Errorf("parse hop list: %w", err)
 			}
 
 			mode := exceed2go.ModeXDP

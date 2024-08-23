@@ -29,7 +29,7 @@ func statsCmd() *cobra.Command {
 
 			stats, err := exceed2go.ReadStats(iface.Index)
 			if err != nil {
-				return err
+				return fmt.Errorf("read stats: %w", err)
 			}
 
 			for _, stat := range stats {

@@ -6,6 +6,7 @@ package exceed2go
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/aibor/exceed2go/internal/bpf"
 	"github.com/cilium/ebpf"
@@ -61,10 +62,15 @@ func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (*xdp, error) {
 }
 
 func (p *xdp) attach(ifaceIndex int) (link.Link, error) { //nolint:ireturn
-	return link.AttachXDP(link.XDPOptions{
+	lnk, err := link.AttachXDP(link.XDPOptions{
 		Program:   p.Program,
 		Interface: ifaceIndex,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("attach: %w", err)
+	}
+
+	return lnk, nil
 }
 
 type tc struct {
@@ -83,9 +89,14 @@ func newTc(objs *bpf.Exceed2GoObjects, layer Layer) (*tc, error) {
 }
 
 func (p *tc) attach(ifaceIndex int) (link.Link, error) { //nolint:ireturn
-	return link.AttachTCX(link.TCXOptions{
+	lnk, err := link.AttachTCX(link.TCXOptions{
 		Program:   p.Program,
 		Attach:    ebpf.AttachTCXIngress,
 		Interface: ifaceIndex,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("attach: %w", err)
+	}
+
+	return lnk, nil
 }
