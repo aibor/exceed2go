@@ -7,10 +7,8 @@ name: Test
 on:
   push:
     branches: [ "**" ]
-
-env:
-  GOPATH: "${{ github.workspace }}/.go"
-  GOVERSION: "1.22.x"
+    tags:
+      - '*'
 
 jobs:
   c-lint:
@@ -29,26 +27,11 @@ jobs:
 
   generate:
     name: Generate
-    runs-on: ubuntu-latest
-    container:
-      image: silkeh/clang:18-bookworm
     needs:
-      - c-lint
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "${{ env.GOVERSION }}"
-
-      - run: make -B bpf
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bpf
-          path: |
-            internal/bpf/*_bpfel.*
-            internal/bpf/*_string.go
+    - c-lint
+    uses: ./.github/workflows/generate.yaml
+    with:
+      artifact-name: bpf
 
   go-lint-and-test:
     name: Go Lint and Test
@@ -67,7 +50,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
-          go-version: "${{ env.GOVERSION }}"
+          go-version: "1.22.x"
 
       - name: Download artifacts
         uses: actions/download-artifact@v4

@@ -9,37 +9,12 @@ on:
     tags:
       - '*'
 
-env:
-  GOPATH: "${{ github.workspace }}/.go"
-  GOVERSION: "1.22.x"
-
 jobs:
   generate:
     name: Generate
-    runs-on: ubuntu-latest
-    container:
-      image: silkeh/clang:18-bookworm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "${{ env.GOVERSION }}"
-
-      - name: Generate
-        run: make -B bpf
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bpf
-          path: |
-            internal/bpf/*_bpfel.*
-            internal/bpf/*_string.go
+    uses: ./.github/workflows/generate.yaml
+    with:
+      artifact-name: bpf
 
   goreleaser:
     name: Release
@@ -66,7 +41,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "${{ env.GOVERSION }}"
+          go-version: "1.22.x"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

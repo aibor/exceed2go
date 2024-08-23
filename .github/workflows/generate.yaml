@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Generate
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        default: "1.22.x"
+        type: string
+      llvm-version:
+        default: "18"
+        type: string
+      artifact-name:
+        required: true
+        type: string
+
+jobs:
+  bpf:
+    name: BPF
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.20
+    steps:
+      - name: Install packages
+        run: |
+          apk add --no-scripts \
+            make \
+            tar \
+            "llvm${{ inputs.llvm-version }}" \
+            "clang${{ inputs.llvm-version }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "${{ inputs.go-version }}"
+
+      - name: Generate
+        run: |
+          env PATH="$PATH:/usr/lib/llvm${{ inputs.llvm-version }}/bin" make -B bpf
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ inputs.artifact-name }}"
+          path: |
+            internal/bpf/*_bpfel.*
+            internal/bpf/*_string.go
