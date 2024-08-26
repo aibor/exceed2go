@@ -18,12 +18,15 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
 
-  nlreturn:
-    block-size: 2
+  lll:
+    line-length: 80
 
   mnd:
     ignored-functions:
       - '^cobra\..*NArgs$'
+
+  nlreturn:
+    block-size: 2
 
   revive:
     rules:

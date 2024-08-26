@@ -84,11 +84,13 @@ address the get a traceroute with all the given addresses in that order.`,
 		"interface to attach to. Can be given repeated or comma-separated.",
 	)
 
-	if err := cmd.MarkFlagRequired("iface"); err != nil {
+	err := cmd.MarkFlagRequired("iface")
+	if err != nil {
 		panic("marking iface flag required must succeed")
 	}
 
-	if err := cmd.RegisterFlagCompletionFunc("iface", ifaceCompletion); err != nil {
+	err = cmd.RegisterFlagCompletionFunc("iface", ifaceCompletion)
+	if err != nil {
 		panic("registering iface completion must succeed")
 	}
 

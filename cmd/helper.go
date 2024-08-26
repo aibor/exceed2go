@@ -36,8 +36,8 @@ func ifaceByName(name string) (*net.Interface, error) {
 	return iface, nil
 }
 
-// ifaceUpNameList returns a list of names of all interfaces that are up and not a
-// loopback interface.
+// ifaceUpNameList returns a list of names of all interfaces that are up and
+// not a loopback interface.
 func ifaceUpNameList(ifaceList []net.Interface) []string {
 	ifNameList := make([]string, 0)
 
