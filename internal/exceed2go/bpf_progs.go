@@ -5,7 +5,6 @@
 package exceed2go
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aibor/exceed2go/internal/bpf"
@@ -55,7 +54,7 @@ func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (*xdp, error) {
 	case Layer2:
 		return &xdp{objs.Exceed2goXdpL2}, nil
 	case Layer3:
-		return nil, errors.New("layer 3 interfaces do not support XDP, try TC)")
+		return nil, ErrXDPLayer3NotSupported
 	default:
 		return nil, ErrUnknownLayer
 	}

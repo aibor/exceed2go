@@ -41,7 +41,7 @@ func Attach(opts AttachOptions) error {
 
 	err = os.MkdirAll(pinDir, pinDirPerm)
 	if err != nil {
-		return fmt.Errorf("create bpf pin dir: %v", err)
+		return fmt.Errorf("create bpf pin dir: %w", err)
 	}
 
 	objs, err := load(pinDir)

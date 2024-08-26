@@ -57,7 +57,7 @@ func RemoveIface(ifaceIndex int) {
 func load(pinDir string) (*bpf.Exceed2GoObjects, error) {
 	spec, err := bpf.LoadExceed2Go()
 	if err != nil {
-		return nil, fmt.Errorf("load spec: %v", err)
+		return nil, fmt.Errorf("load spec: %w", err)
 	}
 
 	for _, m := range spec.Maps {
@@ -85,7 +85,7 @@ func getPinnedMap(ifaceIndex int, name string) (*ebpf.Map, error) {
 
 	m, err := ebpf.LoadPinnedMap(path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("get map %d/%s: %v", ifaceIndex, name, err)
+		return nil, fmt.Errorf("get map %d/%s: %w", ifaceIndex, name, err)
 	}
 
 	return m, nil

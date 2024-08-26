@@ -35,11 +35,11 @@ func ParseHopList(input []string) (HopList, error) {
 func ParseHop(input string) (netip.Addr, error) {
 	addr, err := netip.ParseAddr(input)
 	if err != nil {
-		return addr, fmt.Errorf("parse address: %s", input)
+		return addr, fmt.Errorf("parse address: %w", err)
 	}
 
 	if !addr.Is6() {
-		return addr, fmt.Errorf("not an IPv6 address: %s", input)
+		return addr, fmt.Errorf("%w: %s", ErrAddrNotIPv6, input)
 	}
 
 	return addr, nil

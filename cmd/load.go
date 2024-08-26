@@ -61,7 +61,7 @@ address the get a traceroute with all the given addresses in that order.`,
 					Layer:      layer,
 				}
 				if err := exceed2go.Attach(opts); err != nil {
-					return fmt.Errorf("attach to %s: %v", iface.Name, err)
+					return fmt.Errorf("attach to %s: %w", iface.Name, err)
 				}
 			}
 

@@ -41,7 +41,7 @@ func readStats(statsMap *ebpf.Map) (Stats, error) {
 
 	_, err := statsMap.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
 	if err != nil {
-		return nil, fmt.Errorf("lookup stats: %v", err)
+		return nil, fmt.Errorf("lookup stats: %w", err)
 	}
 
 	for idx, key := range lookupKeys {

@@ -6,7 +6,6 @@ linters:
   enable-all: true
   disable:
     - depguard
-    - err113
     - execinquery
     - exhaustruct
     - exportloopref
@@ -16,15 +15,8 @@ linters:
     - varnamelen
 
 linters-settings:
-  errorlint:
-    errorf: false
-
   exhaustive:
     default-signifies-exhaustive: true
-
-  gosec:
-    excludes:
-      - G204
 
   nlreturn:
     block-size: 2

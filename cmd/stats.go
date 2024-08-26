@@ -5,11 +5,14 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aibor/exceed2go/internal/exceed2go"
 	"github.com/spf13/cobra"
 )
+
+var ErrNotAttached = errors.New("exceed2go not attached")
 
 func statsCmd() *cobra.Command {
 	var ifaceName string
@@ -24,7 +27,7 @@ func statsCmd() *cobra.Command {
 			}
 
 			if !exceed2go.KnownIface(iface.Index) {
-				return fmt.Errorf("exceed2go not attached to %s", ifaceName)
+				return ErrNotAttached
 			}
 
 			stats, err := exceed2go.ReadStats(iface.Index)

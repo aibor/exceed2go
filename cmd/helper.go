@@ -30,7 +30,7 @@ func ifaceCompletion(_ *cobra.Command, _ []string, _ string) (
 func ifaceByName(name string) (*net.Interface, error) {
 	iface, err := net.InterfaceByName(name)
 	if err != nil {
-		return nil, fmt.Errorf("interface by name: %s: %v", name, err)
+		return nil, fmt.Errorf("interface by name: %s: %w", name, err)
 	}
 
 	return iface, nil

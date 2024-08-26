@@ -33,7 +33,7 @@ func readAddrs(addrsMap *ebpf.Map) (HopList, error) {
 
 	_, err := addrsMap.BatchLookup(&cursor, lookupKeys, lookupValues, nil)
 	if err != nil {
-		return output, fmt.Errorf("lookup stats: %v", err)
+		return output, fmt.Errorf("lookup stats: %w", err)
 	}
 
 	for idx := range lookupKeys {
@@ -56,7 +56,7 @@ func readAddrs(addrsMap *ebpf.Map) (HopList, error) {
 func writeAddrs(addrsMap *ebpf.Map, hops HopList) error {
 	maxEntries := int(addrsMap.MaxEntries())
 	if len(hops) >= maxEntries {
-		return fmt.Errorf("too many hops %d, max %d", len(hops), maxEntries-1)
+		return fmt.Errorf("%w: %d>%d", ErrTooManyHops, len(hops), maxEntries-1)
 	}
 
 	keys := make([]uint32, maxEntries)
@@ -69,7 +69,7 @@ func writeAddrs(addrsMap *ebpf.Map, hops HopList) error {
 	}
 
 	if _, err := addrsMap.BatchUpdate(keys, values, nil); err != nil {
-		return fmt.Errorf("load error: %v", err)
+		return fmt.Errorf("load error: %w", err)
 	}
 
 	return nil
