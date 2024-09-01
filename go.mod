@@ -7,7 +7,7 @@ module github.com/aibor/exceed2go
 go 1.22
 
 require (
-	github.com/aibor/virtrun v0.11.3
+	github.com/aibor/virtrun v0.11.4
 	github.com/cilium/ebpf v0.16.0
 	github.com/gopacket/gopacket v1.2.0
 	github.com/spf13/cobra v1.8.1
