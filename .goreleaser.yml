@@ -43,7 +43,7 @@ nfpms:
     homepage: https://github.com/aibor/exceed2go
     maintainer: Tobias Böhm <code@aibor.de>
     description: ICMPv6 time exceeded packet generator.
-    license: Apache 3.0
+    license: AGPL-3.0-or-later
     formats:
       - deb
       - rpm
