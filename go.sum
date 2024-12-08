@@ -1,5 +1,5 @@
-github.com/aibor/virtrun v0.13.0 h1:n5KgltauH++Aft7A4NK+eAf0jQU+WPhsc3Wz/KSVifw=
-github.com/aibor/virtrun v0.13.0/go.mod h1:vMXp/KjtW9eJkOVyWw920O3ya0bKW8Ly9ptcc8rUcR0=
+github.com/aibor/virtrun v0.13.1 h1:pLLVL58Wc1S/LwX0b+zbjBiT2NR7cilZdnbFGUC/SOg=
+github.com/aibor/virtrun v0.13.1/go.mod h1:vMXp/KjtW9eJkOVyWw920O3ya0bKW8Ly9ptcc8rUcR0=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/cilium/ebpf v0.16.0 h1:+BiEnHL6Z7lXnlGUsXQPPAE7+kenAd4ES8MQ5min0Ok=
