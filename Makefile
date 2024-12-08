@@ -34,13 +34,13 @@ export GOBIN
 build: $(BINARY)
 bpf: $(BPF2GO_FILE)
 
-$(VIRTRUN):
+$(VIRTRUN): go.mod
 	go install github.com/aibor/virtrun
 
-$(BPF2GO):
+$(BPF2GO): go.mod
 	go install github.com/cilium/ebpf/cmd/bpf2go
 
-$(STRINGER):
+$(STRINGER): go.mod
 	go install golang.org/x/tools/cmd/stringer
 
 $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
