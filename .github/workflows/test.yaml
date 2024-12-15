@@ -37,7 +37,7 @@ jobs:
     name: Go Lint and Test
     runs-on: ubuntu-24.04
     container:
-      image: alpine:3.20
+      image: alpine:3.21
     needs:
       - generate
     steps:
