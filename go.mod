@@ -7,7 +7,7 @@ module github.com/aibor/exceed2go
 go 1.23
 
 require (
-	github.com/aibor/virtrun v0.13.1
+	github.com/aibor/virtrun v0.13.2-0.20241215114430-2d81c748140b
 	github.com/cilium/ebpf v0.16.0
 	github.com/gopacket/gopacket v1.3.1
 	github.com/spf13/cobra v1.8.1
