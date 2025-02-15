@@ -11,7 +11,7 @@ on:
         default: "1.24.x"
         type: string
       llvm-version:
-        default: "18"
+        default: "19"
         type: string
       artifact-name:
         required: true

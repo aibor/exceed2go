@@ -42,7 +42,7 @@ CMD make build
 #
 FROM build-image AS build-bpf-image
 
-ARG LLVM_VERSION=17
+ARG LLVM_VERSION=19
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
     "clang${LLVM_VERSION}" \
