@@ -22,7 +22,7 @@ jobs:
     name: BPF
     runs-on: ubuntu-24.04
     container:
-      image: alpine:3.20
+      image: alpine:3.21
     steps:
       - name: Install packages
         run: |
