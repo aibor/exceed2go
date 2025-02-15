@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       go-version:
-        default: "1.23.x"
+        default: "1.24.x"
         type: string
       llvm-version:
         default: "18"
