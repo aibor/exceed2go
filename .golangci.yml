@@ -15,6 +15,12 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
 
+  ireturn:
+    allow:
+      - error
+      - stdlib
+      - link.Link
+
   lll:
     line-length: 80
 

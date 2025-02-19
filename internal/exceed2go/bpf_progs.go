@@ -30,8 +30,7 @@ type attacher interface {
 	attach(ifaceIndex int) (link.Link, error)
 }
 
-//nolint:ireturn
-func program(
+func program( //nolint:ireturn
 	objs *bpf.Exceed2GoObjects,
 	mode Mode,
 	layer Layer,
@@ -61,7 +60,6 @@ func newXdp(objs *bpf.Exceed2GoObjects, layer Layer) (*xdp, error) {
 	}
 }
 
-//nolint:ireturn
 func (p *xdp) attach(ifaceIndex int) (link.Link, error) {
 	lnk, err := link.AttachXDP(link.XDPOptions{
 		Program:   p.Program,
@@ -89,7 +87,6 @@ func newTc(objs *bpf.Exceed2GoObjects, layer Layer) (*tc, error) {
 	}
 }
 
-//nolint:ireturn
 func (p *tc) attach(ifaceIndex int) (link.Link, error) {
 	lnk, err := link.AttachTCX(link.TCXOptions{
 		Program:   p.Program,
