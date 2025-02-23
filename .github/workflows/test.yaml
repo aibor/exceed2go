@@ -134,12 +134,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: bpf
           path: internal/bpf
+
+      - name: Install go-junit-report
+        working-directory: .github/workflows
+        run: go install github.com/jstemmer/go-junit-report/v2
 
       - name: Install virtrun
         run: go install github.com/aibor/virtrun
@@ -154,7 +159,15 @@ jobs:
             -cover \
             -covermode atomic \
             -coverprofile /tmp/cover.out \
-            ./...
+            ./... \
+            | go-junit-report -set-exit-code > junit-report.xml
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: junit-report.xml
 
   reuse-lint:
     name: FSFE REUSE Compliance Check
