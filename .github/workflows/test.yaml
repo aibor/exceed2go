@@ -27,8 +27,6 @@ jobs:
 
   generate:
     name: Generate
-    needs:
-    - c-lint
     uses: ./.github/workflows/generate.yaml
     with:
       artifact-name: bpf
