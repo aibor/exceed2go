@@ -37,8 +37,13 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Go mod download
+        run: go mod download
+
+      - name: Go mod download tools
+        working-directory: .github/workflows
         run: go mod download
 
   generate:
@@ -48,6 +53,41 @@ jobs:
     uses: ./.github/workflows/generate.yaml
     with:
       artifact-name: bpf
+
+  go-deps-check:
+    name: Go dependency check
+    runs-on: ubuntu-24.04
+    needs:
+      - generate
+      - go-setup
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bpf
+          path: internal/bpf
+
+      - name: Go mod tidy
+        run: go mod tidy && git diff --exit-code
+
+      - name: Go mod verify
+        run: go mod verify
+
+      - name: Install govulncheck
+        working-directory: .github/workflows
+        run: go install golang.org/x/vuln/cmd/govulncheck
+
+      - name: Run govulncheck
+        run: govulncheck -test ./...
 
   go-lint:
     name: Go Lint
@@ -132,6 +172,7 @@ jobs:
     name: Test Results
     needs:
       - c-lint
+      - go-deps-check
       - go-lint
       - go-test
       - reuse-lint
