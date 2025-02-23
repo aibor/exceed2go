@@ -16,7 +16,8 @@ jobs:
     name: Clang Format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Run clang-format
         uses: DoozyX/clang-format-lint-action@v0.18
@@ -100,21 +101,23 @@ jobs:
     name: FSFE REUSE Compliance Check
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-    - name: REUSE Compliance Check
-      uses: fsfe/reuse-action@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@v5
 
   results:
     if: always()
     runs-on: ubuntu-24.04
     name: Test Results
     needs:
-    - c-lint
-    - go-lint
-    - go-test
-    - reuse-lint
+      - c-lint
+      - go-lint
+      - go-test
+      - reuse-lint
     steps:
-    - run: exit 1
-      if: |
-        contains(needs.*.result, 'failure') ||
-          contains(needs.*.result, 'cancelled')
+      - run: exit 1
+        if: |
+          contains(needs.*.result, 'failure') ||
+            contains(needs.*.result, 'cancelled')
