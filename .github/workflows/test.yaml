@@ -33,8 +33,33 @@ jobs:
     with:
       artifact-name: bpf
 
-  go-lint-and-test:
-    name: Go Lint and Test
+  go-lint:
+    name: Go Lint
+    runs-on: ubuntu-24.04
+    needs:
+      - generate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bpf
+          path: internal/bpf
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: "v1.64"
+
+  go-test:
+    name: Go Test
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
@@ -57,11 +82,6 @@ jobs:
         with:
           name: bpf
           path: internal/bpf
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: "v1.64"
 
       - name: Install virtrun
         run: go install github.com/aibor/virtrun
@@ -92,7 +112,8 @@ jobs:
     name: Test Results
     needs:
     - c-lint
-    - go-lint-and-test
+    - go-lint
+    - go-test
     - reuse-lint
     steps:
     - run: exit 1
