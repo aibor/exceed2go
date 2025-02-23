@@ -56,3 +56,11 @@ nfpms:
         type: config|noreplace
       - src: extra/exceed2go.service
         dst: /usr/lib/systemd/system/exceed2go.service
+
+changelog:
+  sort: "asc"
+  use: "github-native"
+  filters:
+    include:
+      - "^feat"
+      - "^fix"
