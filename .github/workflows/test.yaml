@@ -26,8 +26,25 @@ jobs:
           exclude: libbpf
           extensions: c
 
+  go-setup:
+    name: Go setup
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go mod download
+        run: go mod download
+
   generate:
     name: Generate
+    needs:
+      - go-setup
     uses: ./.github/workflows/generate.yaml
     with:
       artifact-name: bpf
@@ -37,6 +54,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - generate
+      - go-setup
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,6 +82,7 @@ jobs:
       image: alpine:3.21
     needs:
       - generate
+      - go-setup
     steps:
       - name: Install packages
         run: apk add --no-scripts tar qemu-system-x86_64 linux-virt
