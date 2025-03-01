@@ -29,5 +29,6 @@ require (
 
 tool (
 	github.com/aibor/virtrun
+	github.com/cilium/ebpf/cmd/bpf2go
 	golang.org/x/tools/cmd/stringer
 )
