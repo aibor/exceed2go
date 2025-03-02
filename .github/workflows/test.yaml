@@ -144,15 +144,12 @@ jobs:
         working-directory: .github/workflows
         run: go install github.com/jstemmer/go-junit-report/v2
 
-      - name: Install virtrun
-        run: go install github.com/aibor/virtrun
-
       - name: Run go test
         env:
           VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt -transport pci"
         run: |
           go test -v \
-            -exec virtrun \
+            -exec "go tool virtrun" \
             -coverpkg "$(go list ./... | tr '\n' ,)" \
             -cover \
             -covermode atomic \
