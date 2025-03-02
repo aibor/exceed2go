@@ -9,8 +9,6 @@ CompileFlags:
     -Wall,
     -Werror,
     -Wshadow,
-    -Ibpf/libbpf,
-    -Ilibbpf,
     -nostdinc,
     -std=gnu11
   ]
