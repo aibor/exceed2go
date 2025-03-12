@@ -60,7 +60,6 @@ nfpms:
 
 changelog:
   sort: "asc"
-  use: "github-native"
   filters:
     include:
       - "^feat"
