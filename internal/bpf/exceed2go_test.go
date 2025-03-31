@@ -71,7 +71,7 @@ func addEth(
 	return slices.Insert(layer, 0, gopacket.SerializableLayer(&eth))
 }
 
-func serialize(tb testing.TB, layer ...gopacket.SerializableLayer) []byte {
+func serialize(tb testing.TB, layer []gopacket.SerializableLayer) []byte {
 	tb.Helper()
 
 	buf := gopacket.NewSerializeBuffer()
@@ -151,8 +151,14 @@ type progTest struct {
 	noEth       bool
 }
 
-func (p *progTest) run(tb testing.TB, pkt []byte, rc uint32) gopacket.Packet {
+func (p *progTest) run(
+	tb testing.TB,
+	layer []gopacket.SerializableLayer,
+	rc uint32,
+) gopacket.Packet {
 	tb.Helper()
+
+	pkt := serialize(tb, layer)
 
 	opts := p.getRunOpts()
 	opts.Data = pkt
@@ -285,7 +291,7 @@ func TestTTL(t *testing.T) {
 							),
 						},
 						gopacket.Payload{0x0, 0x0, 0x0, 0x0},
-						gopacket.Payload(serialize(t, inLayers...)),
+						gopacket.Payload(serialize(t, inLayers)),
 					}
 
 					if !test.noEth {
@@ -293,8 +299,9 @@ func TestTTL(t *testing.T) {
 						outLayers = addEth(t, outLayers, ethIPv6Out)
 					}
 
-					expectedPkt := deserialize(t, serialize(t, outLayers...), test.noEth)
-					actualPkt := test.run(t, serialize(t, inLayers...), test.redirectRC)
+					expectedBytes := serialize(t, outLayers)
+					expectedPkt := deserialize(t, expectedBytes, test.noEth)
+					actualPkt := test.run(t, inLayers, test.redirectRC)
 
 					assert.Equal(t, expectedPkt.String(), actualPkt.String())
 				})
@@ -329,7 +336,8 @@ func TestTTLMaxSize(t *testing.T) {
 			entry := mapIPs[0]
 
 			for _, payload := range payloads {
-				t.Run(fmt.Sprintf("payload size %d", payload.len), func(t *testing.T) {
+				name := fmt.Sprintf("payload size %d", payload.len)
+				t.Run(name, func(t *testing.T) {
 					inLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
@@ -348,7 +356,7 @@ func TestTTLMaxSize(t *testing.T) {
 						make(gopacket.Payload, payload.len),
 					}
 
-					respPacket := serialize(t, inLayers...)
+					respPacket := serialize(t, inLayers)
 					// The eBPF program aligns the packet to 4 byte.
 					respPacket = respPacket[:len(respPacket) & ^3]
 					// The ICMPv6 packets must not exceed IPv6 minimum MTU.
@@ -381,8 +389,9 @@ func TestTTLMaxSize(t *testing.T) {
 						outLayers = addEth(t, outLayers, ethIPv6Out)
 					}
 
-					expectedPkt := deserialize(t, serialize(t, outLayers...), test.noEth)
-					actualPkt := test.run(t, serialize(t, inLayers...), test.redirectRC)
+					expectedBytes := serialize(t, outLayers)
+					expectedPkt := deserialize(t, expectedBytes, test.noEth)
+					actualPkt := test.run(t, inLayers, test.redirectRC)
 					actualLen := len(actualPkt.Data())
 
 					assert.Equal(t, expectedPkt.String(), actualPkt.String())
@@ -390,7 +399,8 @@ func TestTTLMaxSize(t *testing.T) {
 					if payload.truncated {
 						assert.Equal(t, maxLen, actualLen)
 					} else {
-						assert.LessOrEqual(t, actualLen, maxLen, "IPv6 minimum MTU")
+						assert.LessOrEqual(t, actualLen, maxLen,
+							"pkt should not exceed IPv6 minimum MTU")
 					}
 				})
 			}
@@ -437,8 +447,9 @@ func TestNoMatch(t *testing.T) {
 						inLayers = addEth(t, inLayers, ethIPv6In)
 					}
 
-					expectedPkt := deserialize(t, serialize(t, inLayers...), test.noEth)
-					actualPkt := test.run(t, serialize(t, inLayers...), test.passRC)
+					expectedBytes := serialize(t, inLayers)
+					expectedPkt := deserialize(t, expectedBytes, test.noEth)
+					actualPkt := test.run(t, inLayers, test.passRC)
 
 					assert.Equal(t, expectedPkt.String(), actualPkt.String())
 				})
@@ -499,8 +510,9 @@ func TestEchoReply(t *testing.T) {
 						outLayers = addEth(t, outLayers, ethIPv6Out)
 					}
 
-					expectedPkt := deserialize(t, serialize(t, outLayers...), test.noEth)
-					actualPkt := test.run(t, serialize(t, inLayers...), test.redirectRC)
+					expectedBytes := serialize(t, outLayers)
+					expectedPkt := deserialize(t, expectedBytes, test.noEth)
+					actualPkt := test.run(t, inLayers, test.redirectRC)
 
 					assert.Equal(t, expectedPkt.String(), actualPkt.String())
 				})
