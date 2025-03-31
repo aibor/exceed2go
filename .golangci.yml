@@ -1,50 +1,55 @@
-# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+# SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+version: "2"
+
 linters:
-  enable-all: true
+  default: all
   disable:
     - depguard
     - exhaustruct
     - funlen
     - paralleltest
     - varnamelen
-
-linters-settings:
-  exhaustive:
-    default-signifies-exhaustive: true
-
-  ireturn:
-    allow:
-      - error
-      - stdlib
-      - link.Link
-
-  lll:
-    line-length: 80
-
-  mnd:
-    ignored-functions:
-      - '^cobra\..*NArgs$'
-
-  nlreturn:
-    block-size: 2
-
-  revive:
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    ireturn:
+      allow:
+        - error
+        - stdlib
+        - link.Link
+    lll:
+      line-length: 80
+    mnd:
+      ignored-functions:
+        - ^cobra\..*NArgs$
+    nlreturn:
+      block-size: 2
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+  exclusions:
+    generated: strict
     rules:
-      - name: package-comments
-        disabled: true
+      - linters:
+          - gochecknoglobals
+          - ireturn
+        path: (.+)_test\.go
 
-  stylecheck:
-    checks: 
-      - "all"
-      - "-ST1000"
-
-issues:
-  exclude-use-default: false
-  exclude-rules:
-    - path: '(.+)_test\.go'
-      linters:
-        - gochecknoglobals
-        - ireturn
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 80
