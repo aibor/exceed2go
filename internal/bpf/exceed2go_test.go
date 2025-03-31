@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"net/netip"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -22,20 +23,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
+var (
 	ipv6MinMTU = 1280
-	senderAddr = "fd03::4"
-	targetAddr = "fd01::ff"
+	senderAddr = netip.MustParseAddr("fd03::4")
+	targetAddr = netip.MustParseAddr("fd01::ff")
 )
 
 var (
 	loadFailed atomic.Bool
 
-	mapIPs = []MapIP{
-		{1, "fd01::bb"},
-		{2, "fd01::cc"},
-		{3, "fd01::dd"},
-		{4, "fd01::ee"},
+	mapIPs = []mapIP{
+		{1, netip.MustParseAddr("fd01::bb")},
+		{2, netip.MustParseAddr("fd01::cc")},
+		{3, netip.MustParseAddr("fd01::dd")},
+		{4, netip.MustParseAddr("fd01::ee")},
 		{5, targetAddr},
 	}
 
@@ -55,9 +56,9 @@ var (
 	}
 )
 
-type MapIP struct {
+type mapIP struct {
 	hopLimit uint8
-	addr     string
+	addr     netip.Addr
 }
 
 func addEth(
@@ -189,7 +190,7 @@ func (p *progTest) setup(tb testing.TB) {
 	p.objs = load(tb)
 
 	for _, ip := range mapIPs {
-		err := p.objs.Exceed2goAddrs.Put(uint32(ip.hopLimit), net.ParseIP(ip.addr))
+		err := p.objs.Exceed2goAddrs.Put(uint32(ip.hopLimit), ip.addr)
 		if err != nil {
 			tb.Fatalf("map load error: %v", err)
 		}
@@ -254,8 +255,8 @@ func TestTTL(t *testing.T) {
 					inLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(senderAddr),
-							DstIP:      net.ParseIP(targetAddr),
+							SrcIP:      senderAddr.AsSlice(),
+							DstIP:      targetAddr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   ip.hopLimit,
 						},
@@ -272,8 +273,8 @@ func TestTTL(t *testing.T) {
 					outLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(ip.addr),
-							DstIP:      net.ParseIP(senderAddr),
+							SrcIP:      ip.addr.AsSlice(),
+							DstIP:      senderAddr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   64,
 						},
@@ -332,8 +333,8 @@ func TestTTLMaxSize(t *testing.T) {
 					inLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(senderAddr),
-							DstIP:      net.ParseIP(targetAddr),
+							SrcIP:      senderAddr.AsSlice(),
+							DstIP:      targetAddr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   entry.hopLimit,
 						},
@@ -358,8 +359,8 @@ func TestTTLMaxSize(t *testing.T) {
 					outLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(entry.addr),
-							DstIP:      net.ParseIP(senderAddr),
+							SrcIP:      entry.addr.AsSlice(),
+							DstIP:      senderAddr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   64,
 						},
@@ -406,10 +407,10 @@ func TestNoMatch(t *testing.T) {
 		t.Run(progType, func(t *testing.T) {
 			test.setup(t)
 
-			ips := []MapIP{
-				{42, "fd0f::ff"},
-				{12, "fe80::1"},
-				{1, "1234:dead:beef:c0ff:ee:101::ff"},
+			ips := []mapIP{
+				{42, netip.MustParseAddr("fd0f::ff")},
+				{12, netip.MustParseAddr("fe80::1")},
+				{1, netip.MustParseAddr("1234:dead:beef:c0ff:ee:101::ff")},
 			}
 
 			for _, ip := range ips {
@@ -417,8 +418,8 @@ func TestNoMatch(t *testing.T) {
 					inLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(senderAddr),
-							DstIP:      net.ParseIP(ip.addr),
+							SrcIP:      senderAddr.AsSlice(),
+							DstIP:      ip.addr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   ip.hopLimit,
 						},
@@ -460,8 +461,8 @@ func TestEchoReply(t *testing.T) {
 					inLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(senderAddr),
-							DstIP:      net.ParseIP(ip.addr),
+							SrcIP:      senderAddr.AsSlice(),
+							DstIP:      ip.addr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   64,
 						},
@@ -478,8 +479,8 @@ func TestEchoReply(t *testing.T) {
 					outLayers := []gopacket.SerializableLayer{
 						&layers.IPv6{
 							Version:    6,
-							SrcIP:      net.ParseIP(ip.addr),
-							DstIP:      net.ParseIP(senderAddr),
+							SrcIP:      ip.addr.AsSlice(),
+							DstIP:      senderAddr.AsSlice(),
 							NextHeader: layers.IPProtocolICMPv6,
 							HopLimit:   64,
 						},
