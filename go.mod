@@ -7,7 +7,7 @@ module github.com/aibor/exceed2go
 go 1.24
 
 require (
-	github.com/cilium/ebpf v0.17.3
+	github.com/cilium/ebpf v0.18.0
 	github.com/gopacket/gopacket v1.3.1
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
