@@ -7,12 +7,34 @@
 #include "ether.h"
 #include "ip6.h"
 #include "icmp6.h"
+
 #include "libbpf/bpf_endian.h"
 #include "libbpf/bpf_helpers.h"
 
 #define MAX_ADDRS 256
 
 #define ADJ_LEN (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
+
+enum base_layer {
+  BASE_LAYER_L2,
+  BASE_LAYER_L3,
+};
+
+enum pkt_status {
+  PKT_UNRELATED,
+  PKT_HOP_FOUND,
+  PKT_ECHO_REQUEST,
+};
+
+struct pkt_info {
+  struct ethhdr   *eth;
+  struct ipv6hdr  *ipv6;
+  struct icmp6hdr *icmp6;
+  void            *end;
+  struct in6_addr  reply_saddr;
+  struct in6_addr  reply_daddr;
+  int              tail_adjust;
+};
 
 /* Definition of hop addresses in the order they are traversed by the packet.
  * 0 is an invalid hop number. Last entry is the actual target address.
@@ -51,31 +73,30 @@ count(const enum counter_key key) {
     __sync_fetch_and_add(value, 1);
 }
 
-enum base_layer {
-  BASE_LAYER_L2,
-  BASE_LAYER_L3,
-};
+static __always_inline void
+pkt_info_set_ptrs_from_dynptr(struct pkt_info      *pkt,
+                              struct bpf_dynptr    *dynptr,
+                              __u32                 end,
+                              const enum base_layer base_layer) {
+  char  eth_buf[ETH_HLEN];
+  char  ip_buf[sizeof(struct ipv6hdr)];
+  char  icmp_buf[sizeof(struct icmp6hdr)];
+  __u32 offset = 0;
 
-enum pkt_status {
-  PKT_UNRELATED,
-  PKT_HOP_FOUND,
-  PKT_ECHO_REQUEST,
-};
+  if (base_layer == BASE_LAYER_L2) {
+    pkt->eth = next_header_dynptr(dynptr, offset, eth_buf);
+  }
 
-struct pkt_info {
-  struct ethhdr  *eth;
-  struct ipv6hdr *ipv6;
-  void           *end;
-  struct in6_addr reply_saddr;
-  struct in6_addr reply_daddr;
-  int             tail_adjust;
-};
+  pkt->ipv6  = next_header_dynptr(dynptr, offset, ip_buf);
+  pkt->icmp6 = next_header_dynptr(dynptr, offset, icmp_buf);
+  pkt->end   = (void *)(unsigned long)end;
+}
 
 static __always_inline void
-pkt_info_set_ptrs(struct pkt_info      *pkt,
-                  const __u32           start,
-                  const __u32           end,
-                  const enum base_layer base_layer) {
+pkt_info_set_ptrs_from_pkt(struct pkt_info      *pkt,
+                           const __u32           start,
+                           const __u32           end,
+                           const enum base_layer base_layer) {
   switch (base_layer) {
   case BASE_LAYER_L2:
     pkt->eth  = (void *)(unsigned long)start;
@@ -85,7 +106,9 @@ pkt_info_set_ptrs(struct pkt_info      *pkt,
     pkt->ipv6 = (void *)(unsigned long)start;
     break;
   }
-  pkt->end = (void *)(unsigned long)end;
+
+  pkt->icmp6 = next_header(pkt->ipv6);
+  pkt->end   = (void *)(unsigned long)end;
 }
 
 static __always_inline __u32
@@ -164,12 +187,12 @@ exceed2go_echo(struct pkt_info *pkt) {
             &pkt->reply_saddr,
             &pkt->reply_daddr);
 
-  struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-  icmp6->icmp6_type      = ICMP6_ECHO_REPLY;
-  icmp6->icmp6_code      = 0;
+  /* Set echo reply header. */
+  pkt->icmp6->icmp6_type = ICMP6_ECHO_REPLY;
+  pkt->icmp6->icmp6_code = 0;
 
   /* Only field changed that affects the check sum field is the ICMP type. */
-  icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
+  pkt->icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
 }
 
 /* Parse packet for a known address.
@@ -184,11 +207,12 @@ exceed2go_echo(struct pkt_info *pkt) {
  */
 static __always_inline enum pkt_status
 parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
-  assert_boundary(pkt->ipv6, pkt->end, PKT_UNRELATED);
-
-  if (base_layer == BASE_LAYER_L2)
+  if (base_layer == BASE_LAYER_L2) {
+    assert(pkt->eth, PKT_UNRELATED);
     assert(pkt->eth->proto == bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
+  }
 
+  assert(pkt->ipv6, PKT_UNRELATED);
   assert(pkt->ipv6->version == 6, PKT_UNRELATED);
   count(COUNTER_IPV6_PACKET);
 
@@ -225,25 +249,25 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   assert(pkt->ipv6->nexthdr == IPPROTO_ICMPV6, PKT_UNRELATED);
   count(COUNTER_ICMP_PACKET);
 
-  struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-  assert_boundary(icmp6, pkt->end, PKT_UNRELATED);
-
-  assert(icmp6->icmp6_type == ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-  assert(icmp6->icmp6_code == 0, PKT_UNRELATED);
+  assert(pkt->icmp6, PKT_UNRELATED);
+  assert(pkt->icmp6->icmp6_type == ICMP6_ECHO_REQUEST, PKT_UNRELATED);
+  assert(pkt->icmp6->icmp6_code == 0, PKT_UNRELATED);
   count(COUNTER_ICMP_ECHO_REQUEST);
-
-  /* Validate check sum. */
-  __wsum csum = 0;
-  csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
-  csum        = pkt_csum(icmp6, pkt->end, true, csum);
-
-  assert(csum_fold(csum) == 0xffff, PKT_UNRELATED);
-  count(COUNTER_ICMP_CORRECT_CHECKSUM);
 
   in6_addr_copy(&pkt->reply_saddr, &pkt->ipv6->daddr);
   in6_addr_copy(&pkt->reply_daddr, &pkt->ipv6->saddr);
 
   return PKT_ECHO_REQUEST;
+}
+
+static __always_inline bool
+valid_csum(const struct pkt_info *pkt) {
+  /* Validate check sum. */
+  __wsum csum = 0;
+  csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
+  csum        = pkt_csum(pkt->icmp6, pkt->end, false, csum);
+
+  return csum_fold(csum) == 0xffff;
 }
 
 static __always_inline int
@@ -254,8 +278,13 @@ exceed2go_xdp(struct xdp_md *ctx) {
    */
   enum base_layer base_layer = BASE_LAYER_L2;
 
-  struct pkt_info pkt = {0};
-  pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
+  struct pkt_info pkt = {};
+  pkt_info_set_ptrs_from_pkt(&pkt, ctx->data, ctx->data_end, base_layer);
+  assert_boundary(pkt.ipv6, pkt.end, XDP_PASS);
+
+  if (next_header(pkt.icmp6) > pkt.end) {
+    pkt.icmp6 = NULL;
+  }
 
   switch (parse_packet(&pkt, base_layer)) {
   case PKT_UNRELATED:
@@ -272,7 +301,7 @@ exceed2go_xdp(struct xdp_md *ctx) {
     assert(bpf_xdp_adjust_tail(ctx, tail_adj) == 0, XDP_ABORTED);
 
     /* Reinitialize after length change. */
-    pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
+    pkt_info_set_ptrs_from_pkt(&pkt, ctx->data, ctx->data_end, base_layer);
 
     /* Move and reverse Ethernet header before it gets overwritten by new IPv6
      * header.
@@ -287,6 +316,13 @@ exceed2go_xdp(struct xdp_md *ctx) {
   case PKT_ECHO_REQUEST:
     count(COUNTER_PKT_ECHO_REQUEST);
 
+    pkt_info_set_ptrs_from_pkt(&pkt, ctx->data, ctx->data_end, base_layer);
+    assert_boundary(pkt.icmp6, pkt.end, XDP_ABORTED);
+
+    /* Validate check sum. */
+    assert(valid_csum(&pkt), XDP_ABORTED);
+    count(COUNTER_ICMP_CORRECT_CHECKSUM);
+
     eth_hdr_reverse(pkt.eth, pkt.eth);
     exceed2go_echo(&pkt);
 
@@ -300,10 +336,15 @@ exceed2go_xdp(struct xdp_md *ctx) {
 
 static __always_inline int
 exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
-  struct pkt_info pkt = {0};
-  struct ethhdr   eth;
+  struct bpf_dynptr dynptr;
+  if (bpf_dynptr_from_skb(ctx, 0, &dynptr) != 0) {
+    return TC_ACT_UNSPEC;
+  }
 
-  pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
+  struct ethhdr eth;
+
+  struct pkt_info pkt = {};
+  pkt_info_set_ptrs_from_dynptr(&pkt, &dynptr, ctx->data_end, base_layer);
 
   switch (parse_packet(&pkt, base_layer)) {
   case PKT_UNRELATED:
@@ -337,14 +378,14 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
     }
     assert(rc_head_adj == 0, TC_ACT_SHOT);
 
-    /* Adjust packet length to match length requirements. */
+    /* Adjust packet length to match length requirements. Also, pulls in the
+     * whole packet data. */
     int new_len = ctx->len + pkt.tail_adjust;
     assert(bpf_skb_change_tail(ctx, new_len, 0) == 0, TC_ACT_SHOT);
 
     /* Reinitialize after length change. */
-    pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
-    struct icmp6hdr *icmp6 = next_header(pkt.ipv6);
-    assert_boundary(icmp6, pkt.end, TC_ACT_SHOT);
+    pkt_info_set_ptrs_from_pkt(&pkt, ctx->data, ctx->data_end, base_layer);
+    assert_boundary(pkt.icmp6, pkt.end, TC_ACT_SHOT);
 
     /* Restore and reverse Ethernet header. */
     if (base_layer == BASE_LAYER_L2)
@@ -355,6 +396,19 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
     break;
   case PKT_ECHO_REQUEST:
     count(COUNTER_PKT_ECHO_REQUEST);
+
+    int pull_len = sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr);
+    if (base_layer == BASE_LAYER_L2)
+      pull_len += ETH_HLEN;
+
+    assert(bpf_skb_pull_data(ctx, pull_len) == 0, TC_ACT_SHOT);
+
+    pkt_info_set_ptrs_from_pkt(&pkt, ctx->data, ctx->data_end, base_layer);
+    assert_boundary(pkt.icmp6, pkt.end, TC_ACT_SHOT);
+
+    /* Validate check sum. */
+    assert(valid_csum(&pkt), TC_ACT_SHOT);
+    count(COUNTER_ICMP_CORRECT_CHECKSUM);
 
     if (base_layer == BASE_LAYER_L2)
       eth_hdr_reverse(pkt.eth, pkt.eth);

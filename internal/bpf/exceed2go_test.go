@@ -137,7 +137,7 @@ func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	objs := &bpf.Exceed2GoObjects{}
 	opts := &ebpf.CollectionOptions{
 		Programs: ebpf.ProgramOptions{
-			LogLevel: ebpf.LogLevelStats,
+			LogLevel: ebpf.LogLevelBranch | ebpf.LogLevelStats,
 		},
 	}
 

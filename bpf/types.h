@@ -94,6 +94,10 @@ struct bpf_iter_num {
   __u64 __opaque[1];
 };
 
+struct bpf_dynptr {
+  __u64 __opaque[2];
+};
+
 enum xdp_action {
   XDP_ABORTED  = 0,
   XDP_DROP     = 1,

@@ -9,6 +9,9 @@
 #include "libbpf/bpf_helpers.h"
 
 #define next_header(h) ((void *)(h + 1))
+#define next_header_dynptr(dynptr, offset, buffer) \
+  bpf_dynptr_slice(dynptr, offset, buffer, sizeof(buffer)); \
+  offset += sizeof(buffer)
 
 #define assert_boundary(h, end, ret) \
   if (unlikely(next_header(h) > end)) \
@@ -17,6 +20,22 @@
 #define assert(e, ret) \
   if (unlikely(!(e))) \
   return ret
+
+extern __ksym __weak int
+bpf_dynptr_from_skb(struct __sk_buff  *skb,
+                    __u64              flags,
+                    struct bpf_dynptr *ptr__uninit);
+
+extern __ksym __weak int
+bpf_dynptr_from_xdp(struct xdp_md     *xdp,
+                    __u64              flags,
+                    struct bpf_dynptr *ptr__uninit);
+
+extern __ksym __weak void *
+bpf_dynptr_slice(const struct bpf_dynptr *ptr,
+                 __u32                    offset,
+                 void                    *buffer,
+                 __u32                    buffer__szk);
 
 /* Calculate checksum of the data starting with the given sum. If max4 is true,
  * only full 4 byte blocks are summed up. Trailing bytes are left out.
