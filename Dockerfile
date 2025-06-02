@@ -6,7 +6,7 @@
 
 ARG KERNEL_VERSION=6.6
 
-FROM alpine:3.21 AS go-image
+FROM alpine:3.22 AS go-image
 
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
