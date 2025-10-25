@@ -4,7 +4,7 @@
 
 module github.com/aibor/exceed2go
 
-go 1.24
+go 1.25.3
 
 require (
 	github.com/cilium/ebpf v0.19.0
