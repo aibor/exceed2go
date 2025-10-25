@@ -33,6 +33,7 @@ func Attach(opts AttachOptions) error {
 	pinDir := ifaceDir(opts.IfaceIndex)
 
 	var err error
+
 	defer func() {
 		if err != nil {
 			RemoveIface(opts.IfaceIndex)

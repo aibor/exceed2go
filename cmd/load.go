@@ -28,11 +28,13 @@ address the get a traceroute with all the given addresses in that order.`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			// Resolve interface names to interface handles.
 			var ifaces []*net.Interface
+
 			for _, ifaceName := range ifaceNames {
 				iface, err := ifaceByName(ifaceName)
 				if err != nil {
 					return err
 				}
+
 				ifaces = append(ifaces, iface)
 			}
 

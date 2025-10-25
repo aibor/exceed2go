@@ -32,6 +32,7 @@ func cleanupCmd() *cobra.Command {
 				if err != nil {
 					errs = append(errs, err)
 				}
+
 				exceed2go.RemoveIface(iface.Index)
 			}
 
