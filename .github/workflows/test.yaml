@@ -73,7 +73,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: bpf
           path: internal/bpf
@@ -107,7 +107,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: bpf
           path: internal/bpf
@@ -139,7 +139,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: bpf
           path: internal/bpf
