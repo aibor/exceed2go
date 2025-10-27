@@ -162,7 +162,7 @@ jobs:
             | go-junit-report -set-exit-code > junit-report.xml
 
       - name: Upload test output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: test-results
