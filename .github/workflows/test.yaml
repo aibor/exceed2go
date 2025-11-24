@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Run clang-format
         uses: DoozyX/clang-format-lint-action@v0.20
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -64,7 +64,7 @@ jobs:
       - go-setup
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -99,7 +99,7 @@ jobs:
       - go-setup
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup go
         uses: actions/setup-go@v6
@@ -130,7 +130,7 @@ jobs:
         run: apk add --no-scripts tar qemu-system-x86_64 linux-virt
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup go
         uses: actions/setup-go@v6
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: REUSE Compliance Check
         uses: fsfe/reuse-action@v6
