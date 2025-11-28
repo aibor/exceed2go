@@ -18,28 +18,27 @@ jobs:
   bpf:
     name: BPF
     runs-on: ubuntu-24.04
-    container:
-      image: alpine:3.21
     steps:
       - name: Install packages
         run: |
-          apk add --no-scripts \
-            make \
-            tar \
-            "llvm${{ inputs.llvm-version }}" \
-            "clang${{ inputs.llvm-version }}"
+          sudo apt-get install \
+            --yes --no-install-recommends \
+            "llvm-${{ inputs.llvm-version }}" \
+            "clang-${{ inputs.llvm-version }}"
+        env:
+          DPKG_FRONTEND: noninteractive
 
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup go
+      - name: Set up go
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: Generate
         run: |
-          env PATH="$PATH:/usr/lib/llvm${{ inputs.llvm-version }}/bin" make -B bpf
+          env PATH="$PATH:/usr/lib/llvm-${{ inputs.llvm-version }}/bin" make -B bpf
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
