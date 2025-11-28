@@ -23,13 +23,14 @@ $(BINARY): $(shell find . -name '*.go' ! -name '*_test.go') $(BPF2GO_FILE)
 	CGO_ENABLED=0 go build -o "$@"
 
 $(BPF2GO_FILE): $(wildcard bpf/*) $(wildcard bpf/libbpf/*) Makefile
-	go generate ./internal/bpf
+	cd ./internal/bpf
+	go generate .
 	llvm-objdump \
 		--source \
 		--no-show-raw-insn \
 		-g \
-		$(patsubst %.go,%.o,$@) \
-		> $(patsubst %.go,%.dump,$@)
+		$(patsubst %.go,%.o,$(@F)) \
+		> $(patsubst %.go,%.dump,$(@F))
 
 .PHONY: pidonetest
 pidonetest: $(BPF2GO_FILE)
