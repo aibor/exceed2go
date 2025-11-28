@@ -18,7 +18,7 @@ func TestLoad(t *testing.T) {
 	require.NoError(t, os.MkdirAll(pinDir, 0o750))
 	t.Cleanup(RemoveAll)
 
-	objs, err := load(pinDir)
+	objs, err := load(pinDir, HopList{})
 	require.NoError(t, err, "first load")
 	t.Cleanup(func() { _ = objs.Close() })
 
@@ -26,7 +26,7 @@ func TestLoad(t *testing.T) {
 	assert.FileExists(t, filepath.Join(pinDir, statsMapName))
 	require.NoError(t, objs.Close())
 
-	objs, err = load(pinDir)
+	objs, err = load(pinDir, HopList{})
 	require.NoError(t, err, "reload")
 	t.Cleanup(func() { _ = objs.Close() })
 }

@@ -48,16 +48,22 @@ func RemoveIface(ifaceIndex int) {
 	_ = os.RemoveAll(ifaceDir(ifaceIndex))
 }
 
-// load loads the eBPF objects into the kernel and pins them to the bpffs.
+// load loads the eBPF objects into the kernel and pins them to the bpffs. The
+// given hoplist is written to the according map.
 //
 // This is the initial action. If there are already loaded objects before, they
 // are removed and so any state of them.
 //
 // Call [Remove] to unload the objects and clear the bpffs files.
-func load(pinDir string) (*bpf.Exceed2GoObjects, error) {
+func load(pinDir string, hops HopList) (*bpf.Exceed2GoObjects, error) {
 	spec, err := bpf.LoadExceed2Go()
 	if err != nil {
 		return nil, fmt.Errorf("load spec: %w", err)
+	}
+
+	err = bpf.SetAddrs(spec, hops)
+	if err != nil {
+		return nil, fmt.Errorf("set addresses: %w", err)
 	}
 
 	for _, m := range spec.Maps {

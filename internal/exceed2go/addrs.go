@@ -52,25 +52,3 @@ func readAddrs(addrsMap *ebpf.Map) (HopList, error) {
 
 	return output, nil
 }
-
-func writeAddrs(addrsMap *ebpf.Map, hops HopList) error {
-	maxEntries := int(addrsMap.MaxEntries())
-	if len(hops) >= maxEntries {
-		return fmt.Errorf("%w: %d>%d", ErrTooManyHops, len(hops), maxEntries-1)
-	}
-
-	keys := make([]uint32, maxEntries)
-	values := make([][16]byte, maxEntries)
-
-	for idx, addr := range hops {
-		// 0 is an invalid hop number, so it is left out.
-		keys[idx] = uint32(idx + 1) //nolint:gosec
-		values[idx] = addr.As16()
-	}
-
-	if _, err := addrsMap.BatchUpdate(keys, values, nil); err != nil {
-		return fmt.Errorf("load error: %w", err)
-	}
-
-	return nil
-}

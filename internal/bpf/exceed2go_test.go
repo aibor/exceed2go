@@ -121,19 +121,27 @@ func deserialize(tb testing.TB, data []byte, noEth bool) gopacket.Packet {
 func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	tb.Helper()
 
-	if loadFailed.Load() {
-		tb.Fatal("Fail due to previous load errors")
+	assert.False(tb, loadFailed.Load(), "previous load errors")
+
+	spec, err := bpf.LoadExceed2Go()
+	require.NoError(tb, err, "spec must load")
+
+	addrs := []netip.Addr{}
+	for _, mapIP := range mapIPs {
+		addrs = append(addrs, mapIP.addr)
 	}
 
-	objs := &bpf.Exceed2GoObjects{}
+	err = bpf.SetAddrs(spec, addrs)
+	require.NoError(tb, err, "must set addrs")
 
+	objs := &bpf.Exceed2GoObjects{}
 	opts := &ebpf.CollectionOptions{
 		Programs: ebpf.ProgramOptions{
 			LogLevel: ebpf.LogLevelStats,
 		},
 	}
 
-	if err := bpf.LoadExceed2GoObjects(objs, opts); err != nil {
+	if err := spec.LoadAndAssign(objs, opts); err != nil {
 		var ve *ebpf.VerifierError
 		if errors.As(err, &ve) {
 			tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
@@ -208,13 +216,6 @@ func (p *progTest) setup(tb testing.TB) {
 	tb.Helper()
 
 	p.objs = load(tb)
-
-	for _, ip := range mapIPs {
-		err := p.objs.Exceed2goAddrs.Put(uint32(ip.hopLimit), ip.addr)
-		if err != nil {
-			tb.Fatalf("map load error: %v", err)
-		}
-	}
 }
 
 var progTests = map[string]progTest{

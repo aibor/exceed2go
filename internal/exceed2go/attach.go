@@ -45,18 +45,13 @@ func Attach(opts AttachOptions) error {
 		return fmt.Errorf("create bpf pin dir: %w", err)
 	}
 
-	objs, err := load(pinDir)
+	objs, err := load(pinDir, opts.HopList)
 	if err != nil {
 		return err
 	}
 	defer objs.Close() //nolint:errcheck
 
 	prog, err := program(objs, opts.Mode, opts.Layer)
-	if err != nil {
-		return err
-	}
-
-	err = writeAddrs(objs.Exceed2goAddrs, opts.HopList)
 	if err != nil {
 		return err
 	}
