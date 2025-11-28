@@ -121,7 +121,7 @@ func deserialize(tb testing.TB, data []byte, noEth bool) gopacket.Packet {
 func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	tb.Helper()
 
-	assert.False(tb, loadFailed.Load(), "previous load errors")
+	require.False(tb, loadFailed.Load(), "previous load errors")
 
 	spec, err := bpf.LoadExceed2Go()
 	require.NoError(tb, err, "spec must load")
