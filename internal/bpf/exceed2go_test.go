@@ -30,7 +30,8 @@ var (
 )
 
 var (
-	loadFailed atomic.Bool
+	loadFailed  atomic.Bool
+	statsLogged atomic.Bool
 
 	mapIPs = []mapIP{
 		{1, netip.MustParseAddr("fd01::bb")},
@@ -125,7 +126,14 @@ func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	}
 
 	objs := &bpf.Exceed2GoObjects{}
-	if err := bpf.LoadExceed2GoObjects(objs, nil); err != nil {
+
+	opts := &ebpf.CollectionOptions{
+		Programs: ebpf.ProgramOptions{
+			LogLevel: ebpf.LogLevelStats,
+		},
+	}
+
+	if err := bpf.LoadExceed2GoObjects(objs, opts); err != nil {
 		var ve *ebpf.VerifierError
 		if errors.As(err, &ve) {
 			tb.Logf("verifier log:\n %s", strings.Join(ve.Log, "\n"))
@@ -138,6 +146,12 @@ func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	tb.Cleanup(func() {
 		_ = objs.Close()
 	})
+
+	if statsLogged.CompareAndSwap(false, true) {
+		tb.Log("xdp:", objs.Exceed2goXdpL2.VerifierLog)
+		tb.Log("tc l2:", objs.Exceed2goTcL2.VerifierLog)
+		tb.Log("tc l3:", objs.Exceed2goTcL3.VerifierLog)
+	}
 
 	return objs
 }
