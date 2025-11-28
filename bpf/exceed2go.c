@@ -213,7 +213,7 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
     assert_equal(pkt->eth->proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
   }
 
-  assert_equal(pkt->ipv6->version, 6, false);
+  assert_equal(pkt->ipv6->version, 6, PKT_UNRELATED);
   count(COUNTER_IPV6_PACKET);
 
   /* Lookup the destination address in our address table. */
@@ -257,7 +257,7 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   assert_boundary(icmp6, pkt->end, false);
 
   assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-  assert_equal(icmp6->icmp6_code, 0, false);
+  assert_equal(icmp6->icmp6_code, 0, PKT_UNRELATED);
   count(COUNTER_ICMP_ECHO_REQUEST);
 
   /* Validate check sum. */
@@ -287,6 +287,7 @@ exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
     count(COUNTER_PKT_HOP_FOUND);
     /* Make room for additional headers. */
     assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
+
     /* Adjust packet length to match length requirements. */
     int tail_adj = pkt.tail_adjust;
     assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
