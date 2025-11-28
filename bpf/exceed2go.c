@@ -10,7 +10,7 @@
 #include "libbpf/bpf_endian.h"
 #include "libbpf/bpf_helpers.h"
 
-#define MAX_ADDRS 32
+#define MAX_ADDRS 256
 
 #define ADJ_LEN (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
@@ -89,38 +89,22 @@ pkt_info_set_ptrs(struct pkt_info      *pkt,
   pkt->end = (void *)(unsigned long)end;
 }
 
-struct target_search_cb_ctx {
-  struct in6_addr needle;
-  __u32           key;
-  bool            found;
-};
+static __always_inline __u32
+search_hop(const struct in6_addr *needle) {
+  __u32 hop;
 
-/* Callback function for bpf_for_each_map_elem for iterating over exceed_addrs
- * map looking up the given needle by the callback context struct.
- */
-static long
-target_search_cb(const void                  *map,
-                 const __u32                 *key,
-                 const struct in6_addr       *value,
-                 struct target_search_cb_ctx *cb_ctx) {
   /* 0 is an invalid hop number, so skip it. */
-  if (*key == 0) {
-    return 0;
-  }
-  /* If lookup returns nothing or found address is zero exit as that indicates
-   *we are through the list of configured addresses.
-   */
-  if (!value || !((const __u32 *)(value))[0])
-    return 1;
+  bpf_for(hop, 1, MAX_ADDRS) {
+    struct in6_addr *value = bpf_map_lookup_elem(&exceed2go_addrs, &hop);
+    if (!value)
+      break;
 
-  if (in6_addr_equal(&cb_ctx->needle, value)) {
-    /* Found the destination address in our list. Exit from the iteration. */
-    cb_ctx->found = true;
-    cb_ctx->key   = *key;
-
-    return 1;
+    /* Exit from the iteration if the address is found. */
+    if (in6_addr_equal(needle, value))
+      return hop;
   }
 
+  /* 0 is invalid hop number and indicates no key found. */
   return 0;
 }
 
@@ -216,18 +200,15 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   assert_equal(pkt->ipv6->version, 6, PKT_UNRELATED);
   count(COUNTER_IPV6_PACKET);
 
-  /* Lookup the destination address in our address table. */
-  struct target_search_cb_ctx target = {
-      .needle = pkt->ipv6->daddr,
-      .found  = false,
-  };
-  bpf_for_each_map_elem(&exceed2go_addrs, target_search_cb, &target, 0);
+  __u32 addr_hop = search_hop(&pkt->ipv6->daddr);
 
-  /* If the address is found, we continue and will reply with a ICMPv6
-   * time-exceeded message if the hop limit is low enough, or reply to echo
-   * requests.
+  /* If the address is found (has hop > 0), we continue and will reply with an
+   * ICMPv6 time-exceeded message if the hop limit is low enough, or reply to
+   * echo requests.
    */
-  assert_equal(target.found, true, PKT_UNRELATED);
+  if (!addr_hop)
+    return PKT_UNRELATED;
+
   count(COUNTER_TO_TARGET);
 
   /* Only reply with time exceeded messages, if the hop_limit is not above the
@@ -236,9 +217,10 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
    * relevant.
    */
   __u32 hop_key = pkt->ipv6->hop_limit;
-  if (target.key > hop_key) {
+  if (addr_hop > hop_key) {
     struct in6_addr *exceed_addr =
         bpf_map_lookup_elem(&exceed2go_addrs, &hop_key);
+
     if (exceed_addr != NULL) {
       pkt->tail_adjust = tail_adjust(pkt->end - (void *)pkt->ipv6);
       in6_addr_copy(&pkt->reply_saddr, exceed_addr);
