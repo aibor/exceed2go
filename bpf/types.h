@@ -2,6 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#pragma once
+
+#define NULL ((void *)0)
+
 typedef _Bool bool;
 
 enum {
@@ -35,53 +39,6 @@ typedef __u64 __be64;
 
 typedef __u16 __sum16;
 typedef __u32 __wsum;
-
-struct mac_addr {
-  __u16 mac_addr16[3];
-};
-
-struct ethhdr {
-  struct mac_addr daddr;
-  struct mac_addr saddr;
-  __be16          proto;
-};
-
-struct in6_addr {
-  union {
-    __u8   u6_addr8[16];
-    __be16 u6_addr16[8];
-    __be32 u6_addr32[4];
-    __be64 u6_addr64[2];
-  } in6_u;
-};
-
-struct ipv6hdr {
-  __u8            priority : 4;
-  __u8            version  : 4;
-  __u8            flow_lbl[3];
-  __be16          payload_len;
-  __u8            nexthdr;
-  __u8            hop_limit;
-  struct in6_addr saddr;
-  struct in6_addr daddr;
-};
-
-struct icmpv6_echo {
-  __be16 identifier;
-  __be16 sequence;
-};
-
-struct icmp6hdr {
-  __u8    icmp6_type;
-  __u8    icmp6_code;
-  __sum16 icmp6_cksum;
-  union {
-    __be32             un_data32[1];
-    __be16             un_data16[2];
-    __u8               un_data8[4];
-    struct icmpv6_echo u_echo;
-  } icmp6_dataun;
-};
 
 struct xdp_md {
   __u32 data;
@@ -131,6 +88,10 @@ struct __sk_buff {
   __u32 gso_size;
   __u8  tstamp_type;
   __u64 hwtstamp;
+};
+
+struct bpf_iter_num {
+  __u64 __opaque[1];
 };
 
 enum xdp_action {

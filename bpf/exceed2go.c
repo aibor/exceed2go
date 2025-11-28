@@ -3,53 +3,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "types.h"
+#include "bpf.h"
+#include "ether.h"
+#include "ip6.h"
+#include "icmp6.h"
 #include "libbpf/bpf_endian.h"
 #include "libbpf/bpf_helpers.h"
 
 #define MAX_ADDRS 32
 
-#define ETH_HLEN            14
-#define ETH_ALEN            6
-#define ETH_P_IPV6          0x86DD
-#define IPV6_MTU_MIN        1280
-#define IPV6_ALEN           16
-#define IPV6_HOP_LIMIT      64
-#define IPPROTO_ICMPV6      58
-#define ICMP6_TIME_EXCEEDED 3
-#define ICMP6_ECHO_REQUEST  128
-#define ICMP6_ECHO_REPLY    129
-#define ADJ_LEN             (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
-
-#define likely(p)      __builtin_expect(!!(p), 1)
-#define unlikely(p)    __builtin_expect(!!(p), 0)
-#define bpf_memcpy     __builtin_memcpy
-#define next_header(h) ((void *)(h + 1))
-#define assert_boundary(h, end, ret) \
-  if (unlikely(next_header(h) > end)) \
-  return ret
-#define assert_equal(f, e, ret) \
-  if (unlikely(f != e)) \
-  return ret
-
-enum base_layer {
-  BASE_LAYER_L2,
-  BASE_LAYER_L3,
-};
-
-enum pkt_status {
-  PKT_UNRELATED,
-  PKT_HOP_FOUND,
-  PKT_ECHO_REQUEST,
-};
-
-struct pkt_info {
-  struct ethhdr  *eth;
-  struct ipv6hdr *ipv6;
-  void           *end;
-  struct in6_addr reply_saddr;
-  struct in6_addr reply_daddr;
-  int             tail_adjust;
-};
+#define ADJ_LEN (sizeof(struct ipv6hdr) + sizeof(struct icmp6hdr))
 
 /* Definition of hop addresses in the order they are traversed by the packet.
  * 0 is an invalid hop number. Last entry is the actual target address.
@@ -89,6 +52,26 @@ count(const enum counter_key key) {
   }
 }
 
+enum base_layer {
+  BASE_LAYER_L2,
+  BASE_LAYER_L3,
+};
+
+enum pkt_status {
+  PKT_UNRELATED,
+  PKT_HOP_FOUND,
+  PKT_ECHO_REQUEST,
+};
+
+struct pkt_info {
+  struct ethhdr  *eth;
+  struct ipv6hdr *ipv6;
+  void           *end;
+  struct in6_addr reply_saddr;
+  struct in6_addr reply_daddr;
+  int             tail_adjust;
+};
+
 static __always_inline void
 pkt_info_set_ptrs(struct pkt_info      *pkt,
                   const __u32           start,
@@ -104,38 +87,6 @@ pkt_info_set_ptrs(struct pkt_info      *pkt,
     break;
   }
   pkt->end = (void *)(unsigned long)end;
-}
-
-static __always_inline void
-in6_addr_copy(struct in6_addr *dest, const struct in6_addr *src) {
-  (dest->in6_u.u6_addr64[0] = src->in6_u.u6_addr64[0]);
-  (dest->in6_u.u6_addr64[1] = src->in6_u.u6_addr64[1]);
-}
-
-static __always_inline bool
-in6_addr_equal(const struct in6_addr *a, const struct in6_addr *b) {
-  return ((a->in6_u.u6_addr64[0] == b->in6_u.u6_addr64[0]) &&
-          (a->in6_u.u6_addr64[1] == b->in6_u.u6_addr64[1]));
-}
-
-/* Copy non address fields of the new headers. New headers are defined on stack
- * and make sure all fields that are not set dynamically later are initialized
- * with 0.
- */
-static __always_inline void
-ipv6_init(struct ipv6hdr *ipv6, const __be16 payload_len) {
-  const struct ipv6hdr ipv6_new = {
-      .version     = 6,
-      .priority    = 0,
-      .flow_lbl[0] = 0,
-      .flow_lbl[1] = 0,
-      .flow_lbl[2] = 0,
-      .payload_len = payload_len,
-      .nexthdr     = IPPROTO_ICMPV6,
-      .hop_limit   = IPV6_HOP_LIMIT,
-  };
-
-  bpf_memcpy(ipv6, &ipv6_new, sizeof(struct ipv6hdr) - 2 * IPV6_ALEN);
 }
 
 struct target_search_cb_ctx {
@@ -173,85 +124,6 @@ target_search_cb(const void                  *map,
   return 0;
 }
 
-static __always_inline __wsum
-csum_add(__wsum csum, __be32 addend) {
-  csum += addend;
-  return csum + (csum < addend);
-}
-
-/* Fold a 32bit integer checksum down to 16bit value as needed in protocol
- * headers.
- */
-static __always_inline __sum16
-csum_fold(__wsum sum) {
-  sum = (sum & 0xffff) + (sum >> 16);
-  sum = (sum & 0xffff) + (sum >> 16);
-  return (__u16)sum;
-}
-
-/* Calculate IPv6 pseudo header checksum with given initial value. */
-static __always_inline __wsum
-ipv6_pseudo_hdr_csum(const struct ipv6hdr *ipv6, __wsum sum) {
-  sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-  /* Payload_len is already in network byte order. */
-  sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-  sum = csum_add(sum, ((__u32)ipv6->nexthdr) << 24);
-  return sum;
-}
-
-/* Calculate ICMPv6 header checksum. This sums up the IPv6 pseudo header of the
- * given ipv6hdr struct, the ICMPv6 header and the payload.
- */
-static __always_inline __wsum
-icmp6_csum(struct icmp6hdr *icmp6,
-           void            *data_end,
-           const bool       max4,
-           __wsum           sum) {
-  /* Sum up ICMP6 header and payload.
-   * Walk in biggest possible chunks (bpf_csum_diff can take max 512 byte).
-   * Packet size may not exceed IPV6_MTU_MIN + eth_hdr, so 1024 is biggest chunk
-   * we need to process.
-   */
-  void *buf = icmp6;
-  for (__u16 i = 1024; i > 4; i = (i > 512) ? (i - 512) : i >> 1) {
-    __u16 j = (i >= 512) ? 512 : i;
-    if (likely(buf + j <= data_end)) {
-      sum = bpf_csum_diff(NULL, 0, buf, j, sum);
-      buf += j;
-    }
-  }
-
-  /* inline optimization. */
-  if (likely(buf + 4 <= data_end)) {
-    sum = csum_add(sum, *(__be32 *)buf++);
-  }
-
-  if (max4) {
-    return sum;
-  }
-
-  __u32 addend = 0;
-  if (likely(buf + 2 <= data_end)) {
-    addend = *(__be16 *)buf++;
-  }
-  if (likely(buf + 1 <= data_end)) {
-    addend += *(__u8 *)buf++;
-  }
-  sum = csum_add(sum, addend);
-
-  return sum;
-}
-
-/* Swap ethernet addresses. */
-static __always_inline void
-eth_hdr_reverse(struct ethhdr *new, struct ethhdr *old) {
-  struct mac_addr tmp;
-  bpf_memcpy(&tmp, &old->daddr, sizeof(struct mac_addr));
-  bpf_memcpy(&new->daddr, &old->saddr, sizeof(struct mac_addr));
-  bpf_memcpy(&new->saddr, &tmp, sizeof(struct mac_addr));
-  new->proto = old->proto;
-}
-
 /* Calculate if the packet end needs to be adjusted. It must not be longer than
  * the IPv6 minimum MTU and should always be a multiple of 4 bytes long so it
  * works with our check sum implementation. Returns a signed value that can be
@@ -281,20 +153,21 @@ exceed2go_exceeded(struct pkt_info *pkt) {
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
   assert_boundary(icmp6, pkt->end, false);
 
-  __be16 payload_len = bpf_htons(pkt->end - (void *)icmp6);
-  ipv6_init(pkt->ipv6, payload_len);
-  in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
-  in6_addr_copy(&pkt->ipv6->daddr, &pkt->reply_daddr);
+  ipv6_init(pkt->ipv6,
+            bpf_htons(pkt->end - (void *)icmp6),
+            IPPROTO_ICMPV6,
+            &pkt->reply_saddr,
+            &pkt->reply_daddr);
 
   struct icmp6hdr icmp6_new = {0};
   icmp6_new.icmp6_type      = ICMP6_TIME_EXCEEDED;
   icmp6_new.icmp6_code      = 0;
   icmp6_new.icmp6_cksum     = 0;
-  *icmp6                    = icmp6_new;
+  memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
 
   __wsum csum        = 0;
   csum               = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
-  csum               = icmp6_csum(icmp6, pkt->end, true, csum);
+  csum               = pkt_csum(icmp6, pkt->end, true, csum);
   icmp6->icmp6_cksum = ~csum_fold(csum);
 
   return true;
@@ -306,10 +179,11 @@ exceed2go_echo(struct pkt_info *pkt) {
   /* Reset fields but keep payload_len. Gets optimized by the compiler so the
    * payload_length field is kept as is.
    * */
-  __be16 payload_len = pkt->ipv6->payload_len;
-  ipv6_init(pkt->ipv6, payload_len);
-  in6_addr_copy(&pkt->ipv6->saddr, &pkt->reply_saddr);
-  in6_addr_copy(&pkt->ipv6->daddr, &pkt->reply_daddr);
+  ipv6_init(pkt->ipv6,
+            pkt->ipv6->payload_len,
+            IPPROTO_ICMPV6,
+            &pkt->reply_saddr,
+            &pkt->reply_daddr);
 
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
 
@@ -389,7 +263,7 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   /* Validate check sum. */
   __wsum csum = 0;
   csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
-  csum        = icmp6_csum(icmp6, pkt->end, true, csum);
+  csum        = pkt_csum(icmp6, pkt->end, true, csum);
   assert_equal(csum_fold(csum), 0xffff, PKT_UNRELATED);
   count(COUNTER_ICMP_CORRECT_CHECKSUM);
 
@@ -462,7 +336,7 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
      * rewrite it later.
      */
     if (base_layer == BASE_LAYER_L2) {
-      bpf_memcpy(&eth, pkt.eth, sizeof(struct ethhdr));
+      memcpy(&eth, pkt.eth, sizeof(struct ethhdr));
     }
 
     /* Make room for additional headers.
