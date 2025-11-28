@@ -14,8 +14,8 @@
   if (unlikely(next_header(h) > end)) \
   return ret
 
-#define assert_equal(f, e, ret) \
-  if (unlikely(f != e)) \
+#define assert(e, ret) \
+  if (unlikely(!(e))) \
   return ret
 
 /* Calculate checksum of the data starting with the given sum. If max4 is true,
@@ -32,26 +32,25 @@ pkt_csum(const void *data, const void *data_end, const bool max4, __wsum sum) {
   for (__u8 exp = 9; exp >= 2; exp--) {
     /* Cap at 512 because bpf_csum_diff can take max 512 byte. */
     __u16 chunk_size = 1 << (exp > 8 ? 8 : exp);
-    if (data + chunk_size > data_end) {
+    if (data + chunk_size > data_end)
       continue;
-    }
 
     sum = bpf_csum_diff(NULL, 0, (void *)data, chunk_size, sum);
     data += chunk_size;
   }
 
-  if (max4) {
+  if (max4)
     return sum;
-  }
 
   __u32 addend     = 0;
   void *addend_ptr = &addend;
-  if (data + 2 <= data_end) {
+
+  if (data + 2 <= data_end)
     *(__u16 *)addend_ptr++ = *(__be16 *)data++;
-  }
-  if (data + 1 <= data_end) {
+
+  if (data + 1 <= data_end)
     *(__u8 *)addend_ptr += *(__u8 *)data++;
-  }
+
   sum = bpf_csum_diff(NULL, 0, &addend, 4, sum);
 
   return sum;

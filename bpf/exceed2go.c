@@ -47,9 +47,8 @@ struct {
 static __always_inline void
 count(const enum counter_key key) {
   __u32 *value = bpf_map_lookup_elem(&exceed2go_counters, &key);
-  if (likely(value)) {
+  if (likely(value))
     __sync_fetch_and_add(value, 1);
-  }
 }
 
 enum base_layer {
@@ -122,9 +121,8 @@ tail_adjust(int ipv6_pkt_len) {
   /* Ensure the resulting packet is always a multiple of 4 so it works with the
    * check sum implementation.
    */
-  if (tail_adj > 0 && new_ip_pkt_len % 4) {
+  if (tail_adj > 0 && new_ip_pkt_len % 4)
     tail_adj = -(new_ip_pkt_len % 4);
-  }
 
   return tail_adj < 0 ? tail_adj : 0;
 }
@@ -132,10 +130,9 @@ tail_adjust(int ipv6_pkt_len) {
 /* Create a ICMPv6 time exceeded message for the current packet and send it
  * from the given src_addr.
  */
-static __always_inline bool
+static __always_inline void
 exceed2go_exceeded(struct pkt_info *pkt) {
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-  assert_boundary(icmp6, pkt->end, false);
 
   ipv6_init(pkt->ipv6,
             bpf_htons(pkt->end - (void *)icmp6),
@@ -143,18 +140,16 @@ exceed2go_exceeded(struct pkt_info *pkt) {
             &pkt->reply_saddr,
             &pkt->reply_daddr);
 
-  struct icmp6hdr icmp6_new = {0};
-  icmp6_new.icmp6_type      = ICMP6_TIME_EXCEEDED;
-  icmp6_new.icmp6_code      = 0;
-  icmp6_new.icmp6_cksum     = 0;
-  memcpy(icmp6, &icmp6_new, sizeof(struct icmp6hdr));
+  icmp6->icmp6_type                = ICMP6_TIME_EXCEEDED;
+  icmp6->icmp6_code                = 0;
+  icmp6->icmp6_cksum               = 0;
+  icmp6->icmp6_dataun.un_data32[0] = 0;
 
-  __wsum csum        = 0;
-  csum               = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
-  csum               = pkt_csum(icmp6, pkt->end, true, csum);
+  __wsum csum = 0;
+  csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
+  csum        = pkt_csum(icmp6, pkt->end, true, csum);
+
   icmp6->icmp6_cksum = ~csum_fold(csum);
-
-  return true;
 }
 
 /* Create ICMPv6 echo reply message for the given packet. */
@@ -170,10 +165,8 @@ exceed2go_echo(struct pkt_info *pkt) {
             &pkt->reply_daddr);
 
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-
-  /* Set echo reply header. */
-  icmp6->icmp6_type = ICMP6_ECHO_REPLY;
-  icmp6->icmp6_code = 0;
+  icmp6->icmp6_type      = ICMP6_ECHO_REPLY;
+  icmp6->icmp6_code      = 0;
 
   /* Only field changed that affects the check sum field is the ICMP type. */
   icmp6->icmp6_cksum += ICMP6_ECHO_REQUEST - ICMP6_ECHO_REPLY;
@@ -191,13 +184,12 @@ exceed2go_echo(struct pkt_info *pkt) {
  */
 static __always_inline enum pkt_status
 parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
-  assert_boundary(pkt->ipv6, pkt->end, false);
+  assert_boundary(pkt->ipv6, pkt->end, PKT_UNRELATED);
 
-  if (base_layer == BASE_LAYER_L2) {
-    assert_equal(pkt->eth->proto, bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
-  }
+  if (base_layer == BASE_LAYER_L2)
+    assert(pkt->eth->proto == bpf_htons(ETH_P_IPV6), PKT_UNRELATED);
 
-  assert_equal(pkt->ipv6->version, 6, PKT_UNRELATED);
+  assert(pkt->ipv6->version == 6, PKT_UNRELATED);
   count(COUNTER_IPV6_PACKET);
 
   __u32 addr_hop = search_hop(&pkt->ipv6->daddr);
@@ -206,9 +198,7 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
    * ICMPv6 time-exceeded message if the hop limit is low enough, or reply to
    * echo requests.
    */
-  if (!addr_hop)
-    return PKT_UNRELATED;
-
+  assert(addr_hop, PKT_UNRELATED);
   count(COUNTER_TO_TARGET);
 
   /* Only reply with time exceeded messages, if the hop_limit is not above the
@@ -232,21 +222,22 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   /* If the address was found but does not match our exceed requirements, check
    * if it is an ICMP echo request that we want to reply to.
    */
-  assert_equal(pkt->ipv6->nexthdr, IPPROTO_ICMPV6, PKT_UNRELATED);
+  assert(pkt->ipv6->nexthdr == IPPROTO_ICMPV6, PKT_UNRELATED);
   count(COUNTER_ICMP_PACKET);
 
   struct icmp6hdr *icmp6 = next_header(pkt->ipv6);
-  assert_boundary(icmp6, pkt->end, false);
+  assert_boundary(icmp6, pkt->end, PKT_UNRELATED);
 
-  assert_equal(icmp6->icmp6_type, ICMP6_ECHO_REQUEST, PKT_UNRELATED);
-  assert_equal(icmp6->icmp6_code, 0, PKT_UNRELATED);
+  assert(icmp6->icmp6_type == ICMP6_ECHO_REQUEST, PKT_UNRELATED);
+  assert(icmp6->icmp6_code == 0, PKT_UNRELATED);
   count(COUNTER_ICMP_ECHO_REQUEST);
 
   /* Validate check sum. */
   __wsum csum = 0;
   csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
   csum        = pkt_csum(icmp6, pkt->end, true, csum);
-  assert_equal(csum_fold(csum), 0xffff, PKT_UNRELATED);
+
+  assert(csum_fold(csum) == 0xffff, PKT_UNRELATED);
   count(COUNTER_ICMP_CORRECT_CHECKSUM);
 
   in6_addr_copy(&pkt->reply_saddr, &pkt->ipv6->daddr);
@@ -256,9 +247,14 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
 }
 
 static __always_inline int
-exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
-  struct pkt_info pkt = {0};
+exceed2go_xdp(struct xdp_md *ctx) {
+  /* L3 interfaces do not support XDP and L3 interfaces are not supported in
+   * generic mode. It always expects an ethernet header:
+   * https://github.com/torvalds/linux/blob/04b8076df2534f08bb4190f90a24e0f7f8930aca/net/core/dev.c#L4891
+   */
+  enum base_layer base_layer = BASE_LAYER_L2;
 
+  struct pkt_info pkt = {0};
   pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
 
   switch (parse_packet(&pkt, base_layer)) {
@@ -267,12 +263,13 @@ exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
     return XDP_PASS;
   case PKT_HOP_FOUND:
     count(COUNTER_PKT_HOP_FOUND);
+
     /* Make room for additional headers. */
-    assert_equal(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN), 0, XDP_ABORTED);
+    assert(bpf_xdp_adjust_head(ctx, -(int)ADJ_LEN) == 0, XDP_ABORTED);
 
     /* Adjust packet length to match length requirements. */
     int tail_adj = pkt.tail_adjust;
-    assert_equal(bpf_xdp_adjust_tail(ctx, tail_adj), 0, XDP_ABORTED);
+    assert(bpf_xdp_adjust_tail(ctx, tail_adj) == 0, XDP_ABORTED);
 
     /* Reinitialize after length change. */
     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
@@ -280,20 +277,19 @@ exceed2go_xdp(struct xdp_md *ctx, const enum base_layer base_layer) {
     /* Move and reverse Ethernet header before it gets overwritten by new IPv6
      * header.
      */
-    if (base_layer == BASE_LAYER_L2) {
-      struct ethhdr *old_eth = (void *)pkt.eth + (int)ADJ_LEN;
-      assert_boundary(old_eth, pkt.end, XDP_ABORTED);
-      eth_hdr_reverse(pkt.eth, old_eth);
-    }
+    struct ethhdr *old_eth = (void *)pkt.eth + (int)ADJ_LEN;
+    assert_boundary(old_eth, pkt.end, XDP_ABORTED);
 
-    assert_equal(exceed2go_exceeded(&pkt), true, XDP_ABORTED);
+    eth_hdr_reverse(pkt.eth, old_eth);
+    exceed2go_exceeded(&pkt);
+
     break;
   case PKT_ECHO_REQUEST:
     count(COUNTER_PKT_ECHO_REQUEST);
-    if (base_layer == BASE_LAYER_L2) {
-      eth_hdr_reverse(pkt.eth, pkt.eth);
-    }
+
+    eth_hdr_reverse(pkt.eth, pkt.eth);
     exceed2go_echo(&pkt);
+
     break;
   }
 
@@ -315,12 +311,12 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
     return TC_ACT_UNSPEC;
   case PKT_HOP_FOUND:
     count(COUNTER_PKT_HOP_FOUND);
+
     /* bpf_skb_adjust_room overwrites the Ethernet header, so store it so we can
      * rewrite it later.
      */
-    if (base_layer == BASE_LAYER_L2) {
+    if (base_layer == BASE_LAYER_L2)
       memcpy(&eth, pkt.eth, sizeof(struct ethhdr));
-    }
 
     /* Make room for additional headers.
      * bpf_skb_adjust_room requires skb->protocol to be set to ETH_P_IP or
@@ -339,29 +335,32 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
        */
       rc_head_adj = bpf_skb_change_head(ctx, (u32)ADJ_LEN, 0);
     }
-    assert_equal(rc_head_adj, 0, TC_ACT_SHOT);
+    assert(rc_head_adj == 0, TC_ACT_SHOT);
 
     /* Adjust packet length to match length requirements. */
     int new_len = ctx->len + pkt.tail_adjust;
-    assert_equal(bpf_skb_change_tail(ctx, new_len, 0), 0, TC_ACT_SHOT);
+    assert(bpf_skb_change_tail(ctx, new_len, 0) == 0, TC_ACT_SHOT);
 
     /* Reinitialize after length change. */
     pkt_info_set_ptrs(&pkt, ctx->data, ctx->data_end, base_layer);
+    struct icmp6hdr *icmp6 = next_header(pkt.ipv6);
+    assert_boundary(icmp6, pkt.end, TC_ACT_SHOT);
 
     /* Restore and reverse Ethernet header. */
-    if (base_layer == BASE_LAYER_L2) {
-      assert_boundary(pkt.eth, pkt.end, TC_ACT_SHOT);
+    if (base_layer == BASE_LAYER_L2)
       eth_hdr_reverse(pkt.eth, &eth);
-    }
 
-    assert_equal(exceed2go_exceeded(&pkt), true, TC_ACT_SHOT);
+    exceed2go_exceeded(&pkt);
+
     break;
   case PKT_ECHO_REQUEST:
     count(COUNTER_PKT_ECHO_REQUEST);
-    if (base_layer == BASE_LAYER_L2) {
+
+    if (base_layer == BASE_LAYER_L2)
       eth_hdr_reverse(pkt.eth, pkt.eth);
-    }
+
     exceed2go_echo(&pkt);
+
     break;
   }
 
@@ -373,12 +372,8 @@ exceed2go_tc(struct __sk_buff *ctx, const enum base_layer base_layer) {
 SEC("xdp")
 int
 exceed2go_xdp_l2(struct xdp_md *ctx) {
-  return exceed2go_xdp(ctx, BASE_LAYER_L2);
+  return exceed2go_xdp(ctx);
 }
-
-// L3 interfaces do not support XDP and L3 interfaces are not supported in
-// generic mode. It always expects an ethernet header:
-// https://github.com/torvalds/linux/blob/04b8076df2534f08bb4190f90a24e0f7f8930aca/net/core/dev.c#L4891
 
 SEC("tc")
 int
