@@ -189,22 +189,24 @@ csum_fold(__wsum sum) {
   return (__u16)sum;
 }
 
+/* Calculate IPv6 pseudo header checksum with given initial value. */
+static __always_inline __wsum
+ipv6_pseudo_hdr_csum(const struct ipv6hdr *ipv6, __wsum sum) {
+  sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
+  /* Payload_len is already in network byte order. */
+  sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
+  sum = csum_add(sum, ((__u32)ipv6->nexthdr) << 24);
+  return sum;
+}
+
 /* Calculate ICMPv6 header checksum. This sums up the IPv6 pseudo header of the
  * given ipv6hdr struct, the ICMPv6 header and the payload.
  */
 static __always_inline __wsum
 icmp6_csum(struct icmp6hdr *icmp6,
-           struct ipv6hdr  *ipv6,
            void            *data_end,
-           const bool       max4) {
-  __wsum sum = 0;
-
-  /* Sum up IPv6 pseudo header. */
-  sum = bpf_csum_diff(NULL, 0, (void *)&ipv6->saddr, 2 * IPV6_ALEN, sum);
-  /* Payload_len is already in network byte order. */
-  sum = csum_add(sum, ((__u32)ipv6->payload_len) << 16);
-  sum = csum_add(sum, ((__u32)IPPROTO_ICMPV6) << 24);
-
+           const bool       max4,
+           __wsum           sum) {
   /* Sum up ICMP6 header and payload.
    * Walk in biggest possible chunks (bpf_csum_diff can take max 512 byte).
    * Packet size may not exceed IPV6_MTU_MIN + eth_hdr, so 1024 is biggest chunk
@@ -290,7 +292,10 @@ exceed2go_exceeded(struct pkt_info *pkt) {
   icmp6_new.icmp6_cksum     = 0;
   *icmp6                    = icmp6_new;
 
-  icmp6->icmp6_cksum = ~csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, true));
+  __wsum csum        = 0;
+  csum               = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
+  csum               = icmp6_csum(icmp6, pkt->end, true, csum);
+  icmp6->icmp6_cksum = ~csum_fold(csum);
 
   return true;
 }
@@ -382,9 +387,10 @@ parse_packet(struct pkt_info *pkt, const enum base_layer base_layer) {
   count(COUNTER_ICMP_ECHO_REQUEST);
 
   /* Validate check sum. */
-  assert_equal(csum_fold(icmp6_csum(icmp6, pkt->ipv6, pkt->end, false)),
-               0xffff,
-               PKT_UNRELATED);
+  __wsum csum = 0;
+  csum        = ipv6_pseudo_hdr_csum(pkt->ipv6, csum);
+  csum        = icmp6_csum(icmp6, pkt->end, true, csum);
+  assert_equal(csum_fold(csum), 0xffff, PKT_UNRELATED);
   count(COUNTER_ICMP_CORRECT_CHECKSUM);
 
   in6_addr_copy(&pkt->reply_saddr, &pkt->ipv6->daddr);
