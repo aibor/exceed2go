@@ -30,7 +30,7 @@ type attacher interface {
 	attach(ifaceIndex int) (link.Link, error)
 }
 
-func program( //nolint:ireturn
+func program( //nolint:nolintlint,ireturn
 	objs *bpf.Exceed2GoObjects,
 	mode Mode,
 	layer Layer,
