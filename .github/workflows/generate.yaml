@@ -41,7 +41,7 @@ jobs:
           env PATH="$PATH:/usr/lib/llvm-${{ inputs.llvm-version }}/bin" make -B bpf
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: "${{ inputs.artifact-name }}"
           path: |
