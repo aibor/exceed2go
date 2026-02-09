@@ -126,9 +126,9 @@ func load(tb testing.TB) *bpf.Exceed2GoObjects {
 	spec, err := bpf.LoadExceed2Go()
 	require.NoError(tb, err, "spec must load")
 
-	addrs := []netip.Addr{}
-	for _, mapIP := range mapIPs {
-		addrs = append(addrs, mapIP.addr)
+	addrs := make([]netip.Addr, len(mapIPs))
+	for idx, mapIP := range mapIPs {
+		addrs[idx] = mapIP.addr
 	}
 
 	err = bpf.SetAddrs(spec, addrs)
