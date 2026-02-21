@@ -1,7 +1,7 @@
 github.com/aibor/cpio v0.1.0 h1:Z2NHxK3BDco5LHcflaez8KGcEMzh1lMJMJ+3NB4KbvI=
 github.com/aibor/cpio v0.1.0/go.mod h1:4wYZgzn8wReHEoUqFoJytRGxNYq2iJ5+q0vCXSfDe9s=
-github.com/aibor/virtrun v0.15.2 h1:vsqUUSprwQ4/lLVWwvc29Vg6pYQ8hnr5TipFmYgSkCM=
-github.com/aibor/virtrun v0.15.2/go.mod h1:8AyH2qWbkzgLwze7JIz+6RVLsdHR60+QNPlK/nPtPDg=
+github.com/aibor/virtrun v0.15.3 h1:SmqZ/8+hw78bw8hL+GIkO2edwgcF1mlM8PSvn2Ra71s=
+github.com/aibor/virtrun v0.15.3/go.mod h1:Fc010FQICP+Emg1R0df/ENbpTNnNOPmgANcsKI5F6S8=
 github.com/cilium/ebpf v0.20.0 h1:atwWj9d3NffHyPZzVlx3hmw1on5CLe9eljR8VuHTwhM=
 github.com/cilium/ebpf v0.20.0/go.mod h1:pzLjFymM+uZPLk/IXZUL63xdx5VXEo+enTzxkZXdycw=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
