@@ -8,7 +8,7 @@ go 1.25.3
 
 require (
 	github.com/cilium/ebpf v0.22.0
-	github.com/gopacket/gopacket v1.7.1
+	github.com/gopacket/gopacket v1.7.4
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 )
